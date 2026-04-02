@@ -1,50 +1,69 @@
-# Welcome to your Expo app 👋
+# FinanceApp 🚀
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A premium, AI-driven personal finance application with high-performance visualizations, built for the modern mission-control experience.
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+- **Mission Control Dashboard**: Real-time spending breakdown and categorical mix using **React Native Skia**.
+- **Goal Management**: Reactive local-first tracking for your savings targets, from emergency funds to Japan trips.
+- **AI-Powered Insights**: Integrated AI service for financial analysis and categorization.
+- **Gold-Standard Initialization**: Robust "Absolute Isolation" bootstrap for Skia-Web, ensuring zero-crash graphics on all platforms.
+- **Local-First Speed**: Powered by **WatermelonDB** for instant updates and offline capability.
+- **Premium Aesthetics**: Glassmorphic UI with vibrant Emerald and Charcoal themes.
 
-   ```bash
-   npm install
-   ```
+---
 
-2. Start the app
+## 🛠 Tech Stack
 
-   ```bash
-   npx expo start
-   ```
+- **Core**: Expo (React Native), Expo Router
+- **Graphics**: @shopify/react-native-skia
+- **Database**: WatermelonDB (SQLite/IndexedDB)
+- **Styling**: NativeWind (Tailwind CSS)
+- **Runtime**: CanvasKit WASM (v0.40.0)
 
-In the output, you'll find options to open the app in a
+---
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🚀 Getting Started
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
+### 1. Install Dependencies
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Configure Environment
+Create a `.env` file with your credentials:
+```bash
+SUPABASE_URL=your_url
+SUPABASE_ANON_KEY=your_key
+OPENAI_API_KEY=your_key
+```
 
-## Learn more
+### 3. Start Development
+```bash
+npx expo start
+```
+- Press `w` for Web
+- Press `i` for iOS
+- Press `a` for Android
 
-To learn more about developing your project with Expo, look at the following resources:
+---
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## 🏗 Key Components
 
-## Join the community
+### Skia Graphics
+The application uses a custom-tuned Skia engine. For web users, we implement a **Direct CDN Bootstrap** in `index.web.js` to bypass initialization race conditions and ensure 100% WebGL context reliability.
 
-Join our community of developers creating universal apps.
+### Goal Tracking
+Managed in the **Goals Tab**, providing real-time synchronization between your manual entries and the global monitoring dashboard using WatermelonDB Observables.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+---
+
+## 🎨 Design Language
+- **Typography**: Inter / Outfit
+- **Color Palette**: Dark Mode Midnight (`#050505`) with Emerald accents (`#10b981`).
+- **Aesthetic**: Minimalist "Mission Control" using `BlurView` and glassmorphic surface depth.
+
+---
+
+## 📜 License
+MIT
