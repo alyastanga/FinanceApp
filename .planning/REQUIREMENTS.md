@@ -10,6 +10,7 @@
 - [ ] **FND-02**: Local SQLite database for offline-first data persistence
 - [ ] **FND-03**: Secure local storage for sensitive user data
 - [ ] **FND-04**: Responsive layout that adapts from mobile to desktop screen sizes
+- [ ] **FND-05**: Local LLM runtime (llama.rn) for offline-first privacy
 
 ### Core Finance Tracking
 - [ ] **CORE-01**: User can log monthly income with source labels
@@ -27,6 +28,7 @@
 - [ ] **CHAT-01**: Real-time AI chat interface for querying financial status (e.g., "How much did I spend on coffee this week?")
 - [ ] **CHAT-02**: AI provides educational investment guidance (general concepts)
 - [ ] **CHAT-03**: AI analyzes user-provided portfolio data to suggest optimizations based on trends
+- [ ] **CHAT-04**: Offline-first AI mode for basic financial status queries
 
 ## v2 Requirements
 
@@ -51,6 +53,7 @@
 | FND-02 | Phase 1 | Pending |
 | FND-03 | Phase 1 | Pending |
 | FND-04 | Phase 5 | Pending |
+| FND-05 | Phase 3 | Pending |
 | CORE-01 | Phase 2 | Pending |
 | CORE-02 | Phase 2 | Pending |
 | CORE-03 | Phase 2 | Pending |
@@ -62,6 +65,7 @@
 | CHAT-01 | Phase 3 | Pending |
 | CHAT-02 | Phase 4 | Pending |
 | CHAT-03 | Phase 4 | Pending |
+| CHAT-04 | Phase 3 | Pending |
 
 ---
 *Last updated: 2026-04-02*

@@ -42,20 +42,21 @@ Plans:
 - [ ] 02-02: Implement categorization logic and summary dashboard.
 - [ ] 02-03: Develop CSV Parser for bulk import.
 
-### Phase 3: AI Budgeting & Assistant
-**Goal**: Introduce AI-driven value through chat and intelligent budgeting.
+### Phase 3: Hybrid AI Budgeting & Assistant
+**Goal**: Introduce AI-driven value through a hybrid (Cloud + Local) chat and intelligent budgeting.
 **Depends on**: Phase 2
-**Requirements**: GOAL-01, GOAL-02, GOAL-03, CHAT-01
+**Requirements**: GOAL-01, GOAL-02, GOAL-03, CHAT-01, CHAT-04, FND-05
 **Success Criteria**:
-  1. User can set and track specific savings goals.
-  2. AI chat accurately answers questions about spending history.
-  3. AI generates a "Safe to Spend" budget based on active goals.
-**Plans**: 3 plans
+  1. User can track specific savings goals.
+  2. AI chat works offline for basic balance/history queries.
+  3. AI chat seamlessly falls back to Cloud for complex budgeting.
+**Plans**: 4 plans
 
 Plans:
-- [ ] 03-01: Setup OpenRouter integration and AI Chat interface.
+- [ ] 03-01: Setup OpenRouter (Cloud) and Local LLM (llama.rn) runtimes.
 - [ ] 03-02: Goal tracking system and "Safe to Spend" logic.
 - [ ] 03-03: AI Visualization (Pie charts via Skia).
+- [ ] 03-04: Hybrid Chat Router (Cloud vs. Local logic).
 
 ### Phase 4: Investment Insights
 **Goal**: Expand the AI into portfolio analysis and investment guidance.

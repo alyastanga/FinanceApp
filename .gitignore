@@ -1,37 +1,46 @@
-# General
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# dependencies
 node_modules/
-.DS_Store
-.env
-.env.local
-.env.*.local
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # Expo
 .expo/
 dist/
 web-build/
+expo-env.d.ts
 
-# React Native
-ios/build/
-android/build/
-android/app/build/
-android/.gradle
-ios/Pods/
-ios/.xcode.env.local
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# GSD / Planning
-# (Note: .planning/ is NOT ignored because you chose to commit planning docs)
-# (Note: .gemini/ is NOT ignored as it contains your project-local GSD installation)
+# Metro
+.metro-health-check*
 
-# IDEs
-.vscode/
-.idea/
-*.swp
-*.swo
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
 
-# OS
+# macOS
 .DS_Store
-Thumbs.db
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+app-example
+
+# generated native folders
+/ios
+/android
+
+# Assistant files
+.gemini/
