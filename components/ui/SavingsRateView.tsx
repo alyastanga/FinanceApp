@@ -1,5 +1,5 @@
-import React, { useState, memo } from 'react';
-import { View, Text, Pressable, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { Canvas, Path, LinearGradient, vec, Skia } from '@shopify/react-native-skia';
 
 interface SavingsRateViewProps {
@@ -9,10 +9,10 @@ interface SavingsRateViewProps {
 
 /**
  * SavingsRateView component featuring a dual-mode visualization.
- * Wrapped in memo to prevent unnecessary re-renders that might
- * trigger context-sensitive hooks in children/polyfilled components.
+ * Using standard TouchableOpacity to avoid context conflicts seen with Pressable
+ * in some NativeWind v4 environments.
  */
-export const SavingsRateView = memo(({ currentRate, trendData }: SavingsRateViewProps) => {
+export const SavingsRateView = ({ currentRate, trendData }: SavingsRateViewProps) => {
   const [viewMode, setViewMode] = useState<'month' | 'trend'>('month');
   const size = Dimensions.get('window').width - 80;
   const chartHeight = 120;
@@ -39,8 +39,8 @@ export const SavingsRateView = memo(({ currentRate, trendData }: SavingsRateView
           <Text className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Efficiency</Text>
         </View>
         <Text className="mt-6 text-center text-muted-foreground text-xs px-4">
-          You are currently saving {Math.round(currentRate)}% of your total income.
-          {currentRate > 20 ? ' Excellent discipline!' : currentRate > 0 ? ' Good start, keep it up.' : ' Warning: Outgoing exceeds incoming.'}
+          You {currentRate >= 0 ? 'saved' : 'spent'} {Math.abs(Math.round(currentRate))}% of your income.
+          {currentRate > 20 ? ' Excellent discipline!' : currentRate > 0 ? ' Good start.' : ' Warning: Negative flow.'}
         </Text>
       </View>
     );
@@ -48,54 +48,75 @@ export const SavingsRateView = memo(({ currentRate, trendData }: SavingsRateView
 
   // 6-Month Trend View
   const renderTrend = () => {
-    if (!trendData || trendData.length === 0) {
+    // Guards for mobile stability
+    if (!trendData || trendData.length < 2) {
       return (
-        <View className="h-[120px] items-center justify-center">
-          <Text className="text-muted-foreground text-xs italic">Awaiting trend data...</Text>
+        <View style={{ height: chartHeight + 20, alignItems: 'center', justifyContent: 'center' }}>
+          <Text className="text-muted-foreground text-xs italic">
+            {trendData.length === 1 ? 'Accumulating historical data...' : 'No trend data available.'}
+          </Text>
         </View>
       );
     }
 
     const padding = 20;
-    const graphWidth = size - padding * 2;
+    const effectiveWidth = size || 300;
+    const graphWidth = effectiveWidth - padding * 2;
     const maxRate = Math.max(...trendData.map(d => d.rate), 20);
     const minRate = Math.min(...trendData.map(d => d.rate), 0);
     const range = maxRate - minRate || 1;
 
+    // 1. Calculate points
     const points = trendData.map((d, i) => ({
       x: padding + (i * (graphWidth / (trendData.length - 1))),
       y: chartHeight - padding - ((d.rate - minRate) / range) * (chartHeight - padding * 2)
     }));
 
-    const path = Skia.Path.Make();
-    path.moveTo(points[0].x, points[0].y);
+    // 2. Create Stroke Path (Line)
+    const strokePath = Skia.Path.Make();
+    strokePath.moveTo(points[0].x, points[0].y);
     for (let i = 1; i < points.length; i++) {
       const prev = points[i - 1];
       const curr = points[i];
       const midX = (prev.x + curr.x) / 2;
-      path.cubicTo(midX, prev.y, midX, curr.y, curr.x, curr.y);
+      strokePath.cubicTo(midX, prev.y, midX, curr.y, curr.x, curr.y);
     }
+
+    // 3. Create Fill Path (Area under curve)
+    const fillPath = strokePath.copy();
+    fillPath.lineTo(points[points.length - 1].x, chartHeight);
+    fillPath.lineTo(points[0].x, chartHeight);
+    fillPath.close();
 
     return (
       <View className="py-4">
-        <Canvas style={{ width: size, height: chartHeight }}>
+        <Canvas style={{ width: effectiveWidth, height: chartHeight }}>
+          {/* Area Fill with Shader correctly nested */}
+          <Path path={fillPath}>
+            <LinearGradient
+              start={vec(0, 0)}
+              end={vec(0, chartHeight)}
+              colors={['#10b98130', 'transparent']}
+            />
+          </Path>
+          
+          {/* Main Stroke Line */}
           <Path
-            path={path}
+            path={strokePath}
             strokeWidth={3}
             style="stroke"
             strokeJoin="round"
             strokeCap="round"
             color="#10b981"
           />
-          <LinearGradient
-            start={vec(0, 0)}
-            end={vec(0, chartHeight)}
-            colors={['#10b98120', 'transparent']}
-          />
         </Canvas>
-        <View className="flex-row justify-between px-2 mt-2">
+        
+        {/* Labels */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 8 }}>
           {trendData.map((d, i) => (
-            <Text key={i} className="text-[8px] font-black text-muted-foreground uppercase">{d.label}</Text>
+            <Text key={i} style={{ fontSize: 8, fontWeight: '900', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>
+              {d.label}
+            </Text>
           ))}
         </View>
       </View>
@@ -106,25 +127,27 @@ export const SavingsRateView = memo(({ currentRate, trendData }: SavingsRateView
     <View className="w-full">
       {/* View Toggle */}
       <View className="flex-row bg-white/5 p-1 rounded-2xl self-center mb-6 border border-white/5">
-        <Pressable 
+        <TouchableOpacity 
           onPress={() => setViewMode('month')}
-          className={`px-6 py-2 rounded-xl ${viewMode === 'month' ? 'bg-primary shadow-sm' : ''}`}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 24, paddingVertical: 8, borderRadius: 12, backgroundColor: viewMode === 'month' ? '#10b981' : 'transparent' }}
         >
-          <Text className={`text-[10px] font-black uppercase tracking-widest ${viewMode === 'month' ? 'text-[#050505]' : 'text-white/40'}`}>
+          <Text style={{ fontSize: 10, fontWeight: '900', color: viewMode === 'month' ? '#050505' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1.5 }}>
             Month
           </Text>
-        </Pressable>
-        <Pressable 
+        </TouchableOpacity>
+        <TouchableOpacity 
           onPress={() => setViewMode('trend')}
-          className={`px-6 py-2 rounded-xl ${viewMode === 'trend' ? 'bg-primary shadow-sm' : ''}`}
+          activeOpacity={0.7}
+          style={{ paddingHorizontal: 24, paddingVertical: 8, borderRadius: 12, backgroundColor: viewMode === 'trend' ? '#10b981' : 'transparent' }}
         >
-          <Text className={`text-[10px] font-black uppercase tracking-widest ${viewMode === 'trend' ? 'text-[#050505]' : 'text-white/40'}`}>
+          <Text style={{ fontSize: 10, fontWeight: '900', color: viewMode === 'trend' ? '#050505' : 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: 1.5 }}>
             6M Trend
           </Text>
-        </Pressable>
+        </TouchableOpacity>
       </View>
 
       {viewMode === 'month' ? renderGauge() : renderTrend()}
     </View>
   );
-});
+};
