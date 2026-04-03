@@ -13,6 +13,8 @@ import {
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { generateAIResponse } from '@/lib/ai-service';
+import { AIToggle } from '@/components/ui/AIToggle';
+import type { AIMode } from '@/lib/llama-service';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
 
@@ -118,6 +120,7 @@ export default function AIChatScreen() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [aiMode, setAiMode] = useState<AIMode>('cloud');
   const flatListRef = useRef<FlatList>(null);
 
   const sendMessage = async () => {
@@ -141,7 +144,7 @@ export default function AIChatScreen() {
         content: m.text
       }));
 
-      const response = await generateAIResponse(apiMessages);
+      const response = await generateAIResponse(apiMessages, aiMode === 'local');
 
       const aiMsg: Message = {
         id: (Date.now() + 1).toString(),
@@ -163,13 +166,16 @@ export default function AIChatScreen() {
 
   return (
     <View className="flex-1 bg-[#050505]">
-      {/* Premium Header */}
-      <View className="pt-16 pb-6 px-6 border-b border-white/5">
+      <View className="pt-16 pb-4 px-6 border-b border-white/5">
         <Text className="text-3xl font-black text-foreground tracking-tighter">AI Assistant</Text>
-        <View className="flex-row items-center mt-2 gap-x-2">
-          {/* Use a solid dot for status to avoid ambiguous shadow warnings */}
-          <View className="h-2 w-2 rounded-full bg-[#10b981]" />
-          <Text className="text-xs font-black text-[#10b981] uppercase tracking-[2px] opacity-80">Context Ready</Text>
+        <View className="flex-row items-center justify-between mt-3">
+          <View className="flex-row items-center gap-x-2">
+            <View className={`h-2 w-2 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
+            <Text className={`text-xs font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'}`}>
+              {aiMode === 'cloud' ? 'Cloud' : 'Offline'}
+            </Text>
+          </View>
+          <AIToggle mode={aiMode} onToggle={setAiMode} />
         </View>
       </View>
 
