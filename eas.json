@@ -1,0 +1,32 @@
+{
+  "cli": {
+    "version": ">= 12.0.1",
+    "appExtensions": {
+      "FinanceApp": {
+        "entitlements": {
+          "com.apple.developer.icloud-container-identifiers": [
+            "iCloud.com.pdc.finance"
+          ]
+        }
+      }
+    }
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal"
+    },
+    "preview": {
+      "distribution": "internal",
+      "ios": {
+        "simulator": false
+      }
+    },
+    "production": {
+      "autoIncrement": true
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

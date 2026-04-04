@@ -99,11 +99,18 @@ export default function SettingsScreen() {
                 </View>
                 <AIToggle mode={aiMode} onToggle={setAiMode} />
               </View>
-              <Text className="text-[10px] text-muted-foreground leading-4">
+              <Text className="text-[10px] text-muted-foreground leading-4 mb-4">
                 {aiMode === 'cloud'
                   ? 'Cloud Mode uses high-performance models for complex budgeting analysis.'
                   : 'Local Mode uses on-device inference for maximum privacy and offline stability.'}
               </Text>
+              
+              <Link href="/model-settings" asChild>
+                <TouchableOpacity className="flex-row items-center justify-between">
+                  <Text className="text-primary text-[10px] font-black uppercase tracking-widest">Manage Native AI Engine</Text>
+                  <IconSymbol name="chevron.right" size={14} color="#10b981" />
+                </TouchableOpacity>
+              </Link>
             </View>
 
             <View className="flex-row items-center justify-between p-5">

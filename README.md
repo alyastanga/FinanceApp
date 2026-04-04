@@ -1,69 +1,62 @@
 # FinanceApp 🚀
 
-A premium, AI-driven personal finance application with high-performance visualizations, built for the modern mission-control experience.
+A high-fidelity, AI-driven personal finance "Mission Control" dashboard. Built with a privacy-first philosophy, featuring professional-grade visualizations and on-device LLM intelligence.
 
-## ✨ Features
+## ✨ Core Intelligence
 
-- **Mission Control Dashboard**: Real-time spending breakdown and categorical mix using **React Native Skia**.
-- **Goal Management**: Reactive local-first tracking for your savings targets, from emergency funds to Japan trips.
-- **AI-Powered Insights**: Integrated AI service for financial analysis and categorization.
-- **Gold-Standard Initialization**: Robust "Absolute Isolation" bootstrap for Skia-Web, ensuring zero-crash graphics on all platforms.
-- **Local-First Speed**: Powered by **WatermelonDB** for instant updates and offline capability.
-- **Premium Aesthetics**: Glassmorphic UI with vibrant Emerald and Charcoal themes.
+- **Mission Control 2.0**: Real-time spending habits and budget allocation visualizations using **React Native Skia**.
+- **Privacy-First AI**: Toggle between **Cloud AI** (OpenRouter) and **Native AI** (On-device TinyLlama) for 100% offline financial analysis.
+- **Multi-Currency Engine**: Automated IP-based currency detection and live exchange rates via the Frankfurter & Finnhub APIs.
+- **Wealth Hub**: Track assets, savings goals, and categorical spending with instant, local-first synchronization via **WatermelonDB**.
+- **Portfolio Management**: Manage cash, crypto, stocks, and real estate with smart "one-look" performance metrics.
 
 ---
 
 ## 🛠 Tech Stack
 
-- **Core**: Expo (React Native), Expo Router
-- **Graphics**: @shopify/react-native-skia
-- **Database**: WatermelonDB (SQLite/IndexedDB)
-- **Styling**: NativeWind (Tailwind CSS)
-- **Runtime**: CanvasKit WASM (v0.40.0)
+- **Framework**: Expo (React Native) + Expo Router
+- **Graphics Engine**: @shopify/react-native-skia (High-fps visualizations)
+- **Data Engine**: WatermelonDB (SQLite/IndexedDB Local Persistence)
+- **AI Runtime**: llama.rn (On-device GGUF inference)
+- **Styling**: NativeWind (Tailwind CSS) + Glassmorphism UI
+- **Market Data**: Frankfurter (Currency) & Finnhub (Stocks/Crypto)
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Install Dependencies
+### 1. Clone & Install
 ```bash
+git clone https://github.com/alyastanga/FinanceApp.git
+cd FinanceApp
 npm install
 ```
 
 ### 2. Configure Environment
-Create a `.env` file with your credentials:
+Create a `.env` file in the root with your credentials:
 ```bash
-SUPABASE_URL=your_url
-SUPABASE_ANON_KEY=your_key
-OPENAI_API_KEY=your_key
+EXPO_PUBLIC_OPENROUTER_API_KEY=your_key
+EXPO_PUBLIC_FINNHUB_API_KEY=your_key
 ```
 
-### 3. Start Development
+### 3. Launch
 ```bash
+# Start Metro Bundler
 npx expo start
+
+# Note: For Native AI (llama.rn) support, you must build a development client:
+npx expo run:ios
+# or
+npx expo run:android
 ```
-- Press `w` for Web
-- Press `i` for iOS
-- Press `a` for Android
-
----
-
-## 🏗 Key Components
-
-### Skia Graphics
-The application uses a custom-tuned Skia engine. For web users, we implement a **Direct CDN Bootstrap** in `index.web.js` to bypass initialization race conditions and ensure 100% WebGL context reliability.
-
-### Goal Tracking
-Managed in the **Goals Tab**, providing real-time synchronization between your manual entries and the global monitoring dashboard using WatermelonDB Observables.
 
 ---
 
 ## 🎨 Design Language
-- **Typography**: Inter / Outfit
-- **Color Palette**: Dark Mode Midnight (`#050505`) with Emerald accents (`#10b981`).
-- **Aesthetic**: Minimalist "Mission Control" using `BlurView` and glassmorphic surface depth.
+
+- **Theme**: Charcoal Midnight (`#050505`) with Emerald accents (`#10b981`).
+- **Aesthetic**: Minimalist "Mission Control" using `BlurView` and deep glassmorphic textures.
+- **Typography**: Inter / Outfit for high-legibility financial data and premium feel.
 
 ---
-
-## 📜 License
-MIT
+MIT License | 2026 FinanceApp Team
