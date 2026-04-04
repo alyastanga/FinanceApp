@@ -13,8 +13,7 @@ import {
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { generateAIResponse } from '@/lib/ai-service';
-import { AIToggle } from '@/components/ui/AIToggle';
-import type { AIMode } from '@/lib/llama-service';
+import { useAI } from '../../context/AIContext';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
 
@@ -110,6 +109,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
 };
 
 export default function AIChatScreen() {
+  const { aiMode } = useAI();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -120,7 +120,6 @@ export default function AIChatScreen() {
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [aiMode, setAiMode] = useState<AIMode>('cloud');
   const flatListRef = useRef<FlatList>(null);
 
   const sendMessage = async () => {
@@ -138,7 +137,7 @@ export default function AIChatScreen() {
     setIsTyping(true);
     
     try {
-      // Prepare messages for API (mistral 7b instruct format)
+      // Prepare messages for API
       const apiMessages = [...messages, userMsg].map(m => ({
         role: m.role,
         content: m.text
@@ -168,14 +167,11 @@ export default function AIChatScreen() {
     <View className="flex-1 bg-[#050505]">
       <View className="pt-16 pb-4 px-6 border-b border-white/5">
         <Text className="text-3xl font-black text-foreground tracking-tighter">AI Assistant</Text>
-        <View className="flex-row items-center justify-between mt-3">
-          <View className="flex-row items-center gap-x-2">
-            <View className={`h-2 w-2 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
-            <Text className={`text-xs font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'}`}>
-              {aiMode === 'cloud' ? 'Cloud' : 'Offline'}
-            </Text>
-          </View>
-          <AIToggle mode={aiMode} onToggle={setAiMode} />
+        <View className="flex-row items-center mt-3">
+          <View className={`h-2 w-2 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
+          <Text className={`text-xs font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'} ml-2`}>
+            {aiMode === 'cloud' ? 'Cloud' : 'Offline'}
+          </Text>
         </View>
       </View>
 

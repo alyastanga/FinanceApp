@@ -1,14 +1,16 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export default appSchema({
-  version: 2, // Bumped version for goals table
+  version: 7,
   tables: [
     tableSchema({
       name: 'incomes',
       columns: [
         { name: 'amount', type: 'number' },
         { name: 'source', type: 'string' },
+        { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
       ]
     }),
     tableSchema({
@@ -16,17 +18,44 @@ export default appSchema({
       columns: [
         { name: 'amount', type: 'number' },
         { name: 'category', type: 'string' },
+        { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
       ]
     }),
     tableSchema({
       name: 'goals',
       columns: [
-        { name: 'title', type: 'string' },
+        { name: 'name', type: 'string' },
         { name: 'target_amount', type: 'number' },
-        { name: 'saved_amount', type: 'number' },
-        { name: 'target_date', type: 'number' },
+        { name: 'current_amount', type: 'number' },
+        { name: 'target_completion_date', type: 'number' },
+        { name: 'sync_to_calendar', type: 'boolean' },
+        { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ]
+    }),
+    tableSchema({
+      name: 'budgets',
+      columns: [
+        { name: 'category', type: 'string' },
+        { name: 'amount_limit', type: 'number' },
+        { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ]
+    }),
+    tableSchema({
+      name: 'portfolio',
+      columns: [
+        { name: 'name', type: 'string' },
+        { name: 'asset_type', type: 'string' },
+        { name: 'value', type: 'number' },
+        { name: 'change_24h', type: 'number' },
+        { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
       ]
     }),
   ]

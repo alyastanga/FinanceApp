@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import withObservables from '@nozbe/watermelondb/react/withObservables';
-import database from '../../database';
-import { BudgetChart } from '../../components/ui/BudgetChart';
+import React, { useState } from 'react';
+import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import TransactionForm from '../../components/TransactionForm';
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { BudgetChart } from '../../components/ui/BudgetChart';
+import database from '../../database';
 
 interface MissionControlProps {
   incomes: any[];
@@ -28,9 +28,9 @@ const GoalProgressGlimpseComp = ({ goal }: { goal: any }) => {
         </Text>
       </View>
       <View className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-        <View 
+        <View
           style={{ width: `${Math.min(100, progress)}%` }}
-          className="h-full bg-primary" 
+          className="h-full bg-primary"
         />
       </View>
     </View>
@@ -42,7 +42,7 @@ const GoalProgressGlimpse = withObservables(['goal'], ({ goal }) => ({
 }))(GoalProgressGlimpseComp);
 
 const Dashboard = ({ incomes, expenses, goals, budgets }: MissionControlProps) => {
-  const [activeModal, setActiveModal] = useState<boolean>(false);
+  const [activeType, setActiveType] = useState<'income' | 'expense' | null>(null);
 
   // Safely handle loading/empty states
   if (!incomes || !expenses || !goals || !budgets) {
@@ -86,12 +86,6 @@ const Dashboard = ({ incomes, expenses, goals, budgets }: MissionControlProps) =
             <Text className="text-[10px] font-black uppercase tracking-[4px] text-primary/60 mb-1">Mission Control</Text>
             <Text className="text-3xl font-black text-white">Dashboard</Text>
           </View>
-          <TouchableOpacity 
-            onPress={() => setActiveModal(true)}
-            className="bg-primary h-12 w-12 rounded-2xl items-center justify-center shadow-lg shadow-primary/40"
-          >
-            <Text className="text-white text-2xl font-bold">+</Text>
-          </TouchableOpacity>
         </View>
 
         {/* 1. Monthly Pulse Card */}
@@ -100,40 +94,43 @@ const Dashboard = ({ incomes, expenses, goals, budgets }: MissionControlProps) =
             colors={['#10b98115', 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            className="px-6 pt-6 pb-4"
           >
-            <Text className="text-[10px] font-black uppercase tracking-[3px] text-muted-foreground/40 mb-2">Monthly Pulse</Text>
-            <Text className="text-4xl font-black tracking-tighter text-white mb-1">
-              ${netFlow.toLocaleString(undefined, { minimumFractionDigits: 0 })}
-            </Text>
-            <View className="flex-row items-center gap-x-3 mt-5">
-               <View className="flex-1 rounded-2xl bg-white/5 px-4 py-3 border border-white/5">
+            <View className="p-6">
+              <Text className="text-[10px] font-bold uppercase tracking-[1px] text-muted-foreground/50 mb-2 pl-0.5">
+                Monthly Pulse
+              </Text>
+              <Text className="text-4xl font-black tracking-tighter text-white mb-1">
+                ${netFlow.toLocaleString(undefined, { minimumFractionDigits: 0 })}
+              </Text>
+              <View className="flex-row items-center gap-x-3 mt-5">
+                <View className="flex-1 rounded-2xl bg-white/5 px-4 py-3 border border-white/5">
                   <Text className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Income</Text>
                   <Text className="text-base font-bold text-primary" numberOfLines={1} adjustsFontSizeToFit>+${totalIncome.toLocaleString()}</Text>
-               </View>
-               <View className="flex-1 rounded-2xl bg-white/5 px-4 py-3 border border-white/5">
+                </View>
+                <View className="flex-1 rounded-2xl bg-white/5 px-4 py-3 border border-white/5">
                   <Text className="text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Expenses</Text>
                   <Text className="text-base font-bold text-destructive" numberOfLines={1} adjustsFontSizeToFit>-${totalExpenses.toLocaleString()}</Text>
-               </View>
+                </View>
+              </View>
             </View>
           </LinearGradient>
         </View>
 
         <View className="flex-row gap-4 mb-6">
           {/* 2. Monitoring Glimpse */}
-          <TouchableOpacity 
-            onPress={() => router.push('/ai')}
+          <TouchableOpacity
+            onPress={() => router.push('/monitoring')}
             className="flex-1 rounded-[32px] bg-card/40 border border-white/5 p-5 items-center justify-center overflow-hidden"
           >
             <View style={{ opacity: 0.12, position: 'absolute', bottom: -20, right: -20 }}>
-               <BudgetChart data={chartData.slice(0, 3)} size={100} />
+              <BudgetChart data={chartData.slice(0, 3)} size={200} />
             </View>
             <Text className="text-[10px] font-black uppercase tracking-widest text-muted-foreground text-center mb-1.5">Monitoring</Text>
-            <Text className="text-white font-bold text-center text-sm">Spending Mix</Text>
+            <Text className="text-white font-bold text-center text-sm">Spending Habits</Text>
           </TouchableOpacity>
 
           {/* 3. Budget Glimpse */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/budget')}
             className="flex-1 rounded-[32px] bg-card/40 border border-white/5 p-5 items-center justify-center"
           >
@@ -170,13 +167,13 @@ const Dashboard = ({ incomes, expenses, goals, budgets }: MissionControlProps) =
         </View>
 
         {/* 5. Goals Glimpse */}
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => router.push('/goals')}
           className="mb-10 rounded-[32px] bg-card/40 border border-white/5 p-6"
         >
           <View className="flex-row justify-between items-center mb-4">
-             <Text className="text-sm font-black uppercase tracking-widest text-white">Goal Progress</Text>
-             <IconSymbol name="target" size={16} color="rgba(255,255,255,0.2)" />
+            <Text className="text-sm font-black uppercase tracking-widest text-white">Goal Progress</Text>
+            <IconSymbol name="target" size={16} color="rgba(255,255,255,0.2)" />
           </View>
           {goals[0] ? (
             <GoalProgressGlimpse goal={goals[0]} />
@@ -186,31 +183,36 @@ const Dashboard = ({ incomes, expenses, goals, budgets }: MissionControlProps) =
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Transaction Modal (Reused from original index) */}
-      <Modal
-        visible={activeModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setActiveModal(false)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          className="flex-1"
-        >
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setActiveModal(false)}
-            className="flex-1 justify-end bg-black/60"
+      {/* Transaction Sheet (Replacing native Modal to fix navigation context) */}
+      {activeType && (
+        <View className="absolute inset-0 z-50">
+          <TouchableOpacity
+            activeOpacity={1}
+            onPress={() => setActiveType(null)}
+            className="absolute inset-0 bg-black/60"
+          />
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            className="flex-1 justify-end"
           >
-             <BlurView intensity={20} className="rounded-t-[40px] overflow-hidden border-t border-white/10">
-                <View className="bg-card/90 p-8 pt-4">
+            <TouchableOpacity
+              activeOpacity={1}
+              onPress={(e) => e.stopPropagation()}
+              className="w-full"
+            >
+              <BlurView intensity={20} className="rounded-t-[40px] overflow-hidden border-t border-white/10">
+                <View className="bg-card/90 p-8 pt-4 pb-12">
                   <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-8" />
-                  <TransactionForm />
+                  <TransactionForm
+                    initialType={activeType}
+                    onSuccess={() => setActiveType(null)}
+                  />
                 </View>
-             </BlurView>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
-      </Modal>
+              </BlurView>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </SafeAreaView>
   );
 }

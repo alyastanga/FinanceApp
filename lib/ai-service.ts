@@ -1,30 +1,39 @@
 import database from '../database';
-import { calculateSafeToSpend } from './safe-to-spend';
+import { calculateBudgetInsights } from './budget-engine';
 import { generateLocalResponse, initLocalModel } from './llama-service';
 
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export async function getFinancialContext() {
-  const stats = await calculateSafeToSpend();
-  const recentExpenses = await database.get('expenses')
-    .query()
-    .fetch();
+  const incomes = await database.get('incomes').query().fetch();
+  const expenses = await database.get('expenses').query().fetch();
+  const goals = await database.get('goals').query().fetch();
+  const portfolio = await database.get('portfolio').query().fetch();
 
+  const insights = calculateBudgetInsights(incomes, expenses, goals);
+  
+  const totalPortfolioValue = portfolio.reduce((sum, item) => sum + ((item as any).value || 0), 0);
+  const netWorth = totalPortfolioValue + insights.monthlyIncome - insights.monthlyFixedExpenses;
+  
   // Sort and take last 10
-  const sortedExpenses = recentExpenses
+  const recentExpenses = expenses
     .sort((a, b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime())
     .slice(0, 10);
 
   const contextString = `
     Current context:
-    - Safe to Spend Daily: $${stats.safeDaily.toFixed(2)}
-    - Total Monthly Income: $${stats.totalIncome}
-    - Total Monthly Expenses: $${stats.totalExpenses}
-    - Monthly Goal Commitment: $${stats.totalGoalTarget}
-    - Days left in month: ${stats.daysLeft}
+    - Safe to Spend Daily: $${insights.dailySafeToSpend.toFixed(2)}
+    - Total Monthly Income: $${insights.monthlyIncome}
+    - Total Monthly (Fixed) Expenses: $${insights.monthlyFixedExpenses}
+    - Monthly Goal Commitment: $${insights.monthlyGoalTarget}
+    - Days left in month: ${insights.remainingDays}
+    
+    Portfolio & Net Worth:
+    - Total Portfolio Value: $${totalPortfolioValue.toLocaleString()}
+    - Asset Allocation: ${portfolio.map(p => `${(p as any).name} ($${(p as any).value.toLocaleString()})`).join(', ')}
     
     Last 10 transactions:
-    ${sortedExpenses.map(e => `- ${(e as any).category}: $${(e as any).amount}`).join('\n')}
+    ${recentExpenses.map(e => `- ${(e as any).category}: $${(e as any).amount}`).join('\n')}
   `;
 
   return contextString;
@@ -187,9 +196,22 @@ export async function generateSuggestedBudget() {
   }
 }
 
-export async function explainFinancialGraph(data: any, context: string) {
+export async function explainFinancialGraph(data: any, context: string, useLocal: boolean = false) {
+  // ── Local Mode Fallback ──
+  if (useLocal) {
+    console.log('[AI Service] Interpreting graph in LOCAL mode...');
+    await initLocalModel();
+    const prompt = [{ role: 'user', content: `Analyze this ${context} chart data: ${JSON.stringify(data)}. Give me a 2-sentence summary.` }];
+    return generateLocalResponse(prompt);
+  }
+
   const apiKey = process.env.EXPO_PUBLIC_OPENROUTER_API_KEY;
-  if (!apiKey || apiKey === 'your_key_here') return "Please configure your OpenRouter API Key to use this feature.";
+  if (!apiKey || apiKey === 'your_key_here') {
+    // Auto-fallback if no key
+    await initLocalModel();
+    const prompt = [{ role: 'user', content: `Analyze this ${context} chart data: ${JSON.stringify(data)}. Give me a 2-sentence summary.` }];
+    return generateLocalResponse(prompt);
+  }
 
   const prompt = {
     role: 'system',

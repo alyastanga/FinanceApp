@@ -4,73 +4,65 @@ plan: 1
 type: execute
 wave: 1
 depends_on: []
-files_modified: 8
+files_modified: 5
 autonomous: true
 requirements: ["FND-01", "FND-02", "FND-03"]
 must_haves:
   truths:
-    - "App compiles and runs"
-    - "SQLite database initializes successfully"
-    - "Navigation between Home and Settings screens works"
+    - "Supabase client initializes without errors"
+    - "AuthContext provides session state to the root layout"
+    - "App redirects to Login when no session exists"
   artifacts:
-    - path: "app/_layout.tsx"
-      provides: "Root navigation layout"
-      min_lines: 20
-    - path: "app/(tabs)/index.tsx"
-      provides: "Home Dashboard"
-      min_lines: 10
-    - path: "database/index.ts"
-      provides: "WatermelonDB instance"
-      min_lines: 10
-  key_links:
-    - from: "app/_layout.tsx"
-      to: "database/index.ts"
-      via: "DatabaseProvider"
+    - path: "lib/supabase.ts"
+      provides: "Supabase client"
+    - path: "context/AuthContext.tsx"
+      provides: "User session provider"
+    - path: "app/(auth)/login.tsx"
+      provides: "Identity entry point"
 ---
 
 <objective>
-Initialize Expo Router project, set up WatermelonDB for local-first sqlite storage, and build basic navigation UI.
+Setup Supabase authentication and establish a protected navigation structure where the main dashboard is only accessible to logged-in users.
 </objective>
 
 <task>
-<name>Scaffold Root Navigation</name>
+<name>Supabase & Auth Infrastructure</name>
 <files>
-- `app/_layout.tsx`
-- `app/(tabs)/index.tsx`
-- `app/settings.tsx`
+- `lib/supabase.ts`
+- `context/AuthContext.tsx`
 </files>
 <read_first>
-- `package.json`
+- `.env`
 </read_first>
 <action>
-Create `app/_layout.tsx` to handle root navigation using Stack or Tabs. Include `app/(tabs)/index.tsx` for Home and `app/settings.tsx` for Settings so that the navigation requirement is met.
+Create `lib/supabase.ts` to initialize the `@supabase/supabase-js` client. Create `context/AuthContext.tsx` using `useContext` to expose `session`, `user`, and `signOut` to the application. Implement a listener for `onAuthStateChange` to keep the session in sync.
 </action>
 <verify>
 <automated>npm run lint</automated>
-Check that `app/_layout.tsx`, `app/(tabs)/index.tsx`, and `app/settings.tsx` exist.
+Check that `context/AuthContext.tsx` correctly handles the loading state during the initial session check.
 </verify>
 <done>
-Navigation structure is scaffolded and renders without errors.
+Auth infrastructure is ready and provides reactive session state.
 </done>
 </task>
 
 <task>
-<name>Setup WatermelonDB Instance</name>
+<name>Identity UI & Root Guard</name>
 <files>
-- `database/index.ts`
+- `app/(auth)/login.tsx`
 - `app/_layout.tsx`
 </files>
 <read_first>
-- `database/schema.ts`
+- `app/(tabs)/_layout.tsx`
 </read_first>
 <action>
-Create `database/index.ts`. Initialize a new WatermelonDB `Database` instance using the `@nozbe/watermelondb/adapters/sqlite` SQLiteAdapter, and import the database in `app/_layout.tsx` to pass it through a React Provider context to the rest of the application.
+Build a simple Login screen in `app/(auth)/login.tsx` using NativeWind. Update the root `app/_layout.tsx` to wrap the entire project in `AuthProvider`. Use a conditional redirect (via `expo-router`'s `Slot` or `Stack`) that sends unauthenticated users to `/(auth)/login`.
 </action>
 <verify>
 <automated>npm run lint</automated>
-Check that `database/index.ts` exists and exposes the database, and that it is used in `app/_layout.tsx`.
+Ensure `app/_layout.tsx` includes the `AuthProvider` and logic for navigating based on session presence.
 </verify>
 <done>
-SQLite is initialized and context is available to children.
+Users are successfully guarded by authentication and can log in via the UI.
 </done>
 </task>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Switch, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Modal, FlatList } from 'react-native';
 import database from '../database';
 import Goal from '../database/models/Goal';
+import { IconSymbol } from './ui/icon-symbol';
 
 interface GoalFormProps {
   goal?: Goal | null;
@@ -10,27 +11,36 @@ interface GoalFormProps {
 }
 
 export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
-  const [title, setTitle] = useState(goal?.title || '');
+  const [name, setName] = useState(goal?.name || '');
   const [targetAmount, setTargetAmount] = useState(goal?.targetAmount?.toString() || '');
-  const [savedAmount, setSavedAmount] = useState(goal?.savedAmount?.toString() || '0');
+  const [currentAmount, setCurrentAmount] = useState(goal?.currentAmount?.toString() || '0');
+  const [targetCompletionDate, setTargetCompletionDate] = useState<Date>(
+    goal?.targetCompletionDate ? new Date(goal.targetCompletionDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+  );
+  const [syncToCalendar, setSyncToCalendar] = useState(goal?.syncToCalendar || false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [currentMonth, setCurrentMonth] = useState(new Date(targetCompletionDate.getFullYear(), targetCompletionDate.getMonth(), 1));
 
   const handleSubmit = async () => {
-    if (!title || !targetAmount) return;
+    if (!name || !targetAmount) return;
 
     try {
       await database.write(async () => {
         if (goal) {
-          await goal.update((record) => {
-            record.title = title;
+          await goal.update((record: any) => {
+            record.name = name;
             record.targetAmount = parseFloat(targetAmount);
-            record.savedAmount = parseFloat(savedAmount);
+            record.currentAmount = parseFloat(currentAmount);
+            record.targetCompletionDate = targetCompletionDate.getTime();
+            record.syncToCalendar = syncToCalendar;
           });
         } else {
           await database.get('goals').create((record: any) => {
-            record.title = title;
+            record.name = name;
             record.targetAmount = parseFloat(targetAmount);
-            record.savedAmount = parseFloat(savedAmount);
-            record.createdAt = new Date();
+            record.currentAmount = parseFloat(currentAmount);
+            record.targetCompletionDate = targetCompletionDate.getTime();
+            record.syncToCalendar = syncToCalendar;
           });
         }
       });
@@ -57,8 +67,8 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
             Goal Title
           </Text>
           <TextInput
-            value={title}
-            onChangeText={setTitle}
+            value={name}
+            onChangeText={setName}
             placeholder="e.g. New Garage, Vacation Fund"
             placeholderTextColor="#4b5563"
             className="text-lg font-bold text-white px-2 py-1"
@@ -85,8 +95,8 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
               Saved Amount ($)
             </Text>
             <TextInput
-              value={savedAmount}
-              onChangeText={setSavedAmount}
+              value={currentAmount}
+              onChangeText={setCurrentAmount}
               placeholder="0.00"
               placeholderTextColor="#4b5563"
               keyboardType="numeric"
@@ -94,7 +104,84 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
             />
           </View>
         )}
+
+        <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
+          <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
+            Target Completion Date
+          </Text>
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} className="px-2 py-1">
+            <Text className="text-lg font-bold text-primary">
+              {targetCompletionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View className="bg-white/5 rounded-3xl p-4 border border-white/5 flex-row justify-between items-center px-6">
+           <View>
+              <Text className="text-white font-bold text-sm">Sync to Google Calendar</Text>
+              <Text className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Connect your timeline</Text>
+           </View>
+           <TouchableOpacity 
+             onPress={() => setSyncToCalendar(!syncToCalendar)}
+             className={`w-12 h-6 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : 'bg-white/10'}`}
+           >
+              <View className={`w-4 h-4 rounded-full bg-white ${syncToCalendar ? 'self-end' : 'self-start'}`} />
+           </TouchableOpacity>
+        </View>
       </View>
+
+      {/* Advanced Calendar Modal */}
+      <Modal visible={showDatePicker} transparent animationType="fade">
+        <View className="flex-1 justify-center items-center bg-black/90 px-4">
+          <View className="bg-[#121212] p-6 rounded-[40px] w-full border border-white/10 shadow-2xl">
+              <View className="flex-row justify-between items-center mb-6">
+                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>
+                   <IconSymbol name="chevron.left" size={24} color="#10b981" />
+                </TouchableOpacity>
+                <Text className="text-white font-black text-lg">
+                   {currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}>
+                   <IconSymbol name="chevron.right" size={24} color="#10b981" />
+                </TouchableOpacity>
+              </View>
+
+              <View className="flex-row flex-wrap">
+                 {['S','M','T','W','T','F','S'].map((d, i) => (
+                    <View key={i} className="w-[14.28%] items-center mb-4">
+                       <Text className="text-[10px] font-black text-muted-foreground">{d}</Text>
+                    </View>
+                 ))}
+                 {/* Generate Calendar Days */}
+                 {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay() }).map((_, i) => (
+                    <View key={`pad-${i}`} className="w-[14.28%] h-10" />
+                 ))}
+                 {Array.from({ length: new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate() }).map((_, i) => {
+                    const day = i + 1;
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                    const isSelected = date.toDateString() === targetCompletionDate.toDateString();
+                    const isToday = date.toDateString() === new Date().toDateString();
+
+                    return (
+                      <TouchableOpacity 
+                        key={day} 
+                        onPress={() => {
+                          setTargetCompletionDate(date);
+                        }}
+                        className={`w-[14.28%] h-10 items-center justify-center rounded-xl ${isSelected ? 'bg-primary' : ''} ${isToday && !isSelected ? 'border border-primary/30' : ''}`}
+                      >
+                         <Text className={`font-bold ${isSelected ? 'text-[#050505]' : 'text-white/70'}`}>{day}</Text>
+                      </TouchableOpacity>
+                    );
+                 })}
+              </View>
+
+              <TouchableOpacity onPress={() => setShowDatePicker(false)} className="bg-primary py-4 rounded-2xl items-center mt-8">
+                 <Text className="text-[#050505] font-black uppercase tracking-widest text-xs">Confirm Selection</Text>
+              </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <View className="flex-row gap-x-4 pt-4">
         <TouchableOpacity 

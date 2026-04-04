@@ -32,7 +32,11 @@ export async function clearAllUserData() {
           .eq('user_id', userId);
         
         if (error) {
-          console.error(`[Data Management] Failed to clear cloud table ${table}:`, error.message);
+          if (error.code === 'PGRST116' || error.message.includes('Could not find the table')) {
+             console.warn(`[Data Management] Cloud table ${table} not found, skipping.`);
+          } else {
+             console.error(`[Data Management] Failed to clear cloud table ${table}:`, error.message);
+          }
         }
       }
     }

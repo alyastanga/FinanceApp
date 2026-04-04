@@ -12,6 +12,9 @@
  */
 
 import database from '../database';
+import * as FileSystem from 'expo-file-system/legacy';
+
+const MODEL_NAME = 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -40,24 +43,28 @@ let modelState: LocalModelState = {
  * @param modelPath - File URI to the GGUF model (e.g. from app assets or downloads)
  */
 export async function initLocalModel(modelPath?: string): Promise<boolean> {
-  // Already initialized
-  if (modelState.initialized) return true;
+  // Already initialized in native mode
+  if (modelState.initialized && modelState.mode === 'native') return true;
 
   try {
-    // Dynamically import llama.rn — this will throw in Expo Go
+    // Dynamically import llama.rn — this will throw in Expo Go or if no native module
     const { initLlama } = await import('llama.rn');
 
-    if (!modelPath) {
-      console.warn('[Local LLM] No model path provided, using fallback mode.');
+    // Determine path — default to documentDirectory/tinyllama if none provided
+    const resolvedPath = modelPath || `${FileSystem.documentDirectory}${MODEL_NAME}`;
+    
+    const info = await FileSystem.getInfoAsync(resolvedPath);
+    if (!info.exists) {
+      console.log('[Local LLM] No native model found at path, using offline fallback engine.');
       modelState = { initialized: true, mode: 'fallback', context: null };
       return true;
     }
 
-    console.log('[Local LLM] Initializing native context...');
+    console.log('[Local LLM] Initializing native context with model:', resolvedPath);
     const context = await initLlama({
-      model: modelPath,
+      model: resolvedPath,
       n_ctx: 2048,
-      n_gpu_layers: 99, // Use Metal on iOS, OpenCL on Android
+      n_gpu_layers: 99, // Use GPU acceleration if possible
       use_mlock: true,
     });
 
@@ -65,8 +72,7 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
     console.log('[Local LLM] Native model loaded successfully.');
     return true;
   } catch (error: any) {
-    // Expected in Expo Go — llama.rn requires custom native code
-    console.log('[Local LLM] Native module unavailable, using offline fallback engine.');
+    console.log('[Local LLM] Native module unavailable or error, using fallback engine.');
     modelState = { initialized: true, mode: 'fallback', context: null };
     return true;
   }
@@ -132,10 +138,13 @@ async function generateFallbackResponse(
     const incomes = await database.get('incomes').query().fetch();
     const expenses = await database.get('expenses').query().fetch();
     const goals = await database.get('goals').query().fetch();
+    const portfolio = await database.get('portfolio').query().fetch();
 
     const totalIncome = incomes.reduce((sum, i) => sum + ((i as any).amount || 0), 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + ((e as any).amount || 0), 0);
+    const totalPortfolioValue = portfolio.reduce((sum, p) => sum + ((p as any).value || 0), 0);
     const netFlow = totalIncome - totalExpenses;
+    const netWorthValue = totalPortfolioValue + (netFlow > 0 ? netFlow : 0);
     const savingsRate = totalIncome > 0 ? ((netFlow / totalIncome) * 100).toFixed(1) : '0';
 
     // Category breakdown
@@ -191,12 +200,22 @@ async function generateFallbackResponse(
         `\n\nTotal Expenses: $${totalExpenses.toLocaleString()}`;
     }
 
+    if (query.includes('worth') || query.includes('portfolio') || query.includes('asset')) {
+      if (portfolio.length === 0) {
+        return `[Offline Mode] Your Portfolio is currently empty. You can add assets in the Portfolio hub to track your Net Worth.`;
+      }
+      return `[Offline Mode] Your Net Worth Overview:\n\n` +
+        `Total Assets: $${totalPortfolioValue.toLocaleString()}\n` +
+        `Liquid Flow: $${netFlow.toLocaleString()}/mo\n\n` +
+        `Asset Breakdown:\n` +
+        portfolio.map(p => `  - ${(p as any).name}: $${(p as any).value.toLocaleString()}`).join('\n');
+    }
+
     // Default summary
     return `[Offline Mode] Here's your financial snapshot:\n\n` +
       `Monthly Income: $${totalIncome.toLocaleString()}\n` +
       `Monthly Expenses: $${totalExpenses.toLocaleString()}\n` +
-      `Net Flow: ${netFlow >= 0 ? '+' : ''}$${netFlow.toLocaleString()}\n` +
-      `Savings Rate: ${savingsRate}%\n` +
+      `Net Worth (Assets): $${totalPortfolioValue.toLocaleString()}\n` +
       `Safe to Spend: $${safeToSpend}/day (${daysLeft} days left)\n` +
       `Active Goals: ${goals.length}\n\n` +
       `Tip: For deeper AI analysis, switch to Cloud mode when you have internet access.`;

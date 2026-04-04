@@ -2,9 +2,11 @@ import 'react-native-get-random-values';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+import { AIProvider } from '../context/AIContext';
 import database from '../database';
 import '../global.css';
 import React, { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 
 // Polyfills
 if (typeof (global as any).setImmediate === 'undefined') {
@@ -15,56 +17,84 @@ if (typeof (global as any).process.nextTick === 'undefined') {
   (global as any).process.nextTick = (global as any).setImmediate;
 }
 
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
+
 /**
  * RootLayout is the definitive entry point.
- * It provides the providers and then renders the router itself.
+ * AuthProvider wraps everything so useAuth() is available to RootLayoutNav.
+ * DatabaseProvider makes WatermelonDB available to all screens.
  */
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <DatabaseProvider database={database}>
-        <Stack
-          screenOptions={{
-            headerShown: false,
-          }}
-        >
-          <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
-          <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: 'fade' }} />
-          <Stack.Screen name="settings" options={{ presentation: 'modal', title: 'Settings' }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Info' }} />
-        </Stack>
-
-        {/* This sibling ensures the navigation context is ready for redirection hooks */}
-        <AuthRedirectHandler />
-      </DatabaseProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AIProvider>
+          <DatabaseProvider database={database}>
+            <RootLayoutNav />
+          </DatabaseProvider>
+        </AIProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
 /**
- * AuthRedirectHandler sits alongside the Stack (as a sibling) inside the AuthProvider.
- * It handles the logic of forcing users to the login screen or main app.
+ * RootLayoutNav gates the entire app behind auth resolution.
+ * 
+ * KEY INSIGHT: expo-router pre-renders ALL tab screens during mount.
+ * We must gate the Stack so it doesn't even ATTEMPT to mount protected screens
+ * until we know the session state.
  */
-function AuthRedirectHandler() {
+function RootLayoutNav() {
   const { session, loading } = useAuth();
+  const { isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
+  const [isNavReady, setIsNavReady] = React.useState(false);
 
-  useEffect(() => {
-    // Wait until auth state is confirmed
+  React.useLayoutEffect(() => {
     if (loading) return;
 
-    // segments[0] is the root directory (tabs or auth)
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!session && !inAuthGroup) {
-      // Not logged in, and not in the auth screens, redirect to login
       router.replace('/(auth)/login');
+      setIsNavReady(false);
     } else if (session && inAuthGroup) {
-      // Logged in, but in the auth screens, redirect to the main app
       router.replace('/(tabs)');
+      setIsNavReady(false);
+    } else {
+      // If we are where we're supposed to be, signal that navigation is ready
+      // Use a frame delay to ensure native navigator is fully ready
+      const handle = requestAnimationFrame(() => {
+        setIsNavReady(true);
+      });
+      return () => cancelAnimationFrame(handle);
     }
   }, [session, loading, segments]);
 
-  return null;
+  const inAuthGroup = segments[0] === '(auth)';
+  const needsRedirect = (!session && !inAuthGroup) || (session && inAuthGroup);
+
+  // Strictly gate the navigation tree
+  if (loading || needsRedirect || !isNavReady) {
+    return (
+      <View style={{ flex: 1, backgroundColor: isDark ? '#050505' : '#F5F5F5', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#10b981" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: 'fade' }} />
+      <Stack.Screen name="settings" options={{ presentation: 'modal', title: 'Settings' }} />
+      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Info' }} />
+    </Stack>
+  );
 }

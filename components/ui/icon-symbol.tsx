@@ -16,10 +16,26 @@ type IconSymbolName = keyof typeof MAPPING;
 const MAPPING = {
   'house.fill': 'home',
   'paperplane.fill': 'send',
-  'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
   'chart.bar.fill': 'bar-chart',
   'sparkles': 'auto-awesome',
+  'target': 'track-changes',
+  'list.bullet': 'list',
+  'dollarsign.circle': 'account-balance-wallet',
+  'gear': 'settings',
+  'gearshape.fill': 'settings',
+  'eye.fill': 'visibility',
+  'moon.fill': 'dark-mode',
+  'bell.fill': 'notifications',
+  'person.fill': 'person',
+  'arrow.down.doc.fill': 'file-download',
+  'trash.fill': 'delete',
+  'arrow.up': 'arrow-upward',
+  'cpu.fill': 'memory',
+  'bolt.fill': 'bolt',
+  'lock.fill': 'lock',
+  'battery.100': 'battery-full',
+  'xmark': 'close',
 } as IconMapping;
 
 /**

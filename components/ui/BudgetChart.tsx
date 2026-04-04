@@ -12,9 +12,10 @@ interface BudgetChartProps {
   data: ChartData[];
   title?: string;
   size?: number;
+  isDark?: boolean;
 }
 
-export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 200 }) => {
+export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 200, isDark = true }) => {
   const radius = size / 2;
   const strokeWidth = 30;
   const innerRadius = radius - strokeWidth;
@@ -62,7 +63,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
   return (
     <View className="items-center py-4">
       {title && (
-        <Text className="text-white/40 text-[10px] font-black uppercase tracking-[3px] mb-6">
+        <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[3px] mb-6`}>
           {title}
         </Text>
       )}
@@ -78,7 +79,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
               cx={radius}
               cy={radius}
               r={radius - strokeWidth / 2}
-              color="rgba(255,255,255,0.05)"
+              color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
               style="stroke"
               strokeWidth={strokeWidth}
             />
@@ -107,8 +108,8 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
             borderRadius: radius
           }}
         >
-          <Text className="text-white/20 text-[10px] font-black uppercase tracking-widest">Total</Text>
-          <Text className="text-foreground text-xl font-black">${total.toFixed(0)}</Text>
+          <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[10px] font-black uppercase tracking-widest`}>Total</Text>
+          <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>${total.toFixed(0)}</Text>
         </View>
       </View>
 
@@ -120,7 +121,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
               className="h-2 w-2 rounded-full" 
               style={{ backgroundColor: item.color }} 
             />
-            <Text className="text-white/60 text-[10px] font-bold uppercase tracking-widest leading-none">
+            <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[10px] font-bold uppercase tracking-widest leading-none`}>
               {item.label}
             </Text>
           </View>
