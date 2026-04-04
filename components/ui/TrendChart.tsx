@@ -1,6 +1,7 @@
+import { Canvas, LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
 import React, { useMemo } from 'react';
-import { View, Text, Dimensions } from 'react-native';
-import { Canvas, Path, Skia, LinearGradient, vec } from '@shopify/react-native-skia';
+import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface TrendPoint {
   label: string;
@@ -13,25 +14,28 @@ interface TrendChartProps {
   expenses: any[];
   height?: number;
   isDark?: boolean;
+  simple?: boolean;
 }
 
-export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 180, isDark = true }) => {
-  const width = Dimensions.get('window').width - 64;
-  const paddingVertical = 20;
-  const paddingHorizontal = 10;
-  
+export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 180, isDark = true, simple = false }) => {
+  const { format } = useCurrency();
+  const [range, setRange] = React.useState(6);
+  const width = simple ? Dimensions.get('window').width / 2 : Dimensions.get('window').width - 120; // Adjusted for sparkline or full view
+  const paddingVertical = simple ? 5 : 20;
+  const paddingHorizontal = 0;
+
   // Calculate trend data from raw records
   const data = useMemo(() => {
     const points: TrendPoint[] = [];
     if (!incomes || !expenses) return points;
-    
+
     const now = new Date();
-    
-    for (let i = 5; i >= 0; i--) {
+
+    for (let i = range - 1; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = d.getMonth();
       const y = d.getFullYear();
-      
+
       const mIncomes = (incomes || []).filter(inc => {
         const id = new Date(inc.createdAt);
         return id.getMonth() === m && id.getFullYear() === y;
@@ -49,17 +53,23 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       });
     }
     return points;
-  }, [incomes, expenses]);
+  }, [incomes, expenses, range]);
 
-  const { maxValue, isAllZero } = useMemo(() => {
-    if (!data || data.length === 0) return { maxValue: 1000, isAllZero: true };
+  const { maxValue, isAllZero, formattedMax } = useMemo(() => {
+    if (!data || data.length === 0) return { maxValue: 1000, isAllZero: true, formattedMax: format(1000) };
     const allValues = data.flatMap(d => [d.income, d.expense]);
     const max = Math.max(...allValues, 0);
+    
+    // Round to nearest nice number
+    const magnitude = Math.pow(10, Math.floor(Math.log10(max || 1)));
+    const roundedMax = Math.ceil((max || 1000) / (magnitude / 2)) * (magnitude / 2);
+
     return {
-      maxValue: Math.max(max, 1000),
-      isAllZero: max === 0
+      maxValue: roundedMax,
+      isAllZero: max === 0,
+      formattedMax: format(roundedMax)
     };
-  }, [data]);
+  }, [data, format]);
 
   const getY = (val: number) => {
     return height - paddingVertical - (val / maxValue) * (height - paddingVertical * 2);
@@ -84,7 +94,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       if (i === data.length - 1) path.lineTo(x, y);
     }
     return path;
-  }, [data, maxValue]);
+  }, [data, maxValue, width]);
 
   const expensePath = useMemo(() => {
     if (data.length < 2) return Skia.Path.Make();
@@ -101,7 +111,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       if (i === data.length - 1) path.lineTo(x, y);
     }
     return path;
-  }, [data, maxValue]);
+  }, [data, maxValue, width]);
 
   const incomeArea = useMemo(() => {
     if (data.length < 2) return Skia.Path.Make();
@@ -110,7 +120,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
     path.lineTo(getX(0), height);
     path.close();
     return path;
-  }, [incomePath, data]);
+  }, [incomePath, data, height, width]);
 
   const expenseArea = useMemo(() => {
     if (data.length < 2) return Skia.Path.Make();
@@ -119,67 +129,134 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
     path.lineTo(getX(0), height);
     path.close();
     return path;
-  }, [expensePath, data]);
+  }, [expensePath, data, height, width]);
 
   const textOpacity = isDark ? '0.4' : '0.6';
 
   return (
-    <View className="items-center">
+    <View className={`items-center w-full ${simple ? '' : 'px-4'}`}>
+      {/* Legend & Range Selector */}
+      {!simple && (
+        <View className="flex-row justify-between items-center mb-8 w-full px-2">
+          <View className="flex-row gap-x-4">
+            <View className="flex-row items-center gap-x-2">
+              <View className="h-1.5 w-1.5 rounded-full bg-[#10b981] shadow-sm shadow-primary" />
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[9px] font-black uppercase tracking-[1px]`}>Income</Text>
+            </View>
+            <View className="flex-row items-center gap-x-2">
+              <View className="h-1.5 w-1.5 rounded-full bg-[#ef4444] shadow-sm shadow-destructive" />
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[9px] font-black uppercase tracking-[1px]`}>Expenses</Text>
+            </View>
+          </View>
+
+          <View className="flex-row bg-white/5 rounded-xl p-1 border border-white/5">
+            {[3, 6, 12].map((m) => (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setRange(m)}
+                className={`px-3 py-1.5 rounded-lg ${range === m ? 'bg-primary' : ''}`}
+              >
+                <Text className={`text-[8px] font-black uppercase ${range === m ? 'text-[#050505]' : 'text-white/40'}`}>
+                  {m === 12 ? '1Y' : `${m}M`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
       <View style={{ width, height }}>
+        {/* Y-Axis Labels */}
+        {!simple && (
+          <View className="absolute right-0 top-0 bottom-0 justify-between py-5 z-10 items-end">
+            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>{formattedMax}</Text>
+            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>
+              {format(maxValue / 2)}
+            </Text>
+            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>{format(0)}</Text>
+          </View>
+        )}
+
         <Canvas style={{ flex: 1 }}>
+          {/* Grid Lines */}
+          {!simple && (
+            <>
+              <Path
+                path={`M ${paddingHorizontal} ${getY(maxValue)} L ${width} ${getY(maxValue)}`}
+                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                style="stroke"
+                strokeWidth={1}
+              />
+              <Path
+                path={`M ${paddingHorizontal} ${getY(maxValue / 2)} L ${width} ${getY(maxValue / 2)}`}
+                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                style="stroke"
+                strokeWidth={1}
+              />
+              <Path
+                path={`M ${paddingHorizontal} ${getY(0)} L ${width} ${getY(0)}`}
+                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                style="stroke"
+                strokeWidth={1}
+              />
+            </>
+          )}
+
           {!isAllZero && (
             <>
               <Path path={incomeArea}>
-                 <LinearGradient 
-                   start={vec(0, 0)} 
-                   end={vec(0, height)} 
-                   colors={[isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0)']} 
-                 />
+                <LinearGradient
+                  start={vec(0, 0)}
+                  end={vec(0, height)}
+                  colors={[isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0)']}
+                />
               </Path>
               <Path path={expenseArea}>
-                 <LinearGradient 
-                   start={vec(0, 0)} 
-                   end={vec(0, height)} 
-                   colors={[isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)', 'rgba(239, 68, 68, 0)']} 
-                 />
+                <LinearGradient
+                  start={vec(0, 0)}
+                  end={vec(0, height)}
+                  colors={[isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)', 'rgba(239, 68, 68, 0)']}
+                />
               </Path>
 
-              <Path 
-                path={incomePath} 
-                color="#10b981" 
-                style="stroke" 
-                strokeWidth={3} 
-                strokeCap="round" 
+              <Path
+                path={incomePath}
+                color="#10b981"
+                style="stroke"
+                strokeWidth={simple ? 2 : 3}
+                strokeCap="round"
                 strokeJoin="round"
               />
-              <Path 
-                path={expensePath} 
-                color="#ef4444" 
-                style="stroke" 
-                strokeWidth={3} 
-                strokeCap="round" 
+              <Path
+                path={expensePath}
+                color="#ef4444"
+                style="stroke"
+                strokeWidth={simple ? 2 : 3}
+                strokeCap="round"
                 strokeJoin="round"
               />
             </>
           )}
         </Canvas>
-        
+
         {isAllZero && (
           <View className="absolute inset-0 items-center justify-center">
-            <Text className={`text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-30 mt-10 ${isDark ? 'text-white' : 'text-black'}`}>
-              No activity this period
+            <Text className={`text-muted-foreground text-[10px] font-black uppercase tracking-widest opacity-30 ${simple ? '' : 'mt-10'} ${isDark ? 'text-white' : 'text-black'}`}>
+              No activity
             </Text>
           </View>
         )}
       </View>
 
-      <View className="flex-row justify-between mt-4 px-2" style={{ width }}>
-         {data.map((point, i) => (
-           <Text key={i} className={`text-[10px] font-black text-muted-foreground uppercase`} style={{ opacity: parseFloat(textOpacity) }}>
-             {point.label}
-           </Text>
-         ))}
-      </View>
+      {!simple && (
+        <View className="flex-row justify-between mt-6 px-1" style={{ width }}>
+          {data.map((point, i) => (
+            <Text key={i} className={`text-[10px] font-black text-muted-foreground uppercase`} style={{ opacity: parseFloat(textOpacity) }}>
+              {point.label}
+            </Text>
+          ))}
+        </View>
+      )}
     </View>
   );
 };

@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { IconSymbol } from './icon-symbol';
 import { BlurView } from 'expo-blur';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface AllocationCardProps {
   category: string;
@@ -18,6 +19,7 @@ export const AllocationCard: React.FC<AllocationCardProps> = ({
   onDecrease,
   isDark = true,
 }) => {
+  const { format } = useCurrency();
   const textClass = isDark ? 'text-white' : 'text-black';
   const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
 
@@ -44,7 +46,7 @@ export const AllocationCard: React.FC<AllocationCardProps> = ({
           </TouchableOpacity>
 
           <View className="items-center min-w-[80px]">
-            <Text className={`${textClass} text-xl font-black`}>${limit.toLocaleString()}</Text>
+            <Text className={`${textClass} text-xl font-black`}>{format(limit)}</Text>
           </View>
 
           <TouchableOpacity 

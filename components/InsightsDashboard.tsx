@@ -1,8 +1,9 @@
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Modal } from 'react-native';
 import database from '../database';
 
 // UI Components
@@ -12,6 +13,7 @@ import SafeToSpendView from '@/components/ui/SafeToSpendView';
 import ScenarioSimulator from '@/components/ui/ScenarioSimulator';
 import { SavingsRateView } from './ui/SavingsRateView';
 import { TrendChart } from './ui/TrendChart';
+import { BudgetChart } from './ui/BudgetChart';
 
 // Context
 import { useAI } from '../context/AIContext';
@@ -21,6 +23,7 @@ import { useTheme } from '../context/ThemeContext';
 // Services
 import { explainFinancialGraph } from '@/lib/ai-service';
 import { calculateBudgetInsights } from '@/lib/budget-engine';
+import { useCurrency } from '@/context/CurrencyContext';
 
 interface InsightsDashboardProps {
   incomes: any[];
@@ -32,6 +35,7 @@ interface InsightsDashboardProps {
 
 // Sub-component for Goal Progress
 const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) => {
+  const { format } = useCurrency();
   const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
   const textClass = isDark ? 'text-white' : 'text-black';
   const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
@@ -42,7 +46,7 @@ const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) =>
         <View>
           <Text className={`${textClass} font-black text-lg tracking-tight`}>{goal.name}</Text>
           <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest`}>
-            Target: ${goal.targetAmount.toLocaleString()}
+            Target: {format(goal.targetAmount)}
           </Text>
         </View>
         <Text className="text-primary font-black text-lg">{Math.round(progress)}%</Text>
@@ -57,10 +61,10 @@ const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) =>
 
       <View className="flex-row justify-between mt-3">
         <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest`}>
-          Saved: ${goal.currentAmount.toLocaleString()}
+          Saved: {format(goal.currentAmount)}
         </Text>
         <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest`}>
-          Left: ${(goal.targetAmount - goal.currentAmount).toLocaleString()}
+          Left: {format(goal.targetAmount - goal.currentAmount)}
         </Text>
       </View>
     </View>
@@ -70,9 +74,34 @@ const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) =>
 const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal = false }: InsightsDashboardProps) => {
   const { session, loading } = useAuth();
   const { isDark } = useTheme();
+  const { format } = useCurrency();
   const { aiMode } = useAI();
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [loadingExplains, setLoadingExplains] = useState<Record<string, boolean>>({});
+  const [showTrendDetail, setShowTrendDetail] = useState(false);
+  const [spendingMode, setSpendingMode] = useState<'current' | 'overall' | 'history'>('current');
+  const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string | null>(null);
+
+  const normalizeDate = (record: any) => {
+    if (!record) return 0;
+    const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
+    if (!val) return 0;
+    if (val instanceof Date) return val.getTime();
+    const num = Number(val);
+    if (isNaN(num) || num === 0) return 0;
+    return num < 30000000000 ? num * 1000 : num;
+  };
+
+  const availableMonths = useMemo(() => {
+    const months = new Set<string>();
+    expenses.forEach(exp => {
+      const t = normalizeDate(exp);
+      if (t === 0) return;
+      const d = new Date(t);
+      months.add(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    });
+    return Array.from(months).sort((a, b) => b.localeCompare(a));
+  }, [expenses]);
 
   // Guard: Ensure session is loaded before rendering heavy charts
   if (loading || !session) {
@@ -124,16 +153,6 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-
-    const normalizeDate = (record: any) => {
-      if (!record) return 0;
-      const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
-      if (!val) return 0;
-      if (val instanceof Date) return val.getTime();
-      const num = Number(val);
-      if (isNaN(num) || num === 0) return 0;
-      return num < 30000000000 ? num * 1000 : num;
-    };
 
     const incs = incomes.filter(inc => {
       const t = normalizeDate(inc);
@@ -189,6 +208,43 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     return { trendData: trend };
   }, [incomes, expenses]);
 
+  const categorySpending = useMemo(() => {
+    let filtered = expenses;
+    const now = new Date();
+
+    if (spendingMode === 'current') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      filtered = expenses.filter(e => {
+        const t = normalizeDate(e);
+        return t >= start && t <= end;
+      });
+    } else if (spendingMode === 'history' && selectedHistoryMonth) {
+      const [year, month] = selectedHistoryMonth.split('-').map(Number);
+      const start = new Date(year, month - 1, 1).getTime();
+      const end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+      filtered = expenses.filter(e => {
+        const t = normalizeDate(e);
+        return t >= start && t <= end;
+      });
+    }
+
+    const categoryMap = filtered.reduce((acc, curr) => {
+      const category = curr.category || 'Other';
+      acc[category] = (acc[category] || 0) + (Math.abs(curr.amount) || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+    return Object.entries(categoryMap)
+      .map(([label, value], index) => ({
+        label,
+        value: value as number,
+        color: COLORS[index % COLORS.length],
+      }))
+      .sort((a, b) => (b.value as number) - (a.value as number));
+  }, [expenses, spendingMode, selectedHistoryMonth]);
+
   const insights = calculateBudgetInsights(incomes, expenses, goals);
   const totalPortfolioValue = portfolio.reduce((sum, p) => sum + (p.value || 0), 0);
   const netFlowValue = insights.monthlyIncome - insights.monthlyFixedExpenses;
@@ -214,9 +270,8 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
           <View className="mb-8">
             <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-xs font-bold uppercase tracking-widest mb-1`}>Total Net Worth</Text>
             <View className="flex-row items-baseline">
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-black tracking-tighter`}>$</Text>
               <Text className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-black tracking-tighter`}>
-                {netWorthValue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                {format(netWorthValue)}
               </Text>
             </View>
           </View>
@@ -224,11 +279,11 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
           <View className="flex-row gap-x-4">
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
               <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest mb-1`}>Mth. Income</Text>
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>${insights.monthlyIncome.toLocaleString()}</Text>
+              <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>{format(insights.monthlyIncome)}</Text>
             </BlurView>
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
               <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest mb-1`}>Fixed Expenses</Text>
-              <Text className="text-destructive text-xl font-black">-${insights.monthlyFixedExpenses.toLocaleString()}</Text>
+              <Text className="text-destructive text-xl font-black">-{format(insights.monthlyFixedExpenses)}</Text>
             </BlurView>
           </View>
         </View>
@@ -268,10 +323,90 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <IconSymbol name="sparkles" size={14} color="#10b981" />
               </TouchableOpacity>
             </View>
-            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden`}>
-              <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
-            </BlurView>
+            <TouchableOpacity
+              onPress={() => setShowTrendDetail(true)}
+              activeOpacity={0.8}
+            >
+              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden p-8`}>
+                <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
+              </BlurView>
+            </TouchableOpacity>
             {renderAIInsight('performance')}
+          </View>
+
+          {/* Spending Habits */}
+          <View className="gap-y-6">
+            <View className="flex-row justify-between items-center px-2">
+              <View>
+                <Text className={`text-[10px] font-black uppercase ${isDark ? 'text-white/40' : 'text-black/40'} tracking-[3px]`}>Spending Habits</Text>
+                <Text className={`text-[9px] font-black uppercase tracking-[1px] mt-1 ${isDark ? 'text-white/20' : 'text-black/20'}`}>
+                  {spendingMode === 'current' ? 'Insights for current month' : spendingMode === 'overall' ? 'Lifetime distribution' : 'In-depth archive'}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => handleExplain('spending', 'Categorical Spending Breakdown', { categorySpending })}
+                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
+              >
+                <IconSymbol name="sparkles" size={14} color="#10b981" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Mode Selector */}
+            <View className="flex-row bg-white/5 rounded-2xl p-1 border border-white/5 mx-2">
+              {[
+                { id: 'current', label: 'Current' },
+                { id: 'overall', label: 'Overall' },
+                { id: 'history', label: 'History' }
+              ].map((m) => (
+                <TouchableOpacity
+                  key={m.id}
+                  onPress={() => setSpendingMode(m.id as any)}
+                  className={`flex-1 py-2.5 rounded-xl items-center ${spendingMode === m.id ? 'bg-primary' : ''}`}
+                >
+                  <Text className={`text-[9px] font-black uppercase tracking-widest ${spendingMode === m.id ? 'text-[#050505]' : 'text-white/40'}`}>
+                    {m.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Month Browser (History Mode) */}
+            {spendingMode === 'history' && (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false} 
+                className="mb-2"
+                contentContainerStyle={{ paddingHorizontal: 12, columnGap: 8 }}
+              >
+                {availableMonths.map((mString) => {
+                  const [y, m] = mString.split('-');
+                  const date = new Date(Number(y), Number(m) - 1);
+                  const isSelected = selectedHistoryMonth === mString;
+                  
+                  return (
+                    <TouchableOpacity
+                      key={mString}
+                      onPress={() => setSelectedHistoryMonth(mString)}
+                      className={`px-4 py-3 rounded-2xl border ${isSelected ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5'}`}
+                    >
+                      <Text className={`text-[10px] font-black uppercase tracking-[1.5px] ${isSelected ? 'text-primary' : 'text-white/60'}`}>
+                        {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden h-[400px]`}>
+              <BudgetChart 
+                data={categorySpending} 
+                isDark={isDark} 
+                size={250} 
+                title={spendingMode === 'current' ? "MONTHLY" : spendingMode === 'overall' ? "LIFETIME" : (selectedHistoryMonth ? selectedHistoryMonth.replace('-', ' ') : 'ARCHIVE')}
+              />
+            </BlurView>
+            {renderAIInsight('spending')}
           </View>
 
           {/* Wealth Management */}
@@ -333,6 +468,69 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
           </View>
         </View>
       </ScrollView>
+
+      {/* Trend Detail Modal */}
+      <Modal
+        visible={showTrendDetail}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowTrendDetail(false)}
+      >
+        <View className="flex-1 bg-[#050505]">
+          <SafeAreaView className="flex-1">
+            <View className="px-6 pt-10 pb-6 flex-row justify-between items-center">
+              <View>
+                <Text className="text-3xl font-black text-white tracking-tighter">Performance Analysis</Text>
+                <Text className="text-xs font-black uppercase tracking-[3px] text-white/40 mt-1">Full-Scale Context</Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setShowTrendDetail(false)}
+                className="h-10 w-10 rounded-full bg-white/5 items-center justify-center border border-white/5"
+              >
+                <IconSymbol name="xmark" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+              <View className="px-6 py-10">
+                <BlurView intensity={30} tint="dark" className="rounded-[48px] border border-white/10 p-8 overflow-hidden bg-white/[0.02]">
+                  <TrendChart incomes={incomes} expenses={expenses} height={350} isDark={true} />
+                </BlurView>
+
+                {/* Detailed Analysis Card */}
+                <View className="mt-10 p-8 rounded-[40px] bg-primary/5 border border-primary/20">
+                   <View className="flex-row items-center gap-x-2 mb-4">
+                      <IconSymbol name="chart.bar.xaxis" size={16} color="#10b981" />
+                      <Text className="text-[10px] font-black uppercase text-primary tracking-widest">Monthly Breakdown</Text>
+                   </View>
+                   <Text className="text-white/60 text-xs leading-5">
+                      This expanded view allows you to see the critical intersection of your income and expenses over the last 12 months. 
+                      Notice the peak variances—these represent your highest opportunities for savings or investment reallocation.
+                   </Text>
+                </View>
+
+                <View className="mt-6 p-8 rounded-[40px] bg-[#111] border border-white/5">
+                   <Text className="text-white/40 text-[10px] font-black uppercase tracking-[2px] mb-4">Historical Extremes</Text>
+                   <View className="flex-row justify-between">
+                      <View>
+                        <Text className="text-[9px] font-black text-white/30 uppercase tracking-[1px] mb-1">Max Monthly Income</Text>
+                        <Text className="text-primary font-black text-xl tracking-tight">
+                           +{format(Math.max(...trendData.map(d => d.income)))}
+                        </Text>
+                      </View>
+                      <View className="items-end">
+                        <Text className="text-[9px] font-black text-white/30 uppercase tracking-[1px] mb-1">Max Monthly Expense</Text>
+                        <Text className="text-destructive font-black text-xl tracking-tight">
+                           -{format(Math.max(...trendData.map(d => d.expense)))}
+                        </Text>
+                      </View>
+                   </View>
+                </View>
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </View>
+      </Modal>
     </View>
   );
 };

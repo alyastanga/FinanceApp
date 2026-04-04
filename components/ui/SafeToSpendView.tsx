@@ -9,6 +9,7 @@ import Animated, {
   interpolateColor
 } from 'react-native-reanimated';
 import { IconSymbol } from './icon-symbol';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface SafeToSpendViewProps {
   amount: number;
@@ -17,6 +18,7 @@ interface SafeToSpendViewProps {
 }
 
 export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark = true }: SafeToSpendViewProps) {
+  const { format } = useCurrency();
   const pulse = useSharedValue(1);
   const opacity = useSharedValue(0);
 
@@ -71,12 +73,11 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark = t
         </Text>
 
         <View className="flex-row items-start">
-          <Text style={{ color: statusColor }} className="text-2xl font-black mt-2 mr-1">$</Text>
           <Text 
             style={{ color: statusColor }}
             className="text-7xl font-black tracking-tighter"
           >
-            {amount.toFixed(0)}
+            {format(amount)}
           </Text>
         </View>
 

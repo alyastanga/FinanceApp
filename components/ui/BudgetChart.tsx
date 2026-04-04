@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { Canvas, Path, Skia, Circle } from '@shopify/react-native-skia';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface ChartData {
   label: string;
@@ -16,12 +17,16 @@ interface BudgetChartProps {
 }
 
 export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 200, isDark = true }) => {
+  const { format } = useCurrency();
   const radius = size / 2;
   const strokeWidth = 30;
   const innerRadius = radius - strokeWidth;
   const center = { x: radius, y: radius };
 
-  const total = useMemo(() => data.reduce((acc, curr) => acc + curr.value, 0), [data]);
+  const total = useMemo(() => {
+    if (!data || !Array.isArray(data)) return 0;
+    return data.reduce((acc, curr) => acc + (Number(curr.value) || 0), 0);
+  }, [data]);
 
   const paths = useMemo(() => {
     if (total === 0) return [];
@@ -109,7 +114,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
           }}
         >
           <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[10px] font-black uppercase tracking-widest`}>Total</Text>
-          <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>${total.toFixed(0)}</Text>
+          <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>{format(total)}</Text>
         </View>
       </View>
 

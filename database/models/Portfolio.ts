@@ -6,6 +6,9 @@ export default class Portfolio extends Model {
 
   @field('name') name!: string;
   @field('asset_type') assetType!: string;
+  @field('symbol') symbol!: string;
+  @field('quantity') quantity!: number;
+  @field('invested_amount') investedAmount!: number;
   @field('value') value!: number;
   @field('change_24h') change24h!: number;
   @field('user_id') userId!: string;

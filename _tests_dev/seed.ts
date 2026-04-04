@@ -117,17 +117,21 @@ export async function seedDatabase() {
         });
       }
 
-      // 6. Portfolio Assets
+      // 6. Portfolio Assets (v8 Schema)
       const mockPortfolio = [
-        { name: 'S&P 500 Index', type: 'Stock', value: 12450, change: 1.2 },
-        { name: 'Bitcoin / ETH', type: 'Crypto', value: 3200, change: -2.4 },
-        { name: 'HYS Savings', type: 'Cash', value: 15600, change: 0.1 }
+        { name: 'S&P 500 ETF', symbol: 'VOO', type: 'stock', value: 12450, invested: 10500, quantity: 28, change: 1.2 },
+        { name: 'Bitcoin', symbol: 'BINANCE:BTCUSDT', type: 'crypto', value: 3200, invested: 2800, quantity: 0.05, change: -2.4 },
+        { name: 'Ethereum', symbol: 'BINANCE:ETHUSDT', type: 'crypto', value: 2400, invested: 2100, quantity: 1.2, change: 4.5 },
+        { name: 'Emergency Fund', symbol: 'CASH', type: 'cash', value: 15600, invested: 15600, quantity: 1, change: 0.1 }
       ];
 
       for (const p of mockPortfolio) {
         await database.get('portfolio').create((asset: any) => {
           asset.name = p.name;
+          asset.symbol = p.symbol;
           asset.assetType = p.type;
+          asset.quantity = p.quantity;
+          asset.investedAmount = p.invested;
           asset.value = p.value;
           asset.change24h = p.change;
           asset.userId = userId;

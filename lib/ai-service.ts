@@ -77,13 +77,19 @@ export async function generateAIResponse(
     </FINANCIAL_CONTEXT>
     
     CRITICAL FORMATTING RULES:
-    1. DO NOT say you cannot access data. Use the context above.
+    1. DO NOT say you cannot access data. Use the provided context.
     2. USE PLAIN TEXT ONLY. NO BOLDING (**), NO HASHTAGS (#), NO ASTERISKS (*).
-    3. VISUALIZATION TRIGGER: For every budget breakdown, you MUST append this EXACT block at the end:
-       [CHART_DATA: {"data": [{"label": "Safe", "value": <VALUE>, "color": "#10b981"}, {"label": "Spent", "value": <VALUE>, "color": "#059669"}]}]
-    4. Keep your tone professional, authoritative yet empathetic, drawing upon your 20 years of wealth management experience.
+    3. VISUALIZATION TRIGGER: ONLY if the user explicitly requests a "chart", "graph", "visual", or "breakdown", you MUST append this EXACT block at the end of your response:
+       [CHART_DATA: {"data": [{"label": "<NAME>", "value": <NUMBER>, "color": "<HEX_COLOR>"}, ...]}]
+       
+       COLOR PALETTE:
+       - Green/Positive: #10b981
+       - Red/Negative/Spent: #ef4444
+       - Blue/Savings: #3b82f6
+       - Purple/Investment: #8b5cf6
+       - Gray/Other: #6b7280
     
-    Begin your response now summarizing their status based on the context.`
+    4. Keep your tone professional, authoritative yet empathetic, as a Senior Financial Consultant.`
   };
 
   // Add a 25-second timeout for the free tier

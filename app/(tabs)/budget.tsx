@@ -19,6 +19,7 @@ import { useAI } from '../../context/AIContext';
 import { explainFinancialGraph, generateSuggestedBudget } from '@/lib/ai-service';
 import { calculateBudgetInsights } from '@/lib/budget-engine';
 import { upsertBudget, applyAIAllocation } from '@/lib/budget-actions';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface BudgetScreenProps {
   budgets: any[];
@@ -28,6 +29,7 @@ interface BudgetScreenProps {
 
 const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => {
   const { isDark } = useTheme();
+  const { format } = useCurrency();
   const { aiMode } = useAI();
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'velocity' | 'allocation'>('overview');
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -224,11 +226,11 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
              <View className="flex-row gap-x-4 mt-8">
                <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
                  <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Budget</Text>
-                 <Text className={`${textClass} text-xl font-black`}>${totalAllocated.toLocaleString()}</Text>
+                 <Text className={`${textClass} text-xl font-black`}>{format(totalAllocated)}</Text>
                </View>
                <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
                  <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Spent</Text>
-                 <Text className={`${textClass} text-xl font-black`}>${totalSpent.toLocaleString()}</Text>
+                 <Text className={`${textClass} text-xl font-black`}>{format(totalSpent)}</Text>
                </View>
              </View>
           </View>
@@ -271,12 +273,12 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
             <View className="gap-y-4">
               <View className={`p-6 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'} flex-row justify-between items-center`}>
                 <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-widest`}>Daily Limit</Text>
-                <Text className={`${textClass} font-black`}>${velocityData.dailyLimit.toFixed(2)}</Text>
+                <Text className={`${textClass} font-black`}>{format(velocityData.dailyLimit)}</Text>
               </View>
               <View className={`p-6 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'} flex-row justify-between items-center`}>
                 <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-widest`}>Actual Daily Speed</Text>
                 <Text className={`${velocityData.isSlower ? 'text-primary' : 'text-destructive'} font-black`}>
-                  ${velocityData.currentVelocity.toFixed(2)}
+                  {format(velocityData.currentVelocity)}
                 </Text>
               </View>
             </View>
@@ -320,9 +322,9 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                     <View className="gap-y-3 mb-8">
                       {aiSuggestions.map((s, idx) => (
                         <View key={idx} className={`flex-row justify-between p-4 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                          <Text className={`${textClass} font-bold`}>{s.category}</Text>
-                          <Text className="text-primary font-black">${s.amount_limit}</Text>
-                        </View>
+                        <Text className={`${textClass} font-bold`}>{s.category}</Text>
+                        <Text className="text-primary font-black">{format(s.amount_limit)}</Text>
+                      </View>
                       ))}
                     </View>
 
@@ -343,7 +345,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                 <Text className={`${textClass} text-xs font-black uppercase tracking-[3px] opacity-50`}>Manual Fine-Tuning</Text>
                 <View className="flex-row items-center gap-x-2">
                   <View className="px-3 py-1 bg-primary/20 rounded-full">
-                    <Text className="text-primary text-[10px] font-black uppercase">Surplus: ${remainingToAllocate.toFixed(0)}</Text>
+                    <Text className="text-primary text-[10px] font-black uppercase">Surplus: {format(remainingToAllocate)}</Text>
                   </View>
                   <TouchableOpacity 
                     onPress={() => setIsAddingCategory(!isAddingCategory)}
@@ -415,7 +417,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
               <View className="flex-1">
                  <Text className={`${textClass} font-bold text-sm mb-0.5`}>Budget Velocity</Text>
                  <Text className="text-muted-foreground text-[11px]">
-                   You are spending ${Math.abs(velocityData.dailyLimit - velocityData.currentVelocity).toFixed(0)} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
+                   You are spending {format(Math.abs(velocityData.dailyLimit - velocityData.currentVelocity))} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
                  </Text>
               </View>
            </View>

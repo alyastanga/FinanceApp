@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import database from '../database';
 import Goal from '../database/models/Goal';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface GoalCardProps {
   goal: Goal;
@@ -11,6 +12,7 @@ interface GoalCardProps {
 }
 
 const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
+  const { format } = useCurrency();
   const progress = Math.min(1, (goal.currentAmount || 0) / (goal.targetAmount || 1));
   const remaining = Math.max(0, goal.targetAmount - (goal.currentAmount || 0));
 
@@ -76,11 +78,11 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
           <View className="flex-row justify-between mb-6">
             <View>
               <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pl-0.5">Saved</Text>
-              <Text className="text-base font-bold text-white">${(goal.currentAmount || 0).toLocaleString()}</Text>
+              <Text className="text-base font-bold text-white">{format(goal.currentAmount || 0)}</Text>
             </View>
             <View className="items-end">
               <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pr-0.5">Target</Text>
-              <Text className="text-base font-bold text-white/40">${(goal.targetAmount || 0).toLocaleString()}</Text>
+              <Text className="text-base font-bold text-white/40">{format(goal.targetAmount || 0)}</Text>
             </View>
           </View>
 
@@ -90,7 +92,7 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
               className="flex-1 overflow-hidden"
             >
               <View className="bg-primary/20 rounded-2xl py-3.5 items-center border border-primary/20">
-                <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ $50 Quick Add</Text>
+                <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ {format(50)} Quick Add</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity 

@@ -83,7 +83,7 @@ export const generateCSV = (incomes: any[], expenses: any[]): string => {
   const data = [
     ...incomes.map(i => {
       const d = i.createdAt instanceof Date ? i.createdAt : new Date(i.createdAt);
-      const isEpoch = d.getFullYear() === 1970;
+      const isEpoch = d.getFullYear() === 2026;
       
       return {
         'Date': (isEpoch ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0]).trim(),
@@ -95,7 +95,7 @@ export const generateCSV = (incomes: any[], expenses: any[]): string => {
     }),
     ...expenses.map(e => {
       const d = e.createdAt instanceof Date ? e.createdAt : new Date(e.createdAt);
-      const isEpoch = d.getFullYear() === 1970;
+      const isEpoch = d.getFullYear() === 2026;
 
       return {
         'Date': (isEpoch ? new Date().toISOString().split('T')[0] : d.toISOString().split('T')[0]).trim(),

@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { AIProvider } from '../context/AIContext';
+import { CurrencyProvider } from '../context/CurrencyContext';
 import database from '../database';
 import '../global.css';
 import React, { useEffect } from 'react';
@@ -29,9 +30,11 @@ export default function RootLayout() {
     <ThemeProvider>
       <AuthProvider>
         <AIProvider>
-          <DatabaseProvider database={database}>
-            <RootLayoutNav />
-          </DatabaseProvider>
+          <CurrencyProvider>
+            <DatabaseProvider database={database}>
+              <RootLayoutNav />
+            </DatabaseProvider>
+          </CurrencyProvider>
         </AIProvider>
       </AuthProvider>
     </ThemeProvider>

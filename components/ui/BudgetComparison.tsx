@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { Canvas, RoundedRect, Rect } from '@shopify/react-native-skia';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface BudgetComparisonProps {
   category: string;
@@ -17,6 +18,7 @@ export const BudgetComparison: React.FC<BudgetComparisonProps> = ({
   isDark = true,
   onEdit,
 }) => {
+  const { format } = useCurrency();
   const screenWidth = Dimensions.get('window').width;
   const barWidth = screenWidth - 80; // Account for padding
   const barHeight = 10;
@@ -70,18 +72,18 @@ export const BudgetComparison: React.FC<BudgetComparisonProps> = ({
       <View className="flex-row justify-between items-center">
         <View>
           <Text className="text-[9px] font-black text-muted-foreground uppercase">Spent</Text>
-          <Text className={`${textClass} font-bold text-sm`}>${actualSpent.toLocaleString()}</Text>
+          <Text className={`${textClass} font-bold text-sm`}>{format(actualSpent)}</Text>
         </View>
         <View className="items-center">
           <Text className="text-[9px] font-black text-muted-foreground uppercase">Limit</Text>
-          <Text className={`${subTextClass} font-bold text-sm`}>${(budgetLimit || 0).toLocaleString()}</Text>
+          <Text className={`${subTextClass} font-bold text-sm`}>{format(budgetLimit || 0)}</Text>
         </View>
         <View className="items-end">
           <Text className="text-[9px] font-black text-muted-foreground uppercase">
             {isOver ? 'Over By' : 'Remaining'}
           </Text>
           <Text className={`font-bold text-sm ${isOver ? 'text-destructive' : 'text-primary'}`}>
-            ${isOver ? (actualSpent - budgetLimit).toLocaleString() : remaining.toLocaleString()}
+            {format(isOver ? (actualSpent - budgetLimit) : remaining)}
           </Text>
         </View>
       </View>

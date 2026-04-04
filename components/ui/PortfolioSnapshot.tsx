@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from './icon-symbol';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface PortfolioItem {
   id: string;
@@ -17,6 +18,7 @@ interface PortfolioSnapshotProps {
 }
 
 export default function PortfolioSnapshot({ portfolio, isDark = true }: PortfolioSnapshotProps) {
+  const { format } = useCurrency();
   const totalValue = portfolio.reduce((sum, item) => sum + (item.value || 0), 0);
   
   const getAssetIcon = (type: string) => {
@@ -37,7 +39,7 @@ export default function PortfolioSnapshot({ portfolio, isDark = true }: Portfoli
         <View className="flex-row justify-between items-center mb-8">
           <View>
             <Text className={`text-[10px] font-black uppercase tracking-[4px] ${isDark ? 'text-primary/60' : 'text-primary'} mb-1`}>Wealth Snapshot</Text>
-            <Text className={`text-4xl font-black ${textClass} tracking-tighter`}>${totalValue.toLocaleString()}</Text>
+            <Text className={`text-4xl font-black ${textClass} tracking-tighter`}>{format(totalValue)}</Text>
           </View>
           <View className={`h-10 w-10 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-2xl items-center justify-center`}>
              <IconSymbol name="eye.fill" size={20} color={isDark ? "white" : "black"} />
@@ -57,7 +59,7 @@ export default function PortfolioSnapshot({ portfolio, isDark = true }: Portfoli
                   </Text>
                 </View>
                 <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest mb-1`}>{item.name}</Text>
-                <Text className={`${textClass} font-black text-lg tracking-tight`}>${item.value.toLocaleString()}</Text>
+                <Text className={`${textClass} font-black text-lg tracking-tight`}>{format(item.value)}</Text>
               </View>
             ))}
           </ScrollView>

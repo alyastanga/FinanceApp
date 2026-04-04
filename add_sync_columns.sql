@@ -47,11 +47,49 @@ BEGIN
         ALTER TABLE budgets ADD COLUMN sync_to_calendar boolean DEFAULT false;
     END IF;
 
+    -- Portfolio (New Schema v8)
+    -------------------------------------------
+    -- Check if table exists, if not create basic version
+    IF NOT EXISTS (SELECT FROM pg_tables WHERE tablename  = 'portfolio') THEN
+        CREATE TABLE portfolio (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+            name text,
+            asset_type text,
+            symbol text,
+            quantity numeric DEFAULT 0,
+            invested_amount numeric DEFAULT 0,
+            value numeric DEFAULT 0,
+            change_24h numeric DEFAULT 0,
+            user_id uuid,
+            _status text DEFAULT 'created',
+            _changed text,
+            created_at timestamptz DEFAULT now(),
+            updated_at timestamptz DEFAULT now()
+        );
+    ELSE
+        -- Add missing columns to existing table
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='symbol') THEN
+            ALTER TABLE portfolio ADD COLUMN symbol text;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='quantity') THEN
+            ALTER TABLE portfolio ADD COLUMN quantity numeric DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='invested_amount') THEN
+            ALTER TABLE portfolio ADD COLUMN invested_amount numeric DEFAULT 0;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='_status') THEN
+            ALTER TABLE portfolio ADD COLUMN _status text DEFAULT 'created';
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='portfolio' AND column_name='_changed') THEN
+            ALTER TABLE portfolio ADD COLUMN _changed text;
+        END IF;
+    END IF;
+
 END $$;
 
 -- Verify results
 SELECT table_name, column_name, data_type, column_default 
 FROM information_schema.columns 
-WHERE table_name IN ('incomes', 'expenses', 'budgets', 'goals')
-AND column_name IN ('_status', '_changed', 'sync_to_calendar')
+WHERE table_name IN ('incomes', 'expenses', 'budgets', 'goals', 'portfolio')
+AND column_name IN ('_status', '_changed', 'sync_to_calendar', 'symbol', 'quantity', 'invested_amount')
 ORDER BY table_name;
