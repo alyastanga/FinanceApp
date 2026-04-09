@@ -10,6 +10,11 @@ export default class Goal extends Model {
   @field('target_completion_date') targetCompletionDate!: number;
   @field('sync_to_calendar') syncToCalendar!: boolean;
   @field('user_id') userId!: string;
+  @field('currency') _currency?: string;
+
+  get currency(): string {
+    return this._currency || 'PHP';
+  }
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

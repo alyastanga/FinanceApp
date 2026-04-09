@@ -1,9 +1,9 @@
-import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { seedDatabase } from '../_tests_dev/seed';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useCurrency, CurrencyCode } from '../context/CurrencyContext';
+import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
+import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { seedDatabase } from '../_tests_dev/seed';
+import { CurrencyCode, useCurrency } from '../context/CurrencyContext';
 
 export default function Settings() {
   const router = useRouter();
@@ -45,17 +45,17 @@ export default function Settings() {
             className="w-full rounded-[24px] bg-white/[0.03] p-6 border border-white/5 flex-row items-center justify-between"
           >
             <View className="flex-row items-center gap-x-4">
-               <View className="h-8 w-8 bg-blue-500/20 rounded-xl items-center justify-center">
-                  <Text className="text-blue-500 font-black text-xs">{symbol}</Text>
-               </View>
-               <View>
-                 <Text className="text-white font-black uppercase tracking-widest text-[10px]">
-                   Primary Currency
-                 </Text>
-                 <Text className="text-white/40 font-bold text-[10px] mt-0.5">
-                   {currency} (Displaying converted rates)
-                 </Text>
-               </View>
+              <View className="h-8 w-8 bg-blue-500/20 rounded-xl items-center justify-center">
+                <Text className="text-blue-500 font-black text-xs">{symbol}</Text>
+              </View>
+              <View>
+                <Text className="text-white font-black uppercase tracking-widest text-[10px]">
+                  Primary Currency
+                </Text>
+                <Text className="text-white/40 font-bold text-[10px] mt-0.5">
+                  {currency} (Displaying converted rates)
+                </Text>
+              </View>
             </View>
             <IconSymbol name={showPicker ? "chevron.up" : "chevron.down"} size={14} color="white" style={{ opacity: 0.4 }} />
           </TouchableOpacity>
@@ -84,18 +84,18 @@ export default function Settings() {
 
         {/* Infrastructure */}
         <Text className="text-[10px] font-black text-white/30 uppercase tracking-[3px] ml-6 mb-2">Infrastructure</Text>
-        
+
         <TouchableOpacity
           onPress={() => router.push('/model-settings')}
           className="w-full rounded-[24px] bg-white/[0.03] p-6 border border-white/5 flex-row items-center justify-between"
         >
           <View className="flex-row items-center gap-x-4">
-             <View className="h-8 w-8 bg-[#10b981]/20 rounded-xl items-center justify-center">
-                <IconSymbol name="cpu.fill" size={16} color="#10b981" />
-             </View>
-             <Text className="text-white/60 font-black uppercase tracking-widest text-xs">
-               AI Local Engine
-             </Text>
+            <View className="h-8 w-8 bg-[#10b981]/20 rounded-xl items-center justify-center">
+              <IconSymbol name="cpu.fill" size={16} color="#10b981" />
+            </View>
+            <Text className="text-white/60 font-black uppercase tracking-widest text-xs">
+              AI Local Engine
+            </Text>
           </View>
           <IconSymbol name="chevron.right" size={14} color="#10b981" />
         </TouchableOpacity>
@@ -105,12 +105,12 @@ export default function Settings() {
           className="w-full rounded-[24px] bg-white/[0.03] p-6 border border-white/5 flex-row items-center justify-between"
         >
           <View className="flex-row items-center gap-x-4 opacity-40">
-             <View className="h-8 w-8 bg-white/10 rounded-xl items-center justify-center">
-                <IconSymbol name="bolt.fill" size={16} color="white" />
-             </View>
-             <Text className="text-white font-black uppercase tracking-widest text-xs">
-               Seed Database
-             </Text>
+            <View className="h-8 w-8 bg-white/10 rounded-xl items-center justify-center">
+              <IconSymbol name="bolt.fill" size={16} color="white" />
+            </View>
+            <Text className="text-white font-black uppercase tracking-widest text-xs">
+              Seed Database
+            </Text>
           </View>
           <IconSymbol name="chevron.right" size={14} color="white" style={{ opacity: 0.2 }} />
         </TouchableOpacity>

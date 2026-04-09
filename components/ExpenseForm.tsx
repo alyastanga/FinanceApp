@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, Platform, Alert } from 'react-native';
 import database from '../database';
+import { useCurrency } from '../context/CurrencyContext';
 
 const CATEGORIES = [
   'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'
@@ -12,6 +13,7 @@ interface ExpenseFormProps {
 }
 
 export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
+  const { symbolFor, currency } = useCurrency();
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +32,7 @@ export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
         await database.get('expenses').create((expense: any) => {
           expense.amount = parsedAmount;
           expense.category = category;
+          expense._currency = currency;
           expense.createdAt = new Date();
         });
       });
@@ -53,7 +56,7 @@ export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
 
         <View className="gap-y-8">
           <View>
-            <Text className="mb-3 text-sm font-black text-foreground/40 uppercase tracking-[2px]">Amount ($)</Text>
+            <Text className="mb-3 text-sm font-black text-foreground/40 uppercase tracking-[2px]">Amount ({symbolFor(currency)})</Text>
             <TextInput
               placeholder="0.00"
               keyboardType="decimal-pad"

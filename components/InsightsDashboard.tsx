@@ -46,7 +46,7 @@ const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) =>
         <View>
           <Text className={`${textClass} font-black text-lg tracking-tight`}>{goal.name}</Text>
           <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest`}>
-            Target: {format(goal.targetAmount)}
+            Target: {format(goal.targetAmount, goal.currency)}
           </Text>
         </View>
         <Text className="text-primary font-black text-lg">{Math.round(progress)}%</Text>
@@ -74,7 +74,7 @@ const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) =>
 const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal = false }: InsightsDashboardProps) => {
   const { session, loading } = useAuth();
   const { isDark } = useTheme();
-  const { format } = useCurrency();
+  const { format, convertFrom, currency } = useCurrency();
   const { aiMode } = useAI();
   const [explanations, setExplanations] = useState<Record<string, string>>({});
   const [loadingExplains, setLoadingExplains] = useState<Record<string, boolean>>({});
@@ -102,6 +102,102 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     });
     return Array.from(months).sort((a, b) => b.localeCompare(a));
   }, [expenses]);
+
+  useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+
+    const incs = incomes.filter(inc => {
+      const t = normalizeDate(inc);
+      return t >= start && t <= end;
+    });
+    const exps = expenses.filter(exp => {
+      const t = normalizeDate(exp);
+      return t >= start && t <= end;
+    });
+
+    return {
+      currentMonthIncome: incs.reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0),
+      currentMonthExpenses: exps.reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0)
+    };
+  }, [incomes, expenses, convertFrom, currency]);
+
+  const { trendData } = useMemo(() => {
+    const trend = [];
+    const now = new Date();
+
+    const normalizeDateLocal = (record: any) => {
+      if (!record) return 0;
+      const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
+      if (val instanceof Date) return val.getTime();
+      const num = Number(val);
+      if (!val || isNaN(num) || num === 0) return 0;
+      return num < 30000000000 ? num * 1000 : num;
+    };
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const label = d.toLocaleString('default', { month: 'short' });
+      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+
+      const incomeValue = incomes
+        .filter(inc => {
+          const t = normalizeDateLocal(inc);
+          return t >= monthStart && t <= monthEnd;
+        })
+        .reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
+
+      const expenseValue = expenses
+        .filter(exp => {
+          const t = normalizeDateLocal(exp);
+          return t >= monthStart && t <= monthEnd;
+        })
+        .reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
+
+      trend.push({ label, income: incomeValue, expense: expenseValue });
+    }
+
+    return { trendData: trend };
+  }, [incomes, expenses, convertFrom, currency]);
+
+  const categorySpending = useMemo(() => {
+    let filtered = expenses;
+    const now = new Date();
+
+    if (spendingMode === 'current') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      filtered = expenses.filter(e => {
+        const t = normalizeDate(e);
+        return t >= start && t <= end;
+      });
+    } else if (spendingMode === 'history' && selectedHistoryMonth) {
+      const [year, month] = selectedHistoryMonth.split('-').map(Number);
+      const start = new Date(year, month - 1, 1).getTime();
+      const end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
+      filtered = expenses.filter(e => {
+        const t = normalizeDate(e);
+        return t >= start && t <= end;
+      });
+    }
+
+    const categoryMap = filtered.reduce((acc, curr) => {
+      const category = curr.category || 'Other';
+      acc[category] = (acc[category] || 0) + (Math.abs(curr.amount) || 0);
+      return acc;
+    }, {} as Record<string, number>);
+
+    const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
+    return Object.entries(categoryMap)
+      .map(([label, value], index) => ({
+        label,
+        value: value as number,
+        color: COLORS[index % COLORS.length],
+      }))
+      .sort((a, b) => (b.value as number) - (a.value as number));
+  }, [expenses, spendingMode, selectedHistoryMonth]);
 
   // Guard: Ensure session is loaded before rendering heavy charts
   if (loading || !session) {
@@ -149,101 +245,6 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     );
   };
 
-  const { currentMonthIncome, currentMonthExpenses } = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-
-    const incs = incomes.filter(inc => {
-      const t = normalizeDate(inc);
-      return t >= start && t <= end;
-    });
-    const exps = expenses.filter(exp => {
-      const t = normalizeDate(exp);
-      return t >= start && t <= end;
-    });
-
-    return {
-      currentMonthIncome: incs.reduce((acc, curr) => acc + curr.amount, 0),
-      currentMonthExpenses: exps.reduce((acc, curr) => acc + curr.amount, 0)
-    };
-  }, [incomes, expenses]);
-
-  const { trendData } = useMemo(() => {
-    const trend = [];
-    const now = new Date();
-
-    const normalizeDate = (record: any) => {
-      if (!record) return 0;
-      const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
-      if (val instanceof Date) return val.getTime();
-      const num = Number(val);
-      if (!val || isNaN(num) || num === 0) return 0;
-      return num < 30000000000 ? num * 1000 : num;
-    };
-
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const label = d.toLocaleString('default', { month: 'short' });
-      const monthStart = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
-      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-
-      const incomeValue = incomes
-        .filter(inc => {
-          const t = normalizeDate(inc);
-          return t >= monthStart && t <= monthEnd;
-        })
-        .reduce((acc, curr) => acc + curr.amount, 0);
-
-      const expenseValue = expenses
-        .filter(exp => {
-          const t = normalizeDate(exp);
-          return t >= monthStart && t <= monthEnd;
-        })
-        .reduce((acc, curr) => acc + curr.amount, 0);
-
-      trend.push({ label, income: incomeValue, expense: expenseValue });
-    }
-
-    return { trendData: trend };
-  }, [incomes, expenses]);
-
-  const categorySpending = useMemo(() => {
-    let filtered = expenses;
-    const now = new Date();
-
-    if (spendingMode === 'current') {
-      const start = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
-      filtered = expenses.filter(e => {
-        const t = normalizeDate(e);
-        return t >= start && t <= end;
-      });
-    } else if (spendingMode === 'history' && selectedHistoryMonth) {
-      const [year, month] = selectedHistoryMonth.split('-').map(Number);
-      const start = new Date(year, month - 1, 1).getTime();
-      const end = new Date(year, month, 0, 23, 59, 59, 999).getTime();
-      filtered = expenses.filter(e => {
-        const t = normalizeDate(e);
-        return t >= start && t <= end;
-      });
-    }
-
-    const categoryMap = filtered.reduce((acc, curr) => {
-      const category = curr.category || 'Other';
-      acc[category] = (acc[category] || 0) + (Math.abs(curr.amount) || 0);
-      return acc;
-    }, {} as Record<string, number>);
-
-    const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
-    return Object.entries(categoryMap)
-      .map(([label, value], index) => ({
-        label,
-        value: value as number,
-        color: COLORS[index % COLORS.length],
-      }))
-      .sort((a, b) => (b.value as number) - (a.value as number));
-  }, [expenses, spendingMode, selectedHistoryMonth]);
 
   const insights = calculateBudgetInsights(incomes, expenses, goals);
   const totalPortfolioValue = portfolio.reduce((sum, p) => sum + (p.value || 0), 0);

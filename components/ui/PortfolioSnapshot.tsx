@@ -10,6 +10,7 @@ interface PortfolioItem {
   assetType: string;
   value: number;
   change24h: number;
+  currency?: string;
 }
 
 interface PortfolioSnapshotProps {
@@ -18,8 +19,8 @@ interface PortfolioSnapshotProps {
 }
 
 export default function PortfolioSnapshot({ portfolio, isDark = true }: PortfolioSnapshotProps) {
-  const { format } = useCurrency();
-  const totalValue = portfolio.reduce((sum, item) => sum + (item.value || 0), 0);
+  const { formatRaw, convertFrom, currency, symbolFor } = useCurrency();
+  const totalValue = portfolio.reduce((sum, item) => sum + convertFrom(item.value || 0, item.currency || currency), 0);
   
   const getAssetIcon = (type: string) => {
     switch (type.toLowerCase()) {
@@ -39,7 +40,7 @@ export default function PortfolioSnapshot({ portfolio, isDark = true }: Portfoli
         <View className="flex-row justify-between items-center mb-8">
           <View>
             <Text className={`text-[10px] font-black uppercase tracking-[4px] ${isDark ? 'text-primary/60' : 'text-primary'} mb-1`}>Wealth Snapshot</Text>
-            <Text className={`text-4xl font-black ${textClass} tracking-tighter`}>{format(totalValue)}</Text>
+            <Text className={`text-4xl font-black ${textClass} tracking-tighter`}>{formatRaw(totalValue)}</Text>
           </View>
           <View className={`h-10 w-10 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-2xl items-center justify-center`}>
              <IconSymbol name="eye.fill" size={20} color={isDark ? "white" : "black"} />
@@ -58,8 +59,10 @@ export default function PortfolioSnapshot({ portfolio, isDark = true }: Portfoli
                     {item.change24h >= 0 ? '+' : ''}{item.change24h}%
                   </Text>
                 </View>
-                <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest mb-1`}>{item.name}</Text>
-                <Text className={`${textClass} font-black text-lg tracking-tight`}>{format(item.value)}</Text>
+                <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest mb-1`}>
+                  {item.currency && item.currency !== currency ? `${symbolFor(item.currency)} ` : ''}{item.name}
+                </Text>
+                <Text className={`${textClass} font-black text-lg tracking-tight`}>{formatRaw(convertFrom(item.value, item.currency || currency))}</Text>
               </View>
             ))}
           </ScrollView>

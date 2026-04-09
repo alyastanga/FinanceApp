@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
@@ -18,11 +18,14 @@ interface PortfolioScreenProps {
 }
 
 const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => void }) => {
-  const { format } = useCurrency();
-  const isPositive = asset.change24h >= 0;
-  const gains = asset.value - asset.investedAmount;
-  const gainsPercent = asset.investedAmount > 0 ? (gains / asset.investedAmount) * 100 : 0;
+  const { formatRaw, convertFrom, currency, symbolFor } = useCurrency();
+  const assetCurrency = asset.currency || currency;
+  const displayValue = convertFrom(asset.value, assetCurrency);
+  const displayInvested = convertFrom(asset.investedAmount, assetCurrency);
+  const gains = displayValue - displayInvested;
+  const gainsPercent = displayInvested > 0 ? (gains / displayInvested) * 100 : 0;
   const isGainsPositive = gains >= 0;
+  const showCurrencyBadge = assetCurrency !== currency;
   
   return (
     <TouchableOpacity
@@ -42,7 +45,14 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
            />
         </View>
         <View>
-          <Text className="text-white font-black text-base">{asset.name || asset.symbol}</Text>
+          <View className="flex-row items-center gap-x-2">
+            <Text className="text-white font-black text-base">{asset.name || asset.symbol}</Text>
+            {showCurrencyBadge && (
+              <View className="px-2 py-0.5 rounded-full bg-white/10">
+                <Text className="text-[8px] font-black text-white/60">{symbolFor(assetCurrency)} {assetCurrency}</Text>
+              </View>
+            )}
+          </View>
           <Text className="text-white/40 text-[10px] font-black uppercase tracking-widest">
             {asset.quantity} {asset.symbol}
           </Text>
@@ -50,10 +60,10 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
       </View>
 
       <View className="items-end">
-        <Text className="text-white font-black text-lg">{format(asset.value)}</Text>
+        <Text className="text-white font-black text-lg">{formatRaw(displayValue)}</Text>
         <View className="flex-row items-center gap-x-2">
            <Text className={`text-[10px] font-black ${isGainsPositive ? 'text-primary' : 'text-destructive'}`}>
-             {isGainsPositive ? '+' : '-'} {format(Math.abs(gains))} ({gainsPercent.toFixed(1)}%)
+             {isGainsPositive ? '+' : '-'} {formatRaw(Math.abs(gains))} ({gainsPercent.toFixed(1)}%)
            </Text>
         </View>
       </View>
@@ -62,14 +72,27 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
 };
 
 const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
-  const { format } = useCurrency();
+  const { formatRaw, convertFrom, currency, refreshRates } = useCurrency();
   const [activeAsset, setActiveAsset] = useState<Portfolio | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const totalValue = useMemo(() => portfolio.reduce((acc, curr) => acc + curr.value, 0), [portfolio]);
-  const totalInvested = useMemo(() => portfolio.reduce((acc, curr) => acc + curr.investedAmount, 0), [portfolio]);
+  // Proactively fetch exchange rates for all asset currencies
+  useEffect(() => {
+    const currencies = portfolio.map(p => p.currency).filter(Boolean) as string[];
+    if (currencies.length > 0) {
+      refreshRates(currencies);
+    }
+  }, [portfolio, refreshRates]);
+
+  // Convert all assets to the current display currency for totals
+  const totalValue = useMemo(() => portfolio.reduce((acc, curr) => {
+    return acc + convertFrom(curr.value, curr.currency || currency);
+  }, 0), [portfolio, currency, convertFrom]);
+  const totalInvested = useMemo(() => portfolio.reduce((acc, curr) => {
+    return acc + convertFrom(curr.investedAmount, curr.currency || currency);
+  }, 0), [portfolio, currency, convertFrom]);
   const totalGains = totalValue - totalInvested;
   const totalGainsPercent = totalInvested > 0 ? (totalGains / totalInvested) * 100 : 0;
   
@@ -81,7 +104,7 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
     );
   }, [portfolio, searchQuery]);
 
-  const refreshPrices = async () => {
+  const refreshPrices = React.useCallback(async () => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
@@ -92,6 +115,9 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
       
       await database.write(async () => {
         for (const asset of portfolio) {
+          // Guard against trying to update a record that was just deleted (e.g. during a seed reset)
+          if ((asset as any)._raw?._status === 'deleted') continue;
+
           const quote = quotes[asset.symbol];
           if (quote) {
             await asset.update((record: any) => {
@@ -106,11 +132,11 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
     } finally {
       setIsRefreshing(false);
     }
-  };
+  }, [portfolio, isRefreshing]);
 
   React.useEffect(() => {
     refreshPrices();
-  }, []);
+  }, [refreshPrices]);
 
   const handleAddAsset = () => {
     setActiveAsset(null);
@@ -166,12 +192,12 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
              />
              <Text className="text-white/40 text-[10px] font-black uppercase tracking-[3px] mb-2 text-center">Cumulative Assets</Text>
              <Text className="text-6xl font-black text-white tracking-tighter text-center">
-               {format(totalValue)}
+               {formatRaw(totalValue)}
              </Text>
              <View className="mt-8 flex-row justify-center gap-x-2">
                 <View className={`px-4 py-1.5 rounded-full border ${totalGains >= 0 ? 'bg-primary/20 border-primary/20' : 'bg-destructive/20 border-destructive/20'}`}>
                    <Text className={`${totalGains >= 0 ? 'text-primary' : 'text-destructive'} font-black text-[10px] uppercase tracking-widest`}>
-                     {totalGains >= 0 ? '+' : '-'} {format(Math.abs(totalGains))} ({totalGainsPercent.toFixed(1)}%)
+                     {totalGains >= 0 ? '+' : '-'} {formatRaw(Math.abs(totalGains))} ({totalGainsPercent.toFixed(1)}%)
                    </Text>
                 </View>
              </View>

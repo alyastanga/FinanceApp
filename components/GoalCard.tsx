@@ -78,11 +78,11 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
           <View className="flex-row justify-between mb-6">
             <View>
               <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pl-0.5">Saved</Text>
-              <Text className="text-base font-bold text-white">{format(goal.currentAmount || 0)}</Text>
+              <Text className="text-base font-bold text-white">{format(goal.currentAmount || 0, goal.currency)}</Text>
             </View>
             <View className="items-end">
               <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pr-0.5">Target</Text>
-              <Text className="text-base font-bold text-white/40">{format(goal.targetAmount || 0)}</Text>
+              <Text className="text-base font-bold text-white/40">{format(goal.targetAmount || 0, goal.currency)}</Text>
             </View>
           </View>
 
@@ -92,7 +92,7 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
               className="flex-1 overflow-hidden"
             >
               <View className="bg-primary/20 rounded-2xl py-3.5 items-center border border-primary/20">
-                <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ {format(50)} Quick Add</Text>
+                <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ {format(50, goal.currency)} Quick Add</Text>
               </View>
             </TouchableOpacity>
             <TouchableOpacity 

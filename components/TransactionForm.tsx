@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, ScrollView } from 'react-native';
 import database from '../database';
 import { useAuth } from '../context/AuthContext';
+import { useCurrency, SUPPORTED_CURRENCIES, CurrencyCode } from '../context/CurrencyContext';
 
 interface TransactionFormProps {
   initialType?: 'income' | 'expense';
@@ -10,18 +11,21 @@ interface TransactionFormProps {
 
 export default function TransactionForm({ initialType = 'expense', onSuccess }: TransactionFormProps) {
   const { user, loading: authLoading } = useAuth();
+  const { currency, symbolFor, convertFrom } = useCurrency();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'income' | 'expense'>(initialType);
+  const [txCurrency, setTxCurrency] = useState<CurrencyCode>(currency);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
   React.useEffect(() => {
     // Definitive mobile stabilization: Delay interactive mount to let native context settle
     const transitionTimer = setTimeout(() => {
       setIsHydrated(true);
+      setTxCurrency(currency); // Sync with detected currency on mount
     }, 50);
     return () => clearTimeout(transitionTimer);
-  }, []);
+  }, [currency]);
 
   if (authLoading || !user || !isHydrated) {
     return (
@@ -35,19 +39,28 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
     if (!amount || !description || !user) return;
 
     try {
+      const inputAmount = parseFloat(amount);
+      const isForeign = txCurrency !== currency;
+      const finalAmount = isForeign ? convertFrom(inputAmount, txCurrency) : inputAmount;
+      const finalDescription = isForeign 
+        ? `${description} (from ${symbolFor(txCurrency)}${inputAmount.toFixed(2)})`
+        : description;
+
       await database.write(async () => {
         if (type === 'income') {
           await database.get('incomes').create((record: any) => {
-            record.amount = parseFloat(amount);
-            record.source = description;
+            record.amount = finalAmount;
+            record.source = finalDescription;
+            record._currency = currency;
             record.userId = user.id;
             record.createdAt = new Date();
             record.updatedAt = new Date();
           });
         } else {
           await database.get('expenses').create((record: any) => {
-            record.amount = parseFloat(amount);
-            record.category = description;
+            record.amount = finalAmount;
+            record.category = finalDescription;
+            record._currency = currency;
             record.userId = user.id;
             record.createdAt = new Date();
             record.updatedAt = new Date();
@@ -84,10 +97,10 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
         </View>
       )}
 
-      <View className="space-y-6">
+      <View className="gap-y-6">
         <View>
-          <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Amount</Text>
-          <View className="bg-white/[0.03] border border-white/5 rounded-2xl p-5">
+          <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Amount ({symbolFor(txCurrency)})</Text>
+          <View className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4">
             <TextInput
               className="text-4xl font-black text-white p-0"
               placeholder="0.00"
@@ -100,16 +113,45 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
         </View>
 
         <View>
+          <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Currency</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8 }}
+          >
+            {[...SUPPORTED_CURRENCIES].sort((a, b) => a.code === txCurrency ? -1 : b.code === txCurrency ? 1 : 0).map((info) => (
+              <Pressable
+                key={info.code}
+                onPress={() => setTxCurrency(info.code)}
+                className={`px-5 py-3 rounded-2xl border ${
+                  txCurrency === info.code 
+                    ? 'bg-primary border-primary' 
+                    : 'bg-white/5 border-white/10'
+                }`}
+              >
+                <Text className={`font-black text-[10px] uppercase tracking-widest ${
+                  txCurrency === info.code ? 'text-white' : 'text-muted-foreground'
+                }`}>
+                  {info.code}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View>
           <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">
             {type === 'income' ? 'Source' : 'Category'}
           </Text>
-          <TextInput
-            className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4 text-white font-bold"
-            placeholder={type === 'income' ? 'e.g. Salary' : 'e.g. Shopping'}
+          <View className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4">
+            <TextInput
+              className="text-lg font-bold text-white p-0"
+              placeholder={type === 'income' ? 'e.g. Salary' : 'e.g. Shopping'}
             placeholderTextColor="rgba(255,255,255,0.1)"
-            value={description}
-            onChangeText={setDescription}
-          />
+              value={description}
+              onChangeText={setDescription}
+            />
+          </View>
         </View>
 
         <Pressable 

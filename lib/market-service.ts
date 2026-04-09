@@ -64,34 +64,35 @@ export const fetchMultipleQuotes = async (symbols: string[]): Promise<Record<str
 };
 
 /**
- * Fetches the exchange rate from USD to a target currency.
- * Uses Finnhub's Forex quote endpoint (e.g., OANDA:USD_PHP).
- * Default rate is 1.0 (USD to USD).
+ * Fetches the exchange rate between two currencies.
+ * @param fromCurrency - Source currency code (default: 'USD')
+ * @param toCurrency - Target currency code
+ * @returns The exchange rate multiplier (e.g., 56.5 for USD->PHP)
  */
-export const fetchExchangeRate = async (toCurrency: string): Promise<number> => {
-  if (toCurrency === 'USD') return 1.0;
+export const fetchExchangeRate = async (toCurrency: string, fromCurrency: string = 'PHP'): Promise<number> => {
+  if (fromCurrency === toCurrency) return 1.0;
 
   // 1. Primary: Frankfurter Dev API (Free, high-availability, no key required)
   try {
-    const fResponse = await fetch(`https://api.frankfurter.dev/v1/latest?from=USD&to=${toCurrency}`);
+    const fResponse = await fetch(`https://api.frankfurter.dev/v1/latest?from=${fromCurrency}&to=${toCurrency}`);
     const fData = await fResponse.json();
     if (fData && fData.rates && fData.rates[toCurrency]) {
       const rate = fData.rates[toCurrency];
-      console.log(`[MarketService] Exchange rate for ${toCurrency} found via Frankfurter: ${rate}`);
+      console.log(`[MarketService] Exchange rate ${fromCurrency}->${toCurrency} via Frankfurter: ${rate}`);
       return rate;
     }
   } catch (error) {
-    console.warn(`[MarketService] Frankfurter API failed for ${toCurrency}:`, error);
+    console.warn(`[MarketService] Frankfurter API failed for ${fromCurrency}->${toCurrency}:`, error);
   }
 
   // 2. Secondary: Finnhub Fallback (If key and access allow)
   if (!FINNHUB_API_KEY) return 1.0;
 
   const pairs = [
-    `FX:USD${toCurrency}`,
-    `PHYSICAL:USD/${toCurrency}`,
-    `OANDA:USD_${toCurrency}`,
-    `FX_PIDC:USD-${toCurrency}`
+    `FX:${fromCurrency}${toCurrency}`,
+    `PHYSICAL:${fromCurrency}/${toCurrency}`,
+    `OANDA:${fromCurrency}_${toCurrency}`,
+    `FX_PIDC:${fromCurrency}-${toCurrency}`
   ];
 
   for (const symbol of pairs) {
@@ -100,7 +101,7 @@ export const fetchExchangeRate = async (toCurrency: string): Promise<number> => 
       const data = await response.json();
 
       if (data && data.c > 0) {
-        console.log(`[MarketService] Exchange rate for ${toCurrency} found via Finnhub (${symbol}): ${data.c}`);
+        console.log(`[MarketService] Exchange rate ${fromCurrency}->${toCurrency} via Finnhub (${symbol}): ${data.c}`);
         return data.c;
       }
     } catch (error) {
@@ -108,13 +109,13 @@ export const fetchExchangeRate = async (toCurrency: string): Promise<number> => 
     }
   }
 
-  console.error(`[MarketService] All exchange rate lookups failed for ${toCurrency}. Defaulting to 1.0`);
+  console.error(`[MarketService] All exchange rate lookups failed for ${fromCurrency}->${toCurrency}. Defaulting to 1.0`);
   return 1.0;
 };
 
 /**
  * Detects the user's local currency based on their IP address.
- * Uses ipapi.co (Free tier). Fallbacks to USD.
+ * Uses ipapi.co (Free tier). Falls back to PHP if detection fails.
  */
 export const fetchCurrencyByIP = async (): Promise<string> => {
   try {
@@ -129,9 +130,9 @@ export const fetchCurrencyByIP = async (): Promise<string> => {
       console.log(`[MarketService] IP-based currency detection: ${currency}`);
       return currency.toUpperCase();
     }
-    return 'USD';
+    return 'PHP';
   } catch (error) {
-    console.warn('[MarketService] IP currency detection failed or timed out. Defaulting to USD.');
-    return 'USD';
+    console.warn('[MarketService] IP currency detection failed or timed out. Defaulting to PHP.');
+    return 'PHP';
   }
 };

@@ -104,7 +104,7 @@ export default function SettingsScreen() {
                   ? 'Cloud Mode uses high-performance models for complex budgeting analysis.'
                   : 'Local Mode uses on-device inference for maximum privacy and offline stability.'}
               </Text>
-              
+
               <Link href="/model-settings" asChild>
                 <TouchableOpacity className="flex-row items-center justify-between">
                   <Text className="text-primary text-[10px] font-black uppercase tracking-widest">Manage Native AI Engine</Text>
@@ -145,7 +145,7 @@ export default function SettingsScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ columnGap: 12 }}
             >
-              {SUPPORTED_CURRENCIES.map((c) => {
+              {[...SUPPORTED_CURRENCIES].sort((a, b) => a.code === currency ? -1 : b.code === currency ? 1 : 0).map((c) => {
                 const isSelected = currency === c.code;
                 return (
                   <TouchableOpacity

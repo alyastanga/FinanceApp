@@ -41,25 +41,27 @@ const TransactionItem = React.memo(({ item, type }: { item: any; type: 'income' 
           type === 'income' ? 'text-primary' : 'text-destructive'
         }`}
       >
-        {type === 'income' ? '+' : '-'} {format(item.amount)}
+        {type === 'income' ? '+' : '-'} {format(item.amount, item.currency)}
       </Text>
     </View>
   </View>
   );
 });
 
+TransactionItem.displayName = 'TransactionItem';
+
 // Combined List component
 const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expenses: any[]; Header?: React.ComponentType<any> }) => {
-  const { format } = useCurrency();
+  const { format, convertFrom, currency } = useCurrency();
   const [searchQuery, setSearchQuery] = React.useState('');
   
-  const totalIncome = incomes.reduce((acc, i) => acc + (i.amount || 0), 0);
-  const totalExpense = expenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+  const totalIncome = incomes.reduce((acc, i) => acc + convertFrom(i.amount || 0, i.currency || currency), 0);
+  const totalExpense = expenses.reduce((acc, e) => acc + convertFrom(e.amount || 0, e.currency || currency), 0);
   const netBalance = totalIncome - totalExpense;
 
   const allTransactions = [
-    ...incomes.map(i => ({ id: i.id, amount: i.amount, source: i.source, createdAt: i.createdAt, type: 'income' as const })),
-    ...expenses.map(e => ({ id: e.id, amount: e.amount, category: e.category, createdAt: e.createdAt, type: 'expense' as const }))
+    ...incomes.map(i => ({ id: i.id, amount: i.amount, currency: i.currency, source: i.source, createdAt: i.createdAt, type: 'income' as const })),
+    ...expenses.map(e => ({ id: e.id, amount: e.amount, currency: e.currency, category: e.category, createdAt: e.createdAt, type: 'expense' as const }))
   ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const filteredTransactions = allTransactions.filter(item => {

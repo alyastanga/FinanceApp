@@ -1,7 +1,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export default appSchema({
-  version: 8,
+  version: 10,
   tables: [
     tableSchema({
       name: 'incomes',
@@ -9,6 +9,7 @@ export default appSchema({
         { name: 'amount', type: 'number' },
         { name: 'source', type: 'string' },
         { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ]
@@ -19,6 +20,7 @@ export default appSchema({
         { name: 'amount', type: 'number' },
         { name: 'category', type: 'string' },
         { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ]
@@ -32,6 +34,7 @@ export default appSchema({
         { name: 'target_completion_date', type: 'number' },
         { name: 'sync_to_calendar', type: 'boolean' },
         { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ]
@@ -42,6 +45,7 @@ export default appSchema({
         { name: 'category', type: 'string' },
         { name: 'amount_limit', type: 'number' },
         { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
       ]
@@ -56,6 +60,7 @@ export default appSchema({
         { name: 'invested_amount', type: 'number' },
         { name: 'value', type: 'number' },
         { name: 'change_24h', type: 'number' },
+        { name: 'currency', type: 'string' },
         { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },
@@ -63,3 +68,4 @@ export default appSchema({
     }),
   ]
 })
+

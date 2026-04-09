@@ -1,10 +1,11 @@
-import Constants from 'expo-constants';
+import ExpoConstants from 'expo-constants';
 import schema from './schema';
+import migrations from './migrations';
 
 export const getAdapter = () => {
   // Detect if we are running in Expo Go (standard app store app)
   // or a custom Development Build.
-  const isExpoGo = Constants.appOwnership === 'expo';
+  const isExpoGo = ExpoConstants.appOwnership === 'expo';
 
   if (isExpoGo) {
     // Lazy-load LokiJS for Expo Go fallback
@@ -13,6 +14,7 @@ export const getAdapter = () => {
     console.warn('WatermelonDB: Running in Expo Go. Falling back to LokiJS (JS-only).');
     return new LokiJSAdapter({
       schema,
+      migrations,
       useWebWorker: false,
       useIncrementalIndexedDB: false,
       onSetUpError: (error: any) => {
@@ -27,6 +29,7 @@ export const getAdapter = () => {
 
   return new SQLiteAdapter({
     schema,
+    migrations,
     dbName: 'FinanceApp',
     jsi: true,
     onSetUpError: (error: any) => {

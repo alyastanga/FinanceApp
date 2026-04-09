@@ -48,17 +48,19 @@ export async function syncData() {
           return res;
         };
 
-        const [incomeRes, expenseRes, goalRes, budgetRes] = await Promise.all([
+        const [incomeRes, expenseRes, goalRes, budgetRes, portfolioRes] = await Promise.all([
           fetchTableInfo('incomes'),
           fetchTableInfo('expenses'),
           fetchTableInfo('goals'),
           fetchTableInfo('budgets'),
+          fetchTableInfo('portfolio'),
         ]);
 
         if (incomeRes.error) throw incomeRes.error;
         if (expenseRes.error) throw expenseRes.error;
         if (goalRes.error) throw goalRes.error;
         if (budgetRes.error) throw budgetRes.error;
+        if (portfolioRes.error) throw portfolioRes.error;
 
         const patchLegacyDates = (data: any[]) => {
           return (data || []).map(d => {
@@ -94,6 +96,11 @@ export async function syncData() {
           budgets: {
             created: [] as any[],
             updated: patchLegacyDates(budgetRes.data || []),
+            deleted: [] as string[],
+          },
+          portfolio: {
+            created: [] as any[],
+            updated: patchLegacyDates(portfolioRes.data || []),
             deleted: [] as string[],
           },
         };
@@ -150,6 +157,7 @@ export async function syncData() {
           pushTable('expenses', (changes as any).expenses),
           pushTable('goals', (changes as any).goals),
           pushTable('budgets', (changes as any).budgets),
+          pushTable('portfolio', (changes as any).portfolio),
         ]);
       },
     });

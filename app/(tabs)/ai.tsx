@@ -25,49 +25,35 @@ interface Message {
 }
 
 const ChatBubble = ({ item }: { item: Message }) => {
-  // Use 'Auto-Repairing' detection: finds anything that starts like a chart and tries to fix it
-  const startIdx = item.text.indexOf('{');
-  const dataIdx = item.text.indexOf('"data"');
-  
+  // ── Robust Chart Extraction (Regex-based) ──
   let chartData = null;
   let cleanText = item.text;
 
-  if (startIdx !== -1 && dataIdx > startIdx) {
-    // Attempt to find the best possible JSON block
-    const lastBrace = item.text.lastIndexOf('}');
-    const lastBracket = item.text.lastIndexOf(']');
-    const endIdx = Math.max(lastBrace, lastBracket) + 1;
-    
-    if (endIdx > dataIdx) {
-      // Find the trigger prefix to remove it as well
-      const triggerMatch = item.text.substring(0, startIdx).match(/\[?CHART_DATA:?\s*/i);
-      const triggerStart = triggerMatch ? item.text.lastIndexOf(triggerMatch[0], startIdx) : startIdx;
-      
-      let rawMatch = item.text.substring(startIdx, endIdx);
-      
+  // Pattern: matches [CHART_DATA: { ... }] with optional Markdown formatting
+  const CHART_REGEX = /\[?CHART_DATA:?\s*(?:```json\s*)?(\{[\s\S]*?\})(?:\s*```)?\s*\]?/gi;
+  const match = CHART_REGEX.exec(item.text);
+
+  if (match && match[1]) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed && Array.isArray(parsed.data)) {
+        chartData = parsed.data;
+        // Strip the entire matched block from the text
+        cleanText = item.text.replace(match[0], '').trim();
+      }
+    } catch (e) {
+      console.warn('[AI UI] Chart extraction failed, attempting surgical repair:', e);
+      // Minimal repair for common JSON trailing errors
       try {
-        let repairToken = rawMatch;
-        if (!repairToken.endsWith('}')) repairToken += '}';
-        const parsed = JSON.parse(repairToken);
-        
-        if (parsed && Array.isArray(parsed.data)) {
-          chartData = parsed.data;
-          // SURGICAL CUT: Remove the entire block from triggerStart to endIdx (plus any trailing bracket)
-          const actualEnd = item.text[endIdx] === ']' ? endIdx + 1 : endIdx;
-          cleanText = (item.text.substring(0, triggerStart) + item.text.substring(actualEnd)).trim();
+        let repair = match[1].trim();
+        if (!repair.endsWith('}')) repair += '}';
+        const parsedRepair = JSON.parse(repair);
+        if (parsedRepair && Array.isArray(parsedRepair.data)) {
+          chartData = parsedRepair.data;
+          cleanText = item.text.replace(match[0], '').trim();
         }
-      } catch (e) {
-        // Fallback for extreme hallucinations
-        try {
-          const simplified = rawMatch.replace(/\]\]$/, ']}');
-          const parsed2 = JSON.parse(simplified);
-          if (parsed2 && Array.isArray(parsed2.data)) {
-            chartData = parsed2.data;
-            cleanText = item.text.replace(rawMatch, '').replace(/\[?CHART_DATA:?\s*/i, '').trim();
-          }
-        } catch (e2) {
-          console.warn('AI Visualization surgical repair failed:', e2);
-        }
+      } catch (innerError) {
+        console.error('[AI UI] Critical visualization failure:', innerError);
       }
     }
   }

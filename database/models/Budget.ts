@@ -7,6 +7,11 @@ export default class Budget extends Model {
   @field('category') category!: string;
   @field('amount_limit') amountLimit!: number;
   @field('user_id') userId!: string;
+  @field('currency') _currency?: string;
+
+  get currency(): string {
+    return this._currency || 'PHP';
+  }
 
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
@@ -11,7 +11,6 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BudgetChart } from '@/components/ui/BudgetChart';
 import { BudgetComparison } from '@/components/ui/BudgetComparison';
 import { AllocationCard } from '@/components/ui/AllocationCard';
-import { TextInput } from 'react-native';
 
 // Context & Services
 import { useTheme } from '../../context/ThemeContext';
@@ -29,7 +28,7 @@ interface BudgetScreenProps {
 
 const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => {
   const { isDark } = useTheme();
-  const { format } = useCurrency();
+  const { format, convertFrom, currency } = useCurrency();
   const { aiMode } = useAI();
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'velocity' | 'allocation'>('overview');
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -56,7 +55,8 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
     const expenseMap = expenses.reduce((acc, exp) => {
       const t = exp.createdAt instanceof Date ? exp.createdAt.getTime() : Number(exp.createdAt);
       if (t >= monthStart) {
-        acc[exp.category] = (acc[exp.category] || 0) + exp.amount;
+        const amt = convertFrom(exp.amount || 0, exp.currency || currency);
+        acc[exp.category] = (acc[exp.category] || 0) + amt;
       }
       return acc;
     }, {} as Record<string, number>);
@@ -65,11 +65,11 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
     const comparisons = budgets.map(b => ({
       id: b.id,
       category: b.category,
-      limit: b.amountLimit,
+      limit: convertFrom(b.amountLimit, b.currency || currency),
       spent: expenseMap[b.category] || 0
     })).sort((a, b) => b.limit - a.limit);
 
-    const totalAlloc = budgets.reduce((acc, b) => acc + b.amountLimit, 0);
+    const totalAlloc = budgets.reduce((acc, b) => acc + convertFrom(b.amountLimit, b.currency || currency), 0);
     const totalSpt = (Object.values(expenseMap) as number[]).reduce((acc, amt) => acc + amt, 0);
 
     const insights = calculateBudgetInsights(incomes, expenses, []); // temp goals check later
@@ -92,7 +92,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
         variance: Math.abs(1 - (currentVelocity / dailyLimit)) * 100
       }
     };
-  }, [budgets, expenses, incomes]);
+  }, [budgets, expenses, incomes, convertFrom, currency]);
 
   const remainingToAllocate = monthlyIncomeValue - totalAllocated;
 
@@ -125,7 +125,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       } else {
         Alert.alert("AI Error", "Could not generate a suggestion. Check your API key.");
       }
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Something went wrong.");
     } finally {
       setIsGenerating(false);
@@ -138,7 +138,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       await applyAIAllocation(aiSuggestions);
       setAiSuggestions(null);
       Alert.alert("Success", "AI suggested budget applied successfully!");
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Failed to apply budget.");
     }
   };
@@ -149,7 +149,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       await upsertBudget(newCategoryName.trim(), Number(newCategoryLimit) || 0);
       setNewCategoryName('');
       setIsAddingCategory(false);
-    } catch (e) {
+    } catch {
       Alert.alert("Error", "Could not add category.");
     }
   };

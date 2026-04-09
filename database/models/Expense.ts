@@ -7,6 +7,11 @@ export default class Expense extends Model {
   @field('amount') amount!: number;
   @field('category') category!: string;
   @field('user_id') userId!: string;
+  @field('currency') _currency?: string;
+
+  get currency(): string {
+    return this._currency || 'PHP';
+  }
 
   @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;

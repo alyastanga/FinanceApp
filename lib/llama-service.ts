@@ -11,10 +11,10 @@
  * Requirements addressed: FND-05 (local LLM runtime), CHAT-04 (offline AI).
  */
 
-import database from '../database';
 import * as FileSystem from 'expo-file-system/legacy';
+import database from '../database';
 
-const MODEL_NAME = 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf';
+const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
 
     // Determine path — default to documentDirectory/tinyllama if none provided
     const resolvedPath = modelPath || `${FileSystem.documentDirectory}${MODEL_NAME}`;
-    
+
     const info = await FileSystem.getInfoAsync(resolvedPath);
     if (!info.exists) {
       console.log('[Local LLM] No native model found at path, using offline fallback engine.');
@@ -100,8 +100,23 @@ export async function generateLocalResponse(
         messages: [
           {
             role: 'system',
-            content:
-              'You are a concise, professional financial advisor. Answer briefly based on the data given. Use plain text only.',
+            content: `[SYSTEM ROLE: SENIOR FINANCIAL CONSULTANT]
+              You are a Senior Partner at a top-tier financial consultancy with 20 years of experience. You provide high-level, authoritative, and extremely concise executive insights. Your output is read by an automated system, so strict adherence to formatting rules is mandatory. Failure to comply causes a FATAL SYSTEM ERROR.
+
+              <directives>
+              1. Provide a single-paragraph executive summary based on the data. Speak with the authority, analytical depth, and brevity of a 20-year industry veteran.
+              2. NO PLEASANTRIES. Do not use conversational filler (e.g., "Here is your chart", "I hope this helps", "Let's look at").
+              3. VISUAL TRIGGER: If the user requests a chart, graph, or visual, you MUST append a raw JSON block at the absolute end of your response.
+              4. The JSON block MUST NOT be inside <think> tags. 
+              5. DO NOT wrap the JSON in Markdown code blocks (e.g., no \`\`\`json).
+              </directives>
+
+              <strict_format_example>
+              User: Graph my recent expenses.
+              Assistant: <think>User requested a graph. I will generate an authoritative executive summary and append the raw chart data after my reasoning closes.</think>
+              Your capital allocation reflects a high concentration in discretionary travel, requiring immediate budget realignment to preserve margin.
+              [CHART_DATA: {"data": [{"label": "Travel", "value": 450, "color": "#3b82f6"}]}]
+              </strict_format_example>`
           },
           ...messages,
         ],
@@ -109,7 +124,12 @@ export async function generateLocalResponse(
         temperature: 0.7,
         stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>'],
       });
-      return result.text || 'I could not generate a response.';
+
+      let finalResponse = result.text || 'I could not generate a response.';
+      // DeepSeek R1 reasoning removal
+      finalResponse = finalResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+
+      return finalResponse;
     } catch (error: any) {
       console.error('[Local LLM] Native inference failed:', error.message);
       // Fall through to fallback
@@ -144,7 +164,6 @@ async function generateFallbackResponse(
     const totalExpenses = expenses.reduce((sum, e) => sum + ((e as any).amount || 0), 0);
     const totalPortfolioValue = portfolio.reduce((sum, p) => sum + ((p as any).value || 0), 0);
     const netFlow = totalIncome - totalExpenses;
-    const netWorthValue = totalPortfolioValue + (netFlow > 0 ? netFlow : 0);
     const savingsRate = totalIncome > 0 ? ((netFlow / totalIncome) * 100).toFixed(1) : '0';
 
     // Category breakdown

@@ -4,6 +4,7 @@ import database from '../database';
 import Portfolio from '../database/models/Portfolio';
 import { IconSymbol } from './ui/icon-symbol';
 import { useAuth } from '../context/AuthContext';
+import { SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
 
 interface PortfolioFormProps {
   asset?: Portfolio | null;
@@ -21,6 +22,7 @@ const ASSET_TYPES = [
 
 export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, onCancel }) => {
   const { session } = useAuth();
+  const { currency: appCurrency, symbolFor } = useCurrency();
   const [name, setName] = useState(asset?.name || '');
   const [assetType, setAssetType] = useState(asset?.assetType || 'stock');
   const [symbol, setSymbol] = useState(asset?.symbol || '');
@@ -28,6 +30,9 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
   const [investedAmount, setInvestedAmount] = useState(asset?.investedAmount ? asset.investedAmount.toString() : '');
   const [value, setValue] = useState(asset?.value ? asset.value.toString() : '');
   const [change24h, setChange24h] = useState(asset?.change24h ? asset.change24h.toString() : '0');
+  const [assetCurrency, setAssetCurrency] = useState(asset?.currency || appCurrency);
+
+  const currentSymbol = symbolFor(assetCurrency);
 
   const handleSubmit = async () => {
     const isAutomated = assetType === 'stock' || assetType === 'crypto';
@@ -53,6 +58,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
             record.investedAmount = amt;
             record.value = val;
             record.change24h = parseFloat(change24h);
+            record.currency = assetCurrency;
           });
         } else {
           // Create new asset
@@ -64,6 +70,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
             record.investedAmount = amt;
             record.value = val;
             record.change24h = parseFloat(change24h);
+            record.currency = assetCurrency;
             record.userId = session?.user?.id || 'anonymous';
           });
         }
@@ -149,7 +156,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
           {/* Invested Amount Input - Always Show */}
           <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
             <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
-              {assetType === 'cash' ? 'Current Balance ($)' : 'Total Invested ($)'}
+              {assetType === 'cash' ? `Current Balance (${currentSymbol})` : `Total Invested (${currentSymbol})`}
             </Text>
             <TextInput
               value={investedAmount}
@@ -165,7 +172,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
           {assetType !== 'stock' && assetType !== 'crypto' && assetType !== 'cash' && (
             <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
               <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
-                Current Value ($)
+                Current Value ({currentSymbol})
               </Text>
               <TextInput
                 value={value}
@@ -215,6 +222,25 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               </TouchableOpacity>
             ))}
           </View>
+        </View>
+
+        {/* Asset Currency Selector */}
+        <View className="gap-y-3">
+          <Text className="text-[10px] font-black uppercase text-white/40 tracking-widest pl-2">
+            Asset Currency
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ columnGap: 8 }}>
+            {SUPPORTED_CURRENCIES.map((c) => (
+              <TouchableOpacity
+                key={c.code}
+                onPress={() => setAssetCurrency(c.code)}
+                className={`px-4 py-3 rounded-2xl border ${assetCurrency === c.code ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5'}`}
+              >
+                <Text className={`text-sm font-black ${assetCurrency === c.code ? 'text-primary' : 'text-white/60'}`}>{c.symbol}</Text>
+                <Text className={`text-[8px] font-black uppercase tracking-widest ${assetCurrency === c.code ? 'text-primary/60' : 'text-white/30'}`}>{c.code}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         <View className="flex-row gap-x-4 mt-8">

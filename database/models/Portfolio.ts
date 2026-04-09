@@ -11,6 +11,7 @@ export default class Portfolio extends Model {
   @field('invested_amount') investedAmount!: number;
   @field('value') value!: number;
   @field('change_24h') change24h!: number;
+  @field('currency') currency!: string;
   @field('user_id') userId!: string;
 
   @readonly @date('created_at') createdAt!: Date;

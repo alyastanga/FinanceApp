@@ -6,9 +6,9 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BlurView } from 'expo-blur';
 import { releaseLocalModel } from '@/lib/llama-service';
 
-const MODEL_URL = 'https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf?download=true';
-const MODEL_NAME = 'tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf';
-const MODEL_SIZE_MB = 669;
+const MODEL_URL = 'https://huggingface.co/tensorblock/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true';
+const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
+const MODEL_SIZE_MB = 952;
 
 export default function ModelSettings() {
   const router = useRouter();
@@ -103,9 +103,9 @@ export default function ModelSettings() {
             <View className="h-16 w-16 bg-primary/20 rounded-3xl items-center justify-center mb-6">
               <IconSymbol name="cpu.fill" size={32} color="#10b981" />
             </View>
-            <Text className="text-white font-black text-xl text-center">TinyLlama 1.1B Chat</Text>
+            <Text className="text-white font-black text-xl text-center">DeepSeek R1 Distill 1.5B</Text>
             <Text className="text-white/40 text-xs text-center mt-2 px-6">
-              Optimized for privacy and speed on mobile devices. Runs 100% offline.
+              Advanced reasoning optimized for mobile. Runs 100% offline.
             </Text>
           </View>
 

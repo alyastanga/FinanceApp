@@ -44,6 +44,12 @@
         "expo-build-properties",
         {
           "ios": {
+            "deploymentTarget": "18.6",
+            "apple": {
+              "buildSettings": {
+                "ENABLE_USER_SCRIPT_SANDBOXING": "NO"
+              }
+            },
             "extraPods": [
               {
                 "name": "simdjson",

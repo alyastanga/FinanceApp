@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchExchangeRate, fetchCurrencyByIP } from '@/lib/market-service';
 
@@ -31,13 +31,27 @@ interface CurrencyContextType {
   setCurrency: (code: CurrencyCode) => Promise<void>;
   loading: boolean;
   convert: (val: number) => number;
-  format: (val: number, decimals?: number) => string;
+  format: (val: number, fromCurrency?: string, decimals?: number) => string;
+  /** Format a value that has already been converted to the display currency (no conversion applied) */
+  formatRaw: (val: number, decimals?: number) => string;
+  /** Convert a value from a specific source currency to the current display currency */
+  convertFrom: (val: number, fromCurrency: string) => number;
+  /** Get the symbol for any supported currency code */
+  symbolFor: (code: string) => string;
+  /** Proactively fetch and cache exchange rates for a list of currencies */
+  refreshRates: (currencies: string[]) => Promise<void>;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
+/**
+ * Rate cache to avoid redundant API calls for currency pairs we've already fetched.
+ * Key format: "FROM->TO", value: exchange rate.
+ */
+const rateCache: Record<string, number> = {};
+
 export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [currency, setCurrencyState] = useState<CurrencyCode>('USD');
+  const [currency, setCurrencyState] = useState<CurrencyCode>('PHP');
   const [exchangeRate, setExchangeRate] = useState(1.0);
   const [loading, setLoading] = useState(true);
 
@@ -49,25 +63,27 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       let saved = await AsyncStorage.getItem('user_currency');
       
-      // If no saved preference, try IP-based detection
-      if (!saved) {
-        console.log('[CurrencyContext] No saved currency found. Detecting via IP...');
+      // If no saved preference or defaulted to USD erroneously, detect via IP address
+      if (!saved || saved === 'USD') {
+        console.log('[CurrencyContext] Detecting via IP...');
         const detected = await fetchCurrencyByIP();
         if (detected in CURRENCY_MAP) {
           saved = detected;
           await AsyncStorage.setItem('user_currency', detected);
-          console.log(`[CurrencyContext] Defaulting to IP-detected currency: ${detected}`);
+          console.log(`[CurrencyContext] Set currency from IP detection: ${detected}`);
         } else {
-          saved = 'USD';
-          await AsyncStorage.setItem('user_currency', 'USD');
-          console.log(`[CurrencyContext] IP-detected currency (${detected}) not supported. Defaulting to USD.`);
+          saved = 'PHP';
+          await AsyncStorage.setItem('user_currency', 'PHP');
+          console.log(`[CurrencyContext] IP-detected currency (${detected}) not supported. Defaulting to PHP.`);
         }
       }
 
       if (saved && saved in CURRENCY_MAP) {
         setCurrencyState(saved as CurrencyCode);
+        // Exchange rate is relative to PHP as the universal base for stored values
         const rate = await fetchExchangeRate(saved as CurrencyCode);
         setExchangeRate(rate);
+        rateCache[`PHP->${saved}`] = rate;
       }
     } catch (e) {
       console.error('Failed to load currency settings', e);
@@ -85,6 +101,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       await AsyncStorage.setItem('user_currency', code);
       setExchangeRate(rate);
       setCurrencyState(code);
+      rateCache[`PHP->${code}`] = rate;
       
       console.log(`[CurrencyContext] Successfully switched to ${code} (Rate: ${rate})`);
     } catch (error) {
@@ -96,19 +113,105 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const convert = (val: number) => val * exchangeRate;
 
-  const format = (val: number, decimals: number = 0) => {
-    const converted = convert(val);
+  /**
+   * Convert a value from a specific source currency to the current display currency.
+   * Uses cached rates when available to minimize API calls.
+   * This is a synchronous function that uses pre-fetched cached rates.
+   */
+  const convertFrom = useCallback((val: number, fromCurrency: string): number => {
+    if (fromCurrency === currency) return val;
+    
+    // Check if we have a cached rate for this pair
+    const cacheKey = `${fromCurrency}->${currency}`;
+    if (rateCache[cacheKey]) {
+      return val * rateCache[cacheKey];
+    }
+    
+    // If both are relative to PHP, we can compute the cross rate
+    const fromToPHP = rateCache[`PHP->${fromCurrency}`];
+    const toToPHP = rateCache[`PHP->${currency}`];
+    
+    if (fromToPHP && toToPHP) {
+      // Cross rate: fromCurrency -> PHP -> toCurrency
+      const crossRate = toToPHP / fromToPHP;
+      rateCache[cacheKey] = crossRate;
+      return val * crossRate;
+    }
+    
+    // Fallback: if no cached rate, return unconverted (rates will be fetched async)
+    return val;
+  }, [currency]);
+
+  /**
+   * Proactively fetch and cache exchange rates for a list of currencies.
+   * This ensures that convertFrom has the necessary data in its cache.
+   */
+  const refreshRates = useCallback(async (currencies: string[]) => {
+    const unique = [...new Set(currencies)].filter(c => c !== currency && !!c);
+    if (unique.length === 0) return;
+
+    try {
+      await Promise.all(unique.map(async (c) => {
+        // If we don't have the PHP pair for this currency, fetch it
+        // Storing PHP pairs allows us to compute cross-rates easily
+        if (!rateCache[`PHP->${c}`]) {
+          const rate = await fetchExchangeRate(c);
+          rateCache[`PHP->${c}`] = rate;
+          console.log(`[CurrencyContext] Cached rate: PHP->${c} = ${rate}`);
+        }
+      }));
+    } catch (error) {
+      console.warn('[CurrencyContext] Failed to refresh some rates:', error);
+    }
+  }, [currency]);
+
+  /**
+   * Pre-fetch and cache exchange rate for a specific currency pair.
+   * Call this when loading portfolio data to ensure convertFrom works.
+   */
+  useEffect(() => {
+    // Pre-cache the current currency rate
+    if (currency !== 'PHP') {
+      rateCache[`PHP->${currency}`] = exchangeRate;
+    }
+  }, [currency, exchangeRate]);
+
+  const symbolFor = useCallback((code: string): string => {
+    return CURRENCY_MAP[code as CurrencyCode]?.symbol || code;
+  }, []);
+
+  const format = (val: number, fromCurrency?: string, decimals: number = 0) => {
+    // If val is already in the target currency, use it directly to avoid drift/precision loss
+    const converted = (fromCurrency && fromCurrency !== currency) 
+      ? convertFrom(val, fromCurrency) 
+      : (fromCurrency ? val : convert(val)); // if no fromCurrency, assume val is "USD Base" (legacy fallback)
+
     const absVal = Math.abs(converted);
-    const symbol = CURRENCY_MAP[currency].symbol;
+    const sym = CURRENCY_MAP[currency].symbol;
     const sign = converted < 0 ? '-' : '';
 
     if (absVal >= 1000000) {
-      return `${sign}${symbol}${(absVal / 1000000).toFixed(1)}M`;
+      return `${sign}${sym}${(absVal / 1000000).toFixed(1)}M`;
     }
     if (absVal >= 1000) {
-      return `${sign}${symbol}${(absVal / 1000).toFixed(1)}K`;
+      return `${sign}${sym}${(absVal / 1000).toFixed(1)}K`;
     }
-    return `${sign}${symbol}${absVal.toFixed(decimals)}`;
+    return `${sign}${sym}${absVal.toFixed(decimals)}`;
+  };
+
+  /** Format value that is already in the display currency (no conversion) */
+  const formatRaw = (val: number, decimals: number = 0) => {
+    const absVal = Math.abs(val);
+    const sym = CURRENCY_MAP[currency].symbol;
+    const sign = val < 0 ? '-' : '';
+
+    if (absVal >= 1000000) {
+      return `${sign}${sym}${(absVal / 1000000).toFixed(1)}M`;
+    }
+    if (absVal >= 1000) {
+      return `${sign}${sym}${(absVal / 1000).toFixed(1)}K`;
+    }
+    return `${sign}${sym}${absVal.toFixed(decimals)}`;
   };
 
   return (
@@ -120,7 +223,11 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCurrency, 
         loading,
         convert,
-        format 
+        format,
+        formatRaw,
+        convertFrom,
+        symbolFor,
+        refreshRates,
       }}
     >
       {children}

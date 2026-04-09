@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert, ScrollView } from 'react-native';
 import database from '../database';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface IncomeFormProps {
   onSuccess?: () => void;
@@ -8,6 +9,7 @@ interface IncomeFormProps {
 }
 
 export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
+  const { symbolFor, currency } = useCurrency();
   const [amount, setAmount] = useState('');
   const [source, setSource] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,6 +28,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
         await database.get('incomes').create((income: any) => {
           income.amount = parsedAmount;
           income.source = source;
+          income._currency = currency;
           income.createdAt = new Date();
         });
       });
@@ -50,7 +53,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
 
         <View className="gap-y-6">
           <View>
-            <Text className="mb-3 text-sm font-bold text-foreground/60 uppercase tracking-tighter">Amount ($)</Text>
+            <Text className="mb-3 text-sm font-bold text-foreground/60 uppercase tracking-tighter">Amount ({symbolFor(currency)})</Text>
             <TextInput
               placeholder="0.00"
               keyboardType="decimal-pad"

@@ -6,7 +6,7 @@ import { AIProvider } from '../context/AIContext';
 import { CurrencyProvider } from '../context/CurrencyContext';
 import database from '../database';
 import '../global.css';
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
 
 // Polyfills
@@ -74,7 +74,7 @@ function RootLayoutNav() {
       });
       return () => cancelAnimationFrame(handle);
     }
-  }, [session, loading, segments]);
+  }, [session, loading, segments, router]);
 
   const inAuthGroup = segments[0] === '(auth)';
   const needsRedirect = (!session && !inAuthGroup) || (session && inAuthGroup);
