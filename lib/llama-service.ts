@@ -11,9 +11,11 @@
  * Requirements addressed: FND-05 (local LLM runtime), CHAT-04 (offline AI).
  */
 
-import * as FileSystem from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Haptics from 'expo-haptics';
 import database from '../database';
+import { getFinancialContext } from './budget-engine';
 
 const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
 
@@ -65,8 +67,9 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
     const context = await initLlama({
       model: resolvedPath,
       n_ctx: 2048,
-      n_gpu_layers: 99, // Use GPU acceleration if possible
-      use_mlock: true,
+      n_threads: 4,      // Optimized for A13 Bionic architecture
+      n_gpu_layers: 24,   // Balanced offload for 1.5B model on iPhone 11
+      use_mlock: false,   // Disable mlock on 4GB devices to avoid memory pressure crashes
     });
 
     modelState = { initialized: true, mode: 'native', context };
@@ -87,7 +90,8 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
  * meaningful offline analysis.
  */
 export async function generateLocalResponse(
-  messages: { role: string; content: string }[]
+  messages: { role: string; content: string }[],
+  agentId?: string
 ): Promise<string> {
   // Ensure model is initialized
   if (!modelState.initialized) {
@@ -97,32 +101,42 @@ export async function generateLocalResponse(
   // ── Native path: use llama.rn context ──
   if (modelState.mode === 'native' && modelState.context) {
     try {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      const context = await getFinancialContext();
+
       const result = await modelState.context.completion({
         messages: [
           {
             role: 'system',
-            content: `[SYSTEM ROLE: SENIOR FINANCIAL CONSULTANT]
-              You are a Senior Partner at a top-tier financial consultancy with 20 years of experience. You provide high-level, authoritative, and extremely concise executive insights. Your output is read by an automated system, so strict adherence to formatting rules is mandatory. Failure to comply causes a FATAL SYSTEM ERROR.
+            content: `You are FinanceGPT, an elite financial advisor. You have the user's REAL financial data below. You MUST use these numbers in every answer. Never say you lack data.
 
-              <directives>
-              1. Provide a single-paragraph executive summary based on the data. Speak with the authority, analytical depth, and brevity of a 20-year industry veteran.
-              2. NO PLEASANTRIES. Do not use conversational filler (e.g., "Here is your chart", "I hope this helps", "Let's look at").
-              3. VISUAL TRIGGER: If the user requests a chart, graph, or visual, you MUST append a raw JSON block at the absolute end of your response.
-              4. The JSON block MUST NOT be inside <think> tags. 
-              5. DO NOT wrap the JSON in Markdown code blocks (e.g., no \`\`\`json).
-              </directives>
+                  <DATA>
+                  ${context}
+                  </DATA>
 
-              <strict_format_example>
-              User: Graph my recent expenses.
-              Assistant: <think>User requested a graph. I will generate an authoritative executive summary and append the raw chart data after my reasoning closes.</think>
-              Your capital allocation reflects a high concentration in discretionary travel, requiring immediate budget realignment to preserve margin.
-              [CHART_DATA: {"data": [{"label": "Travel", "value": 450, "color": "#3b82f6"}]}]
-              </strict_format_example>`
+                  RULES:
+                  1. ALWAYS reference specific numbers from <DATA> in your answer. Double-check your math before responding.
+                  2. For complex questions, use this reasoning framework:
+                    SITUATION: State the financial reality from the data.
+                    ANALYSIS: Calculate metrics (burn rate, savings rate, runway).
+                    RECOMMENDATION: Give 2-3 specific, actionable steps.
+                  3. Keep answers under 250 words. Be direct and authoritative.
+                  4. For budget questions: use the explicit limits provided in the [BUDGET PERFORMANCE] section.
+                  5. For goal questions: calculate needed savings based on the [ACTIVE GOAL DETAILS].
+
+                  CHART RULES:
+                  When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
+                  [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]
+                  - Do NOT include color hex codes.
+                  - Ensure labels are descriptive and values match the context data.
+                  Place the block AFTER your text.`
           },
           ...messages,
         ],
-        n_predict: 256,
-        temperature: 0.7,
+        n_predict: 1024,
+        temperature: 0.5,
+        top_p: 0.9,
         stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>'],
       });
 
@@ -130,6 +144,7 @@ export async function generateLocalResponse(
       // DeepSeek R1 reasoning removal
       finalResponse = finalResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
 
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return finalResponse;
     } catch (error: any) {
       console.error('[Local LLM] Native inference failed:', error.message);
@@ -156,7 +171,7 @@ async function generateFallbackResponse(
 
   try {
     const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
-    
+
     // Fetch real data from the local database
     const incomes = await database.get('incomes').query().fetch();
     const expenses = await database.get('expenses').query().fetch();
@@ -167,85 +182,106 @@ async function generateFallbackResponse(
     const totalExpenses = expenses.reduce((sum, e) => sum + ((e as any).amount || 0), 0);
     const totalPortfolioValue = portfolio.reduce((sum, p) => sum + ((p as any).value || 0), 0);
     const netFlow = totalIncome - totalExpenses;
-    const savingsRate = totalIncome > 0 ? ((netFlow / totalIncome) * 100).toFixed(1) : '0';
 
-    // Category breakdown
-    const categories: Record<string, number> = {};
+    // Monthly aggregation for historical queries
+    const monthlyExpenses: Record<string, number> = {};
+    const monthlyCategorical: Record<string, Record<string, number>> = {};
+    
     expenses.forEach((e: any) => {
-      const cat = e.category || 'Uncategorized';
-      categories[cat] = (categories[cat] || 0) + e.amount;
+      const d = new Date((e as any).createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthlyExpenses[key] = (monthlyExpenses[key] || 0) + (e as any).amount;
+      
+      const cat = (e as any).category || 'Uncategorized';
+      if (!monthlyCategorical[key]) monthlyCategorical[key] = {};
+      monthlyCategorical[key][cat] = (monthlyCategorical[key][cat] || 0) + (e as any).amount;
     });
-    const topCategories = Object.entries(categories)
+
+    const sortedMonths = Object.entries(monthlyExpenses).sort((a, b) => b[0].localeCompare(a[0]));
+    const peakMonth = [...Object.entries(monthlyExpenses)].sort(([, a], [, b]) => b - a)[0];
+
+    // Current category breakdown
+    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const currentCategories = monthlyCategorical[currentMonthKey] || {};
+    const topCategories = Object.entries(currentCategories)
       .sort(([, a], [, b]) => b - a)
       .slice(0, 5);
 
     // Goal progress
     const goalSummaries = goals.map((g: any) => {
-      const pct = g.targetAmount > 0
-        ? ((g.currentAmount / g.targetAmount) * 100).toFixed(0)
-        : '0';
-      return `${g.name}: $${g.currentAmount?.toLocaleString() || 0} / $${g.targetAmount?.toLocaleString() || 0} (${pct}%)`;
+      const target = (g as any).targetAmount || (g as any).target_amount || 0;
+      const current = (g as any).currentAmount || (g as any).current_amount || 0;
+      const pct = target > 0 ? ((current / target) * 100).toFixed(0) : '0';
+      return `${(g as any).name}: ${baseCurrency} ${current.toLocaleString()} / ${target.toLocaleString()} (${pct}%)`;
     });
-
-    // Days left in month
-    const now = new Date();
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-    const daysLeft = daysInMonth - now.getDate();
-    const safeToSpend = daysLeft > 0 ? (netFlow / daysLeft).toFixed(2) : '0.00';
 
     // ── Intent Detection & Response ──
 
+    if (query.includes('most') || query.includes('highest') || query.includes('peak')) {
+      if (!peakMonth) return "[Offline Mode] No expense data found to analyze peak spending.";
+      
+      const [month, amt] = peakMonth;
+      const cats = monthlyCategorical[month];
+      const topCat = Object.entries(cats).sort(([, a], [, b]) => b - a)[0];
+      
+      return `[Offline Mode] Your highest spending month was ${month} with a total of ${baseCurrency} ${amt.toLocaleString()}.\n\n` +
+             `The top category that month was ${topCat[0]} (${baseCurrency} ${topCat[1].toLocaleString()}).`;
+    }
+
+    if (query.includes('history') || query.includes('past') || query.includes('previous')) {
+      if (sortedMonths.length === 0) return "[Offline Mode] No historical data found.";
+      
+      return `[Offline Mode] Your spending history for the last 6 months:\n\n` +
+             sortedMonths.slice(0, 6).map(([m, a]) => `  - ${m}: ${baseCurrency} ${a.toLocaleString()}`).join('\n') +
+             `\n\nTotal Lifetime Spending: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
+    }
+
     if (query.includes('safe') || query.includes('spend') || query.includes('budget')) {
-      return `[Offline Mode] Based on your current data:\n\n` +
-        `Your safe-to-spend amount is ${baseCurrency} ${safeToSpend}/day for the remaining ${daysLeft} days this month.\n\n` +
-        `Monthly Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
-        `Monthly Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
-        `Net Flow: ${netFlow >= 0 ? '+' : ''}${baseCurrency} ${netFlow.toLocaleString()}\n` +
-        `Savings Rate: ${savingsRate}%`;
+      const now = new Date();
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const daysLeft = daysInMonth - now.getDate() || 1;
+      // Net flow of THIS month
+      const currentMonthSpent = monthlyExpenses[currentMonthKey] || 0;
+      const currentMonthIncome = incomes
+        .filter(i => {
+           const d = new Date((i as any).createdAt);
+           return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+        })
+        .reduce((sum, i) => sum + ((i as any).amount || 0), 0);
+      
+      const currentNet = currentMonthIncome - currentMonthSpent;
+      const safeToSpend = Math.max(0, currentNet / daysLeft).toFixed(2);
+
+      return `[Offline Mode] Current Monthly Snapshot (${currentMonthKey}):\n\n` +
+        `Safe-to-spend: ${baseCurrency} ${safeToSpend}/day for ${daysLeft} days.\n\n` +
+        `Income: ${baseCurrency} ${currentMonthIncome.toLocaleString()}\n` +
+        `Expenses: ${baseCurrency} ${currentMonthSpent.toLocaleString()}\n` +
+        `Net: ${currentNet >= 0 ? '+' : ''}${baseCurrency} ${currentNet.toLocaleString()}`;
     }
 
     if (query.includes('goal') || query.includes('saving')) {
-      if (goalSummaries.length === 0) {
-        return `[Offline Mode] You haven't set any savings goals yet. Head to the Goals tab to create one!`;
-      }
-      return `[Offline Mode] Your savings goals:\n\n` +
-        goalSummaries.map(g => `  - ${g}`).join('\n') +
-        `\n\nSavings Rate: ${savingsRate}% of income`;
+      if (goalSummaries.length === 0) return `[Offline Mode] No savings goals defined.`;
+      return `[Offline Mode] Your Savings Progress:\n\n` + goalSummaries.map(g => `  - ${g}`).join('\n');
     }
 
-    if (query.includes('categor') || query.includes('where') || query.includes('most')) {
-      if (topCategories.length === 0) {
-        return `[Offline Mode] No expense data found. Log some transactions to see your spending breakdown.`;
-      }
-      return `[Offline Mode] Your top spending categories:\n\n` +
-        topCategories.map(([cat, amt], i) => `  ${i + 1}. ${cat}: ${baseCurrency} ${amt.toLocaleString()}`).join('\n') +
-        `\n\nTotal Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
-    }
-
-    if (query.includes('worth') || query.includes('portfolio') || query.includes('asset')) {
-      if (portfolio.length === 0) {
-        return `[Offline Mode] Your Portfolio is currently empty. You can add assets in the Portfolio hub to track your Net Worth.`;
-      }
-      return `[Offline Mode] Your Net Worth Overview:\n\n` +
-        `Total Assets: ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n` +
-        `Liquid Flow: ${baseCurrency} ${netFlow.toLocaleString()}/mo\n\n` +
-        `Asset Breakdown:\n` +
-        portfolio.map(p => `  - ${(p as any).name}: ${baseCurrency} ${(p as any).value.toLocaleString()}`).join('\n');
+    if (query.includes('categor') || query.includes('where')) {
+      if (topCategories.length === 0) return `[Offline Mode] No categorical data for this month.`;
+      return `[Offline Mode] Top spending this month (${currentMonthKey}):\n\n` +
+        topCategories.map(([cat, amt], i) => `  ${i + 1}. ${cat}: ${baseCurrency} ${amt.toLocaleString()}`).join('\n');
     }
 
     // Default summary
-    return `[Offline Mode] Here's your financial snapshot:\n\n` +
-      `Monthly Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
-      `Monthly Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
-      `Net Worth (Assets): ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n` +
-      `Safe to Spend: ${baseCurrency} ${safeToSpend}/day (${daysLeft} days left)\n` +
-      `Active Goals: ${goals.length}\n\n` +
-      `Tip: For deeper AI analysis, switch to Cloud mode when you have internet access.`;
+    return `[Offline Mode] Financial Overview:\n\n` +
+      `Lifetime Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
+      `Lifetime Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
+      `Portfolio Value: ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n\n` +
+      `Tip: For complex queries like "create a graph", switch to Cloud Mode (Gemini).`;
   } catch (error: any) {
     console.error('[Local LLM] Fallback engine error:', error.message);
-    return `[Offline Mode] I'm running in offline mode but couldn't access your data right now. Please try again.`;
+    return `[Offline Mode] Error accessing historical data.`;
   }
 }
+
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 

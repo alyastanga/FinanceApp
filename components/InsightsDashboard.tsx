@@ -274,8 +274,19 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
           <View className="flex-row gap-x-4">
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
-              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest mb-1`}>Mth. Income</Text>
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>{format(insights.monthlyIncome)}</Text>
+              <View className="flex-row justify-between items-center mb-1">
+                <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>
+                  {insights.actualIncome > 0 ? 'Actual Income' : 'Income Goal'}
+                </Text>
+                {insights.monthlyIncome > insights.actualIncome && (
+                  <View className="bg-primary/20 px-1.5 py-0.5 rounded-full">
+                    <Text className="text-primary text-[6px] font-black uppercase">Strategy</Text>
+                  </View>
+                )}
+              </View>
+              <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>
+                {format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}
+              </Text>
             </BlurView>
             <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
               <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest mb-1`}>Fixed Expenses</Text>

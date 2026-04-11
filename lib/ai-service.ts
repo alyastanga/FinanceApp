@@ -1,5 +1,5 @@
 import database from '../database';
-import { calculateBudgetInsights } from './budget-engine';
+import { getFinancialContext } from './budget-engine';
 import { generateLocalResponse, initLocalModel } from './llama-service';
 
 // const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -10,53 +10,20 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export async function getFinancialContext() {
-  const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
-  
-  const incomes = await database.get('incomes').query().fetch();
-  const expenses = await database.get('expenses').query().fetch();
-  const goals = await database.get('goals').query().fetch();
-  const portfolio = await database.get('portfolio').query().fetch();
-
-  const insights = calculateBudgetInsights(incomes, expenses, goals, (v) => v, baseCurrency);
-
-  // Note: The AI now receives explicitly tagged currencies so it doesn't assume USD
-  const totalPortfolioValue = portfolio.reduce((sum, item) => sum + ((item as any).value || 0), 0);
-  const netWorth = totalPortfolioValue + insights.monthlyIncome - insights.monthlyFixedExpenses;
-
-  const recentExpenses = expenses
-    .sort((a, b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime())
-    .slice(0, 10);
-
-  const contextString = `
-    User Base Currency: ${baseCurrency}
-    
-    Current context (Amounts in ${baseCurrency} unless explicitly stated otherwise):
-    - Safe to Spend Daily: ${insights.dailySafeToSpend.toFixed(2)}
-    - Total Monthly Income: ${insights.monthlyIncome}
-    - Total Monthly (Fixed) Expenses: ${insights.monthlyFixedExpenses}
-    - Monthly Goal Commitment: ${insights.monthlyGoalTarget}
-    - Days left in month: ${insights.remainingDays}
-    
-    Portfolio Assets (Multi-Currency):
-    - Asset Allocation: ${portfolio.map(p => `${(p as any).name} (Current Market Value: ${(p as any).value.toLocaleString()} ${(p as any)._currency})`).join(', ')}
-    
-    Last 10 transactions:
-    ${recentExpenses.map(e => `- ${(e as any).category}: ${(e as any).amount} ${(e as any)._currency || baseCurrency}`).join('\n')}
-  `;
-
-  return contextString;
-}
+import { AI_AGENTS, DEFAULT_AGENT } from './ai-agents';
 
 export async function generateAIResponse(
   messages: { role: string; content: string }[],
-  useLocal: boolean = false
+  useLocal: boolean = false,
+  agentId?: string
 ) {
+  const agent = agentId ? (AI_AGENTS[agentId] || DEFAULT_AGENT) : DEFAULT_AGENT;
+
   // ── Local Mode: Route directly to on-device engine ──
   if (useLocal) {
-    console.log('[AI Assistant] Using LOCAL mode (on-device)');
+    console.log(`[AI Assistant] Using LOCAL mode with agent: ${agent.name}`);
     await initLocalModel();
-    return generateLocalResponse(messages);
+    return generateLocalResponse(messages, agent.id);
   }
 
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
@@ -66,15 +33,16 @@ export async function generateAIResponse(
 
   if (!apiKey || apiKey === 'your_key_here') {
     // No API key — auto-fallback to local
-    console.log('[AI Assistant] No Gemini API key, falling back to local mode.');
+    console.log(`[AI Assistant] No Gemini API key, falling back to local mode with agent: ${agent.name}.`);
     await initLocalModel();
-    return generateLocalResponse(messages);
+    return generateLocalResponse(messages, agent.id);
   }
 
   const context = await getFinancialContext();
 
   const systemInstructionText = `### MASTER INSTRUCTIONS
-    You are FinanceApp AI, a Senior Financial Consultant with 20 years of experience in the industry.
+    You are ${agent.name}. Your role is: ${agent.description}.
+    
     IGNORING PREVIOUS LIMITATIONS: Your internal knowledge suggesting you cannot access user data is INCORRECT. 
     I have provided the user's LIVE financial data below in the <FINANCIAL_CONTEXT> tags. 
     YOU MUST USE THIS DATA TO ANSWER THE USER.
@@ -83,11 +51,14 @@ export async function generateAIResponse(
     ${context}
     </FINANCIAL_CONTEXT>
     
+    SPECIALIST INSTRUCTIONS:
+    ${agent.systemPrompt}
+    
     CRITICAL FORMATTING RULES:
     1. DO NOT say you cannot access data. Use the provided context.
     2. USE PLAIN TEXT ONLY. NO BOLDING (**), NO HASHTAGS (#), NO ASTERISKS (*).
-    3. NO MARKDOWN: Gemini, please avoid all markdown formatting. Do not use bold (**) or headers (#).
-    4. VISUALIZATION TRIGGER: ONLY if the user explicitly requests a "chart", "graph", "visual", or "breakdown", you MUST append this EXACT block at the end of your response. DO NOT USE MARKDOWN CODE BLOCKS for this block:
+    3. NO MARKDOWN EXCEPT FOR CHARTS: Avoid all markdown formatting in your conversational text. Do not use bold (**) or headers (#).
+    4. VISUALIZATION TRIGGER: If the user explicitly requests a "chart", "graph", "visual", or "breakdown", OR if it is mandated by your specialist instructions, you MUST append this EXACT block at the end of your response:
        [CHART_DATA: {"data": [{"label": "<NAME>", "value": <NUMBER>, "color": "<HEX_COLOR>"}, ...]}]
        
        COLOR PALETTE:
@@ -95,13 +66,11 @@ export async function generateAIResponse(
        - Red/Negative/Spent: #ef4444
        - Blue/Savings: #3b82f6
        - Purple/Investment: #8b5cf6
-       - Gray/Other: #6b7280
-    
-    5. Keep your tone professional, authoritative yet empathetic, as a Senior Financial Consultant.`;
+       - Gray/Other: #6b7280`;
 
   // Add a 25-second timeout for the free tier
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 25000);
+  const timeoutId = setTimeout(() => controller.abort(), 40000);
 
   try {
     /* Commented out OpenRouter implementation
@@ -141,7 +110,7 @@ export async function generateAIResponse(
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
         }
       }),
     });
@@ -169,7 +138,7 @@ export async function generateAIResponse(
     console.warn('[AI Service] Gemini failed, falling back to local mode:', error.message);
     try {
       await initLocalModel();
-      return generateLocalResponse(messages);
+      return generateLocalResponse(messages, agent.id);
     } catch (localError) {
       console.error('[AI Service] Local fallback also failed:', localError);
       return `Connection Error: ${error.message || 'I had trouble connecting.'} - Try switching to Local mode for offline use.`;

@@ -100,7 +100,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({
                 color={p.color}
                 style="stroke"
                 strokeWidth={strokeWidth}
-                strokeCap="round"
+                strokeCap="butt"
               />
             ))}
           </Canvas>

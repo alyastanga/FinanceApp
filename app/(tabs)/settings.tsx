@@ -10,12 +10,27 @@ import { useAI } from '../../context/AIContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../../context/CurrencyContext';
 import { useTheme } from '../../context/ThemeContext';
 import { clearAllUserData } from '../../lib/data-management';
+import { syncData } from '../../lib/sync';
 
 export default function SettingsScreen() {
   const { aiMode, setAiMode } = useAI();
   const { setTheme, isDark } = useTheme();
   const { currency, setCurrency } = useCurrency();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
+  const [isSyncing, setIsSyncing] = React.useState(false);
+
+  const handleManualSync = async () => {
+    setIsSyncing(true);
+    try {
+      await syncData();
+      Alert.alert("Sync Complete", "Your local data is now synchronized with the cloud.");
+    } catch (error: any) {
+      console.error('Manual Sync Error:', error);
+      Alert.alert("Sync Failed", error.message || "An error occurred during synchronization.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   const handleSecurity = async () => {
     const hasHardware = await LocalAuthentication.hasHardwareAsync();
@@ -175,6 +190,35 @@ export default function SettingsScreen() {
                 </View>
               </View>
               <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Synchronization Section */}
+        <View className="mb-8">
+          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Synchronization</Text>
+          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            <TouchableOpacity 
+              onPress={handleManualSync}
+              disabled={isSyncing}
+              className={`flex-row items-center justify-between p-5`}
+            >
+              <View className="flex-row items-center gap-x-3">
+                <IconSymbol name="cloud.fill" size={20} color="#3b82f6" />
+                <View>
+                  <Text className={`${textClass} font-medium text-base`}>
+                    {isSyncing ? 'Syncing with Supabase...' : 'Sync with Cloud'}
+                  </Text>
+                  <Text className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
+                    Manual Data Refresh
+                  </Text>
+                </View>
+              </View>
+              {isSyncing ? (
+                <View className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <IconSymbol name="arrow.triangle.2.circlepath" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
+              )}
             </TouchableOpacity>
           </View>
         </View>

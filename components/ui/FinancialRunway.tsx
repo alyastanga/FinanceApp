@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
-import { Canvas, Path, Skia, LinearGradient, vec, Rect, Shadow } from '@shopify/react-native-skia';
+import { Canvas, Path, Skia, LinearGradient, vec, RoundedRect, Rect, Shadow } from '@shopify/react-native-skia';
 import { useCurrency } from '@/context/CurrencyContext';
 
 interface FinancialRunwayProps {
@@ -49,20 +49,20 @@ export const FinancialRunway: React.FC<FinancialRunwayProps> = ({
       <View className="mb-6">
         <Canvas style={{ width: '100%', height: barHeight + 20 }}>
           {/* Track */}
-          <Rect 
+          <RoundedRect 
             x={0} y={10} width={width} height={barHeight} 
-            rx={4} ry={4} 
+            r={4} 
             color={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'} 
           />
           
           {/* Progress Bar */}
-          <Rect 
+          <RoundedRect 
             x={0} y={10} width={width * progress} height={barHeight} 
-            rx={4} ry={4} 
+            r={4} 
             color={progress >= 1 ? '#10b981' : '#ef4444'} 
           >
             <Shadow dx={0} dy={0} blur={10} color={progress >= 1 ? 'rgba(16, 185, 129, 0.4)' : 'rgba(239, 68, 68, 0.4)'} />
-          </Rect>
+          </RoundedRect>
 
           {/* Safety Target Marker */}
           <Rect 

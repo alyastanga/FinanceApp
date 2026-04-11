@@ -1,6 +1,10 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import database from '../database';
+
 export interface BudgetInsights {
   dailySafeToSpend: number;
   monthlyIncome: number;
+  actualIncome: number;
   monthlyFixedExpenses: number;
   monthlyGoalTarget: number;
   remainingDays: number;
@@ -79,23 +83,30 @@ export const calculateBudgetInsights = (
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const remainingDays = Math.max(1, daysInMonth - now.getDate() + 1);
 
-  // 1. Calculate Monthly Income (Average FALLBACK for the 1st of the month)
-  const monthlyIncomes = incomes.filter(i => {
-    const d = new Date(i.createdAt || i.created_at || (i._raw && i._raw.created_at) || i);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+  // 1. Calculate Monthly Income 
+  const currentMonthIncomes = incomes.filter(i => {
+    const t = i.createdAt instanceof Date ? i.createdAt.getTime() : Number(i.createdAt);
+    return t >= new Date(currentYear, currentMonth, 1).getTime();
   });
-  const currentMonthIncome = monthlyIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
+  const actualCurrentMonthIncome = currentMonthIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
 
-  // LOGIC: If current month income is very low (e.g. beginning of month), look at the average
-  let projectedMonthlyIncome = currentMonthIncome;
-  if (currentMonthIncome === 0 || incomes.length > 5) {
-     const last3Months = [...incomes].sort((a,b) => b.createdAt - a.createdAt).slice(0, 15); // Assuming ~3-5 sources/mo
-     const avgIncome = last3Months.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0) / Math.max(1, last3Months.length / 3);
-     // Use average if it's significantly higher than what we currently have
-     if (avgIncome > currentMonthIncome) {
-        projectedMonthlyIncome = avgIncome;
-     }
-  }
+  // LOGIC: Calculate a true 90-day historical average for better projection
+  const ninetyDaysAgo = new Date();
+  ninetyDaysAgo.setDate(now.getDate() - 90);
+  
+  const historicalIncomes = incomes.filter(i => {
+    const t = i.createdAt instanceof Date ? i.createdAt.getTime() : Number(i.createdAt);
+    return t >= ninetyDaysAgo.getTime();
+  });
+
+  // Calculate sum and divide by exactly 3 months
+  const sum90Days = historicalIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
+  const avgMonthlyIncome = sum90Days / 3;
+
+  // Decide on Projected Income:
+  // Use Actual if it's already higher than average, or if average is 0.
+  // Otherwise use average to help with Safe to Spend at the start of the month.
+  const projectedIncome = Math.max(actualCurrentMonthIncome, avgMonthlyIncome);
 
   // 2. Calculate Fixed Monthly Expenses 
   const monthExpenses = expenses.filter(e => {
@@ -129,15 +140,124 @@ export const calculateBudgetInsights = (
     .filter(e => !fixedCategories.includes(e.category || e._category))
     .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
-  const netAvailable = projectedMonthlyIncome - monthlyFixed - totalGoalContributionRequired - variableSpent;
+  const netAvailable = projectedIncome - monthlyFixed - totalGoalContributionRequired - variableSpent;
   const dailySafeToSpend = netAvailable / remainingDays;
 
   return {
     dailySafeToSpend: Math.max(0, dailySafeToSpend),
-    monthlyIncome: projectedMonthlyIncome,
+    monthlyIncome: projectedIncome,
+    actualIncome: actualCurrentMonthIncome,
     monthlyFixedExpenses: monthlyFixed,
     monthlyGoalTarget: totalGoalContributionRequired,
     remainingDays,
     variableSpent
   };
 };
+
+export async function getFinancialContext() {
+  const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
+  
+  const incomes = await database.get('incomes').query().fetch();
+  const expenses = await database.get('expenses').query().fetch();
+  const goals = await database.get('goals').query().fetch();
+  const portfolio = await database.get('portfolio').query().fetch();
+  const rawBudgets = await database.get('budgets').query().fetch();
+
+  const insights = calculateBudgetInsights(incomes, expenses, goals, (v) => v, baseCurrency);
+
+  // ── 1. Full Monthly History with Categorical Breakdown ──
+  const monthlyAggregates: Record<string, { 
+    income: number; 
+    expense: number; 
+    categories: Record<string, number> 
+  }> = {};
+
+  incomes.forEach(i => {
+    const d = new Date((i as any).createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (!monthlyAggregates[key]) monthlyAggregates[key] = { income: 0, expense: 0, categories: {} };
+    monthlyAggregates[key].income += (i as any).amount || 0;
+  });
+
+  expenses.forEach(e => {
+    const d = new Date((e as any).createdAt);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const category = (e as any).category || 'Uncategorized';
+    if (!monthlyAggregates[key]) monthlyAggregates[key] = { income: 0, expense: 0, categories: {} };
+    monthlyAggregates[key].expense += (e as any).amount || 0;
+    monthlyAggregates[key].categories[category] = (monthlyAggregates[key].categories[category] || 0) + (e as any).amount;
+  });
+
+  const historyLines = Object.entries(monthlyAggregates)
+    .sort((a, b) => b[0].localeCompare(a[0])) // Most recent first
+    .map(([month, data]) => {
+      const breakdown = Object.entries(data.categories)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, 8) // Include more categories for better detail
+        .map(([cat, amt]) => `"${cat}": ${amt.toFixed(0)}`)
+        .join(', ');
+      
+      return `[${month}] Summary: Income: ${data.income.toFixed(0)}, Total_Expenses: ${data.expense.toFixed(0)}\n      Historical_Breakdown: { ${breakdown} }`;
+    })
+    .join('\n    ');
+
+  // ── 2. Detailed Budget vs Actual ──
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const currentMonthData = monthlyAggregates[currentMonthKey] || { categories: {} };
+  
+  const budgetStatus = rawBudgets.map((b: any) => {
+    const spent = currentMonthData.categories[(b as any).category] || 0;
+    const limit = (b as any).amountLimit || (b as any).amount_limit || 0;
+    const remains = limit - spent;
+    const pct = limit > 0 ? ((spent / limit) * 100).toFixed(0) : '0';
+    return `- ${(b as any).category}: ${spent.toFixed(0)} / ${limit.toFixed(0)} (${pct}%) ${remains < 0 ? '!! OVER !!' : ''}`;
+  }).join('\n    ');
+
+  // ── 3. Detailed Portfolio & Goals ──
+  const portfolioDetails = portfolio.map((p: any) => {
+    return `- ${p.name} (${p.assetType || p.asset_type}): ${p.value?.toLocaleString()} ${p.currency || p._currency} [Qty: ${p.quantity || 1}, Cost: ${p.investedAmount || p.invested_amount}]`;
+  }).join('\n    ');
+
+  const goalDetails = goals.map((g: any) => {
+    const target = g.targetAmount || g.target_amount || 0;
+    const current = g.currentAmount || g.current_amount || 0;
+    const date = g.targetCompletionDate ? new Date(g.targetCompletionDate).toLocaleDateString() : 'N/A';
+    return `- ${g.name}: ${current.toLocaleString()} / ${target.toLocaleString()} (Due: ${date})`;
+  }).join('\n    ');
+
+  const lifetimeIncome = incomes.reduce((sum, i) => sum + ((i as any).amount || 0), 0);
+  const lifetimeExpense = expenses.reduce((sum, e) => sum + ((e as any).amount || 0), 0);
+
+  const contextString = `
+    User Base Currency: ${baseCurrency}
+    
+    CURRENT MONTH BUDGET PERFORMANCE:
+    ${budgetStatus || 'No budgets defined.'}
+    
+    CURRENT MONTHLY SUMMARY:
+    - Safe to Spend Daily: ${insights.dailySafeToSpend.toFixed(2)}
+    - Actual Income: ${insights.actualIncome}
+    - Total (Fixed) Expenses: ${insights.monthlyFixedExpenses}
+    - Goal Commitment: ${insights.monthlyGoalTarget}
+    - Days Left: ${insights.remainingDays}
+    
+    LIFETIME TOTALS:
+    - Earned: ${lifetimeIncome.toFixed(0)}, Spent: ${lifetimeExpense.toFixed(0)}, Saved: ${(lifetimeIncome - lifetimeExpense).toFixed(0)}
+
+    FULL HISTORICAL MONTHLY BREAKDOWN (Format: Month: Inc, Exp (Top Categories)):
+    ${historyLines}
+
+    ACTIVE GOAL DETAILS:
+    ${goalDetails || 'No active goals.'}
+
+    PORTFOLIO ASSET DETAILS:
+    ${portfolioDetails || 'Empty portfolio.'}
+    
+    LAST 10 TRANSACTIONS:
+    ${expenses.sort((a,b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime()).slice(0, 10).map(e => `- ${(e as any).category}: ${(e as any).amount} ${(e as any)._currency || baseCurrency}`).join('\n    ')}
+  `;
+
+  return contextString;
+}
+
