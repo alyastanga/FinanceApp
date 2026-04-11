@@ -8,6 +8,7 @@ import database from '../database';
 import '../global.css';
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Polyfills
 if (typeof (global as any).setImmediate === 'undefined') {
@@ -89,15 +90,17 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
-      <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: 'fade' }} />
-      <Stack.Screen name="settings" options={{ presentation: 'modal', title: 'Settings' }} />
-      <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Info' }} />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Stack.Screen name="(tabs)" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="(auth)/login" options={{ headerShown: false, animation: 'fade' }} />
+        <Stack.Screen name="settings" options={{ presentation: 'modal', title: 'Settings' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'System Info' }} />
+      </Stack>
+    </GestureHandlerRootView>
   );
 }

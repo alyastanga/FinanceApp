@@ -1,11 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, TextInput, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
 import database from '../../database';
 import Portfolio from '../../database/models/Portfolio';
 import { PortfolioForm } from '../../components/PortfolioForm';
+import { SwipeableSheet } from '../../components/ui/SwipeableSheet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -72,6 +73,7 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
 };
 
 const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
+  const insets = useSafeAreaInsets();
   const { formatRaw, convertFrom, currency, refreshRates } = useCurrency();
   const [activeAsset, setActiveAsset] = useState<Portfolio | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -244,36 +246,16 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
       </ScrollView>
 
       {/* CRUD Sheet */}
-      {isFormVisible && (
-        <View className="absolute inset-0 z-50">
-          <TouchableOpacity 
-            activeOpacity={1} 
-            onPress={() => setIsFormVisible(false)}
-            className="absolute inset-0 bg-black/80"
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 justify-end"
-          >
-            <TouchableOpacity 
-              activeOpacity={1} 
-              onPress={(e) => e.stopPropagation()}
-              className="w-full"
-            >
-              <BlurView intensity={30} tint="dark" className="rounded-t-[48px] overflow-hidden border-t border-white/10">
-                <View className="bg-black/90 p-8 pt-4 pb-12">
-                   <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-8" />
-                   <PortfolioForm 
-                     asset={activeAsset} 
-                     onSuccess={() => setIsFormVisible(false)} 
-                     onCancel={() => setIsFormVisible(false)} 
-                   />
-                </View>
-              </BlurView>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </View>
-      )}
+      <SwipeableSheet 
+        isVisible={isFormVisible} 
+        onClose={() => setIsFormVisible(false)}
+      >
+         <PortfolioForm 
+           asset={activeAsset} 
+           onSuccess={() => setIsFormVisible(false)} 
+           onCancel={() => setIsFormVisible(false)} 
+         />
+      </SwipeableSheet>
     </SafeAreaView>
   );
 };

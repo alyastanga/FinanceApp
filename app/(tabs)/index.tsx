@@ -5,8 +5,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TransactionForm from '../../components/TransactionForm';
+import { SwipeableSheet } from '../../components/ui/SwipeableSheet';
 import { MicroExpenseBars } from '../../components/ui/MicroExpenseBars';
 import { MicroBudgetGauge } from '../../components/ui/MicroBudgetGauge';
 import { useCurrency } from '../../context/CurrencyContext';
@@ -45,6 +46,7 @@ const GoalProgressGlimpse = withObservables(['goal'], ({ goal }) => ({
 }))(GoalProgressGlimpseComp);
 
 const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionControlProps) => {
+  const insets = useSafeAreaInsets();
   const { format, convertFrom, currency } = useCurrency();
   const [activeType, setActiveType] = useState<'income' | 'expense' | undefined>(undefined);
 
@@ -335,36 +337,15 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
         </View>
       </ScrollView>
 
-      {/* Transaction Sheet */}
-      {activeType && (
-        <View className="absolute inset-0 z-50">
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setActiveType(undefined)}
-            className="absolute inset-0 bg-black/80"
-          />
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            className="flex-1 justify-end"
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={(e) => e.stopPropagation()}
-              className="w-full"
-            >
-              <BlurView intensity={30} tint="dark" className="rounded-t-[48px] overflow-hidden border-t border-white/10">
-                <View className="bg-black/90 p-8 pt-4 pb-12">
-                  <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-8" />
-                  <TransactionForm
-                    initialType={activeType}
-                    onSuccess={() => setActiveType(undefined)}
-                  />
-                </View>
-              </BlurView>
-            </TouchableOpacity>
-          </KeyboardAvoidingView>
-        </View>
-      )}
+      <SwipeableSheet 
+        isVisible={!!activeType} 
+        onClose={() => setActiveType(undefined)}
+      >
+        <TransactionForm
+          initialType={activeType}
+          onSuccess={() => setActiveType(undefined)}
+        />
+      </SwipeableSheet>
     </SafeAreaView>
   );
 }
