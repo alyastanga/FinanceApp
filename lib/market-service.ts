@@ -22,6 +22,7 @@ export const fetchMarketQuote = async (symbol: string): Promise<MarketQuote | nu
   }
 
   try {
+    console.log(`[MarketService] Fetching quote for ${symbol}... URL: ${BASE_URL}/quote?symbol=${symbol}`);
     const response = await fetch(`${BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
     const data = await response.json();
 
@@ -74,6 +75,7 @@ export const fetchExchangeRate = async (toCurrency: string, fromCurrency: string
 
   // 1. Primary: Frankfurter Dev API (Free, high-availability, no key required)
   try {
+    console.log(`[MarketService] Fetching exchange rate via Frankfurter... URL: https://api.frankfurter.dev/v1/latest?from=${fromCurrency}&to=${toCurrency}`);
     const fResponse = await fetch(`https://api.frankfurter.dev/v1/latest?from=${fromCurrency}&to=${toCurrency}`);
     const fData = await fResponse.json();
     if (fData && fData.rates && fData.rates[toCurrency]) {

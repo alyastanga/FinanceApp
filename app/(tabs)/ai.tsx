@@ -19,6 +19,7 @@ import { useAI } from '../../context/AIContext';
 import { AI_AGENTS, getAgentFromMention, cleanMention, AIAgent } from '../../lib/ai-agents';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
+import { GlassCard } from '../../components/ui/GlassCard';
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ interface Message {
 
 const ChatBubble = ({ item }: { item: Message }) => {
   // ── Robust Chart Extraction ──
-  let chartData = null;
+  let chartData: any[] | null = null;
   let cleanText = item.text;
   
   // Helper to reliably extract nested JSON from a string by counting braces
@@ -56,9 +57,6 @@ const ChatBubble = ({ item }: { item: Message }) => {
             else if (char === '[') bracketCount++;
             else if (char === ']') bracketCount--;
             
-            // Allow matching [CHART_DATA: [ ... ]] where outer is a bracket we want to ignore,
-            // but actually CHART_DATA array won't trip this if we start parsing at the first valid { or [ after CHART_DATA.
-            // Wait, if it starts with [ and we hit ], bracketCount goes to 0. We found our JSON.
             if (braceCount === 0 && bracketCount === 0) {
                 endIdx = i;
                 break;
@@ -66,11 +64,28 @@ const ChatBubble = ({ item }: { item: Message }) => {
         }
     }
 
-    if (endIdx !== -1) {
+    // ── AGGRESSIVE JSON HEALING ──
+    // If we reached the end but it's not closed, force-close it
+    let jsonStr = '';
+    let finalEndIdx = endIdx;
+
+    if (endIdx === -1 && (braceCount > 0 || bracketCount > 0)) {
+        console.log(`[AI Parser] Truncated JSON detected (Braces: ${braceCount}, Brackets: ${bracketCount}). Attempting healing...`);
+        jsonStr = str.substring(startIdx);
+        // Append missing closers in reverse order of how they were opened
+        // This is a simple heuristic but works for standard JSON nesting
+        jsonStr += '}'.repeat(Math.max(0, braceCount));
+        jsonStr += ']'.repeat(Math.max(0, bracketCount));
+        finalEndIdx = str.length - 1;
+    } else if (endIdx !== -1) {
+        jsonStr = str.substring(startIdx, endIdx + 1);
+    }
+
+    if (jsonStr) {
         return {
-            jsonStr: str.substring(startIdx, endIdx + 1),
+            jsonStr,
             start: startIdx,
-            end: endIdx
+            end: finalEndIdx
         };
     }
     return null;
@@ -78,25 +93,36 @@ const ChatBubble = ({ item }: { item: Message }) => {
 
   const processExtractedJson = (jsonStr: string, textToRemove: string) => {
     try {
-      // Fix common AI trailing commas and possibly unquoted keys if necessary
-      let fixedJson = jsonStr.replace(/,\s*([\}\]])/g, '$1');
-      const parsed = JSON.parse(fixedJson);
+      // Clean up common AI response noise
+      let cleanJson = jsonStr.trim();
+      
+      // Fix common AI trailing commas
+      cleanJson = cleanJson.replace(/,\s*([\}\]])/g, '$1');
+      
+      const parsed = JSON.parse(cleanJson);
       
       const dataArr = Array.isArray(parsed) ? parsed : (parsed.data && Array.isArray(parsed.data) ? parsed.data : (parsed.items && Array.isArray(parsed.items) ? parsed.items : null));
       
       if (dataArr && Array.isArray(dataArr)) {
-        const HIGH_CONTRAST_PALETTE = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#a855f7'];
+        const HIGH_CONTRAST_PALETTE = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#f97316', '#a855f7'];
         
         // Map common AI field names to the Chart interface robustly
         chartData = dataArr.map((d: any, index: number) => {
-            const label = d.label || d.name || d.category || d.item || d.asset || d.description || 'Item';
-            const value = Math.abs(Number(d.value || d.amount || d.total || d.price || d.balance || 0));
-            // FORCE contrast by using the palette based on index, ignore AI color suggestion
+            // Fuzzy match for labels
+            const label = d.label || d.name || d.category || d.item || d.asset || d.description || d.month || d.date || d.type || 'Item';
+            
+            // Fuzzy match for values
+            const value = Math.abs(Number(
+              d.value || d.amount || d.total || d.price || d.balance || 
+              d.Total_Expenses || d.spending || d.cost || d.sum || d.limit || 0
+            ));
+            
+            // FORCE contrast by using the palette based on index
             const color = HIGH_CONTRAST_PALETTE[index % HIGH_CONTRAST_PALETTE.length];
             return { label, value, color };
         }).filter(d => d.value > 0);
 
-        if (chartData.length > 0) {
+        if (chartData && chartData.length > 0) {
           // Remove the matched block and any residual tags
           cleanText = item.text.replace(textToRemove, '').replace(/\[?CHART_DATA:?\]?/gi, '').trim();
           return true;
@@ -125,8 +151,35 @@ const ChatBubble = ({ item }: { item: Message }) => {
             ? item.text.substring(startOfBlock, possibleEnd)
             : item.text.substring(startOfBlock, chartTagIdx + extraction.end + 1);
          
-         processExtractedJson(extraction.jsonStr, fullMatch);
+         const success = processExtractedJson(extraction.jsonStr, fullMatch);
+         if (!success) {
+            // Even if parsing failed, remove the block to avoid showing JSON to user
+            cleanText = item.text.replace(fullMatch, '').replace(/\[?CHART_DATA:?\]?/gi, '').trim();
+         }
      }
+  }
+
+  // Final cleanup for any residual tags (handled by processExtractedJson/above failure block, but good to ensure)
+  cleanText = cleanText.replace(/\[?CHART_DATA:?\]?/gi, '').trim();
+
+  // ── Thinking Process Extraction ──
+  let thoughtProcess: string | null = null;
+  const thinkOpenTag = '<think>';
+  const thinkCloseTag = '</think>';
+
+  if (cleanText.includes(thinkOpenTag)) {
+    const startIdx = cleanText.indexOf(thinkOpenTag) + thinkOpenTag.length;
+    const endIdx = cleanText.indexOf(thinkCloseTag);
+
+    if (endIdx !== -1) {
+      // Completed thinking process
+      thoughtProcess = cleanText.substring(startIdx, endIdx).trim();
+      cleanText = cleanText.substring(endIdx + thinkCloseTag.length).trim();
+    } else {
+      // Still thinking...
+      thoughtProcess = cleanText.substring(startIdx).trim();
+      cleanText = ''; // Hide the main text while the brain is still churning
+    }
   }
 
   // Fallback: Just look for any JSON block if CHART_DATA wasn't found but there's still no chart
@@ -170,24 +223,43 @@ const ChatBubble = ({ item }: { item: Message }) => {
       )}
 
       {isUser ? (
-        <LinearGradient
-          colors={['#10b981', '#059669']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          className="p-4 rounded-[24px] rounded-tr-none shadow-lg shadow-emerald-500/20"
+        <View 
+          className="p-4 rounded-[32px] rounded-tr-none bg-[#1A1A1A] border border-emerald-500/30 shadow-2xl"
         >
-          <Text className="text-[15px] leading-6 font-bold text-[#050505]">
+          <Text className="text-[15px] leading-6 font-bold text-white/90">
             {cleanText}
           </Text>
-        </LinearGradient>
+        </View>
       ) : (
-        <View className="p-4 rounded-[24px] bg-[#121212] border border-white/5 rounded-tl-none shadow-xl">
+        <View className="p-4 rounded-[32px] bg-[#121212] border border-white/5 rounded-tl-none shadow-xl">
+          {thoughtProcess && (
+            <View className="mb-4 p-3 bg-white/5 rounded-2xl border-l-2 border-primary/40">
+              <View className="flex-row items-center mb-1.5">
+                <IconSymbol name="lightbulb.fill" size={10} color="#10b981" />
+                <Text className="text-[9px] font-black uppercase text-primary/60 tracking-widest ml-2">
+                  Thought Process
+                </Text>
+              </View>
+              <Text className="text-[12px] leading-5 text-white/40 italic font-medium">
+                {thoughtProcess}
+              </Text>
+            </View>
+          )}
+
           <Text className="text-[15px] leading-6 font-medium text-white/90">
             {cleanText}
           </Text>
-          {chartData && (
-            <View className="mt-4 pt-4 border-t border-white/5 bg-black/20 rounded-2xl p-4">
-              <BudgetChart data={chartData} size={150} />
+          {chartData && (chartData as any[]).length > 0 && (
+            <View className="mt-6">
+              <View className="flex-row items-center mb-3 ml-1">
+                <IconSymbol name="chart.pie.fill" size={12} color="#10b981" />
+                <Text className="text-[10px] font-black uppercase text-emerald-500 tracking-[1.5px] ml-2">
+                  Intelligence Report
+                </Text>
+              </View>
+              <GlassCard intensity={40} style={{ padding: 12 }}>
+                <BudgetChart data={chartData} size={160} />
+              </GlassCard>
             </View>
           )}
         </View>
@@ -262,57 +334,152 @@ const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void
   </View>
 );
 
+import { useLocalSearchParams } from 'expo-router';
+
 export default function AIChatScreen() {
+  const { agent, prompt } = useLocalSearchParams<{ agent: string, prompt: string }>();
   const { aiMode } = useAI();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: "Hello! I'm your Finance AI. I can analyze your spending, check your savings goals, or help you with a 'Safe to Spend' budget. How can I help today?",
+      text: "Intelligence active. Ready to analyze your spending, goals, and budget. How can I assist you today?",
       role: 'assistant',
       timestamp: new Date()
     }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [filteredAgents, setFilteredAgents] = useState<AIAgent[]>([]);
   const flatListRef = useRef<FlatList>(null);
-  const sendMessage = async () => {
-    if (!input.trim() || isTyping) return;
+  const mounted = useRef(true);
+  const lastTriggerId = useRef<string | null>(null);
+
+  const handleInputChange = (text: string) => {
+    setInput(text);
+    
+    // Detect '@' trigger
+    const lastWord = text.split(/\s/).pop() || '';
+    if (lastWord.startsWith('@')) {
+      const query = lastWord.slice(1).toLowerCase();
+      const matches = Object.values(AI_AGENTS).filter(agent => 
+        agent.slug.toLowerCase().includes(query) || 
+        agent.name.toLowerCase().includes(query)
+      );
+      
+      setFilteredAgents(matches);
+      setShowSuggestions(matches.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
+
+  const selectAgent = (agent: AIAgent) => {
+    const words = input.split(/\s/);
+    words.pop(); // Remove the partial '@...'
+    const newText = [...words, `@${agent.slug} `].join(' ').trimStart();
+    setInput(newText);
+    setShowSuggestions(false);
+  };
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Handle incoming agent links and auto-trigger if prompt is present
+  useEffect(() => {
+    const currentTriggerId = `${agent}-${prompt}`;
+    if (agent && prompt && lastTriggerId.current !== currentTriggerId) {
+      const targetAgent = Object.values(AI_AGENTS).find(a => a.slug === agent || a.id === agent);
+      if (targetAgent) {
+        const initialInput = `@${targetAgent.slug} ${prompt}`;
+        setInput(initialInput);
+        
+        if (!isTyping) {
+          lastTriggerId.current = currentTriggerId;
+          // Small delay to ensure state and keyboard settle
+          setTimeout(() => {
+            performSendMessage(initialInput);
+            setInput('');
+          }, 600);
+        }
+      }
+    } else if (!agent && !prompt) {
+      // Reset trigger ID if we land on AI screen without params (e.g. manual tab click)
+      // This allows clicking the same insight again after navigating away and back.
+      lastTriggerId.current = null;
+    }
+  }, [agent, prompt]);
+
+  const performSendMessage = async (text: string) => {
+    if (!text.trim() || !mounted.current) return;
 
     const userMsg: Message = {
       id: Date.now().toString(),
-      text: input,
+      text: text,
       role: 'user',
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsTyping(true);
-    
+    const targetedAgent = getAgentFromMention(text);
+    const aiMsgId = (Date.now() + 1).toString();
+
+    // Add empty assistant message for streaming
+    const initialAiMsg: Message = {
+      id: aiMsgId,
+      text: '',
+      role: 'assistant',
+      timestamp: new Date(),
+      agent: targetedAgent
+    };
+    setMessages(prev => [...prev, initialAiMsg]);
+
     try {
       const apiMessages = [...messages, userMsg].map(m => ({
         role: m.role,
         content: m.text
       }));
 
-      const targetedAgent = getAgentFromMention(input);
-      const promptText = cleanMention(input);
+      const response = await generateAIResponse(
+        apiMessages, 
+        aiMode === 'local', 
+        targetedAgent.id,
+        (token) => {
+          if (mounted.current) {
+            setMessages(prev => prev.map(m => 
+              m.id === aiMsgId ? { ...m, text: m.text + token } : m
+            ));
+          }
+        }
+      );
 
-      const response = await generateAIResponse(apiMessages, aiMode === 'local', targetedAgent.id);
+      if (!mounted.current) return;
 
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        text: response || "I'm sorry, I couldn't process that request.",
-        role: 'assistant',
-        timestamp: new Date(),
-        agent: targetedAgent
-      };
-      setMessages(prev => [...prev, aiMsg]);
+      // Final update in case the stream was missing anything or we want to normalize it
+      setMessages(prev => prev.map(m => 
+        m.id === aiMsgId ? { ...m, text: response || m.text } : m
+      ));
     } catch (error) {
       console.error('Chat error:', error);
+      setMessages(prev => prev.map(m => 
+        m.id === aiMsgId && m.text === '' 
+          ? { ...m, text: "I'm sorry, I couldn't process that request." } 
+          : m
+      ));
     } finally {
-      setIsTyping(false);
+      if (mounted.current) {
+        setIsTyping(false);
+      }
     }
+  };
+
+  const sendMessage = () => {
+    if (!input.trim() || isTyping) return;
+    performSendMessage(input);
+    setInput('');
   };
 
   useEffect(() => {
@@ -359,16 +526,45 @@ export default function AIChatScreen() {
 
         {/* Input Area */}
         <BlurView intensity={80} tint="dark" className="px-5 pb-8 pt-4 border-t border-white/5">
-          <View className="flex-row items-center bg-[#181818] rounded-[32px] p-2 pr-2 border border-white/10 shadow-2xl">
-            <View className="pl-4 pr-1">
-               <IconSymbol name="at" size={18} color="rgba(255,255,255,0.2)" />
+          {/* Stacked Agent Suggestions */}
+          {showSuggestions && (
+            <View className="mb-2 bg-[#121212]/90 rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+              {filteredAgents.map((agent, index) => (
+                <TouchableOpacity 
+                  key={agent.id}
+                  onPress={() => selectAgent(agent)}
+                  className={`flex-row items-center p-4 ${index !== filteredAgents.length - 1 ? 'border-b border-white/5' : ''}`}
+                >
+                  <View 
+                    className="h-10 w-10 rounded-2xl items-center justify-center mr-4"
+                    style={{ backgroundColor: `${agent.color}20` }}
+                  >
+                    <Text className="text-xl">{agent.icon}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text className="font-bold text-white text-sm">{agent.name}</Text>
+                    <Text className="text-white/40 text-[10px] uppercase font-black tracking-widest mt-0.5">
+                      Expert Intelligence
+                    </Text>
+                  </View>
+                  <IconSymbol name="plus.circle.fill" size={20} color={agent.color} />
+                </TouchableOpacity>
+              ))}
             </View>
+          )}
+
+          <View className="flex-row items-center bg-[#181818] rounded-[32px] p-2 pr-2 border border-white/10 shadow-2xl" style={{ marginTop: showSuggestions ? 0 : 0 }}>
+            {(!input || input.length === 0) && (
+              <View className="pl-4 pr-1">
+                 <IconSymbol name="at" size={18} color="rgba(255,255,255,0.2)" />
+              </View>
+            )}
             <TextInput
               value={input}
-              onChangeText={setInput}
+              onChangeText={handleInputChange}
               placeholder="Summon an expert..."
               placeholderTextColor="rgba(255,255,255,0.2)"
-              className="flex-1 px-2 py-3 text-[15px] font-bold text-white"
+              className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold text-white`}
               multiline
             />
             <TouchableOpacity 

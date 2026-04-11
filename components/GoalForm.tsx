@@ -4,6 +4,7 @@ import database from '../database';
 import Goal from '../database/models/Goal';
 import { IconSymbol } from './ui/icon-symbol';
 import { useCurrency } from '../context/CurrencyContext';
+import { generateUUID } from '../lib/id-utils';
 
 interface GoalFormProps {
   goal?: Goal | null;
@@ -39,6 +40,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
           });
         } else {
           await database.get('goals').create((record: any) => {
+            record._raw.id = generateUUID();
             record.name = name;
             record.targetAmount = parseFloat(targetAmount);
             record.currentAmount = parseFloat(currentAmount);

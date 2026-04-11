@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import database from '../../database';
 
 // UI Components
@@ -28,6 +29,7 @@ interface BudgetScreenProps {
 
 const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => {
   const { isDark } = useTheme();
+  const router = useRouter();
   const { format, convertFrom, currency } = useCurrency();
   const { aiMode } = useAI();
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'velocity' | 'allocation'>('overview');
@@ -97,39 +99,11 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
   const remainingToAllocate = monthlyIncomeValue - totalAllocated;
 
   const handleExplain = async () => {
-    if (isExplaining) return;
-    setIsExplaining(true);
-    try {
-      const insightData = {
-        totalAllocated,
-        totalSpent,
-        categories: categoryData,
-        velocity: velocityData
-      };
-      const result = await explainFinancialGraph(insightData, "Budget Allocation & Spending Velocity", aiMode === 'local');
-      setExplanation(result);
-    } catch (err) {
-      setExplanation("Failed to generate insight. Check your connection.");
-    } finally {
-      setIsExplaining(false);
-    }
+    router.push('/ai?agent=budget&prompt=Analyze my current budget allocation and spending velocity trends for this month.');
   };
 
   const handleGenerateAI = async () => {
-    setIsGenerating(true);
-    setAiSuggestions(null);
-    try {
-      const suggestions = await generateSuggestedBudget();
-      if (suggestions) {
-        setAiSuggestions(suggestions);
-      } else {
-        Alert.alert("AI Error", "Could not generate a suggestion. Check your API key.");
-      }
-    } catch {
-      Alert.alert("Error", "Something went wrong.");
-    } finally {
-      setIsGenerating(false);
-    }
+    router.push('/ai?agent=budget&prompt=Suggest a new, optimized budget allocation based on my monthly income and financial goals.');
   };
 
   const handleApplyAI = async () => {

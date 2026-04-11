@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { CurrencyCode, SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
 import database from '../database';
 import { fetchExchangeRate } from '../lib/market-service';
+import { generateUUID } from '../lib/id-utils';
 
 interface TransactionFormProps {
   initialType?: 'income' | 'expense';
@@ -62,6 +63,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
       await database.write(async () => {
         if (type === 'income') {
           await database.get('incomes').create((record: any) => {
+            record._raw.id = generateUUID();
             record.amount = finalAmount;
             record.source = finalDescription;
             record._currency = currency;
@@ -71,6 +73,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           });
         } else {
           await database.get('expenses').create((record: any) => {
+            record._raw.id = generateUUID();
             record.amount = finalAmount;
             record.category = finalDescription;
             record._currency = currency;

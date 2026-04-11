@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Platform, Alert, ScrollView } from 'react-native';
 import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
+import { generateUUID } from '../lib/id-utils';
 
 interface IncomeFormProps {
   onSuccess?: () => void;
@@ -26,6 +27,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
     try {
       await database.write(async () => {
         await database.get('incomes').create((income: any) => {
+          income._raw.id = generateUUID();
           income.amount = parsedAmount;
           income.source = source;
           income._currency = currency;

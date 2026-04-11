@@ -49,12 +49,8 @@ const SupabaseStorage = {
 }
 
 // These are your provided credentials
-const envUrl = process.env.EXPO_PUBLIC_SUPABASE_URL
-const supabaseUrl = (envUrl && envUrl.startsWith('http')) 
-  ? envUrl 
-  : 'https://djjozvxisluwggukukpkl.supabase.co'
-
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRqam96dnhpc2x1d2dndWt1cGtsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxMDYzODUsImV4cCI6MjA5MDY4MjM4NX0.GfVUA0CaxpH51Yx4oGXAmL0sSK0nMwgQB_Fpp6ruCX4'
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || ''
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

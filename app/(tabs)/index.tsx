@@ -21,22 +21,12 @@ interface MissionControlProps {
   portfolio: any[];
 }
 
+import { GoalProgressCard } from '../../components/ui/GoalProgressCard';
+
 const GoalProgressGlimpseComp = ({ goal }: { goal: any }) => {
-  const progress = (goal.currentAmount / goal.targetAmount) * 100;
   return (
-    <View>
-      <View className="flex-row justify-between mb-2">
-        <Text className="text-white font-bold text-sm">{goal.name}</Text>
-        <Text className="text-primary font-black text-xs">
-          {Math.round(progress)}%
-        </Text>
-      </View>
-      <View className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-        <View
-          style={{ width: `${Math.min(100, progress)}%` }}
-          className="h-full bg-primary"
-        />
-      </View>
+    <View className="mt-[-16px] mb-[-16px]">
+        <GoalProgressCard goal={goal} compact={true} />
     </View>
   );
 };

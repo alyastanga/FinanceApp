@@ -19,74 +19,118 @@ if (typeof (global as any).process.nextTick === 'undefined') {
   (global as any).process.nextTick = (global as any).setImmediate;
 }
 
-import { ThemeProvider, useTheme } from '../context/ThemeContext';
+// ── Global Network Debugger ──
+const originalFetch = global.fetch;
+global.fetch = async (...args) => {
+  const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
+  console.log(`[Network Debug] 🛫 Dispatching fetch to: ${url}`);
+  try {
+    const result = await originalFetch(...args);
+    console.log(`[Network Debug] ✅ Success (${result.status}) from: ${url}`);
+    return result;
+  } catch (err: any) {
+    console.error(`[Network Debug] ❌ FAILED FETC H to: ${url} | Error: ${err.message}`);
+    throw err;
+  }
+};
 
-/**
- * RootLayout is the definitive entry point.
- * AuthProvider wraps everything so useAuth() is available to RootLayoutNav.
- * DatabaseProvider makes WatermelonDB available to all screens.
- */
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
+import { SecurityProvider, useSecurity } from '../context/SecurityContext';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { TouchableOpacity, Text } from 'react-native';
+
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <AIProvider>
-          <CurrencyProvider>
-            <DatabaseProvider database={database}>
-              <RootLayoutNav />
-            </DatabaseProvider>
-          </CurrencyProvider>
-        </AIProvider>
-      </AuthProvider>
+      <SecurityProvider>
+        <AuthProvider>
+          <AIProvider>
+            <CurrencyProvider>
+              <DatabaseProvider database={database}>
+                <RootLayoutNav />
+              </DatabaseProvider>
+            </CurrencyProvider>
+          </AIProvider>
+        </AuthProvider>
+      </SecurityProvider>
     </ThemeProvider>
   );
 }
 
-/**
- * RootLayoutNav gates the entire app behind auth resolution.
- * 
- * KEY INSIGHT: expo-router pre-renders ALL tab screens during mount.
- * We must gate the Stack so it doesn't even ATTEMPT to mount protected screens
- * until we know the session state.
- */
+function GlassLockScreen() {
+  const { authenticate } = useSecurity();
+  const { isDark } = useTheme();
+
+  return (
+    <View className="flex-1 items-center justify-center bg-[#050505]">
+      <LinearGradient
+        colors={isDark ? ['#050505', '#10b98110', '#050505'] : ['#F5F5F5', '#10b98105', '#F5F5F5']}
+        className="absolute inset-0"
+      />
+      
+      <View className="items-center">
+        <View className="h-24 w-24 rounded-[40px] bg-primary/10 items-center justify-center border border-primary/20 mb-8">
+           <IconSymbol name="lock.fill" size={40} color="#10b981" />
+        </View>
+        
+        <Text className={`text-3xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter mb-2`}>
+          Secure Entry
+        </Text>
+        <Text className="text-muted-foreground text-center px-12 mb-10 font-medium">
+          Finance Intelligence is locked to protect your data.
+        </Text>
+
+        <TouchableOpacity 
+          onPress={() => authenticate()}
+          className="bg-primary px-10 py-4 rounded-[24px] shadow-lg shadow-primary/20"
+        >
+          <Text className="text-[#050505] font-black uppercase tracking-widest text-xs">
+            Unlock App
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function RootLayoutNav() {
   const { session, loading } = useAuth();
+  const { isLocked, isBiometricsEnabled } = useSecurity();
   const { isDark } = useTheme();
   const segments = useSegments();
   const router = useRouter();
-  const [isNavReady, setIsNavReady] = React.useState(false);
 
-  React.useLayoutEffect(() => {
+  // Handle Auth Redirection
+  React.useEffect(() => {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    
+    console.log(`[RootLayoutNav] State - Session: ${!!session}, Loading: ${loading}, Segments: ${segments.join('/')}`);
 
     if (!session && !inAuthGroup) {
-      router.replace('/(auth)/login');
-      setIsNavReady(false);
+      console.log('[RootLayoutNav] Redirecting to /login');
+      router.replace('/login');
     } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
-      setIsNavReady(false);
-    } else {
-      // If we are where we're supposed to be, signal that navigation is ready
-      // Use a frame delay to ensure native navigator is fully ready
-      const handle = requestAnimationFrame(() => {
-        setIsNavReady(true);
-      });
-      return () => cancelAnimationFrame(handle);
+      console.log('[RootLayoutNav] Redirecting to /');
+      router.replace('/');
     }
-  }, [session, loading, segments, router]);
+  }, [session, loading, segments]);
 
-  const inAuthGroup = segments[0] === '(auth)';
-  const needsRedirect = (!session && !inAuthGroup) || (session && inAuthGroup);
-
-  // Strictly gate the navigation tree
-  if (loading || needsRedirect || !isNavReady) {
+  if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: isDark ? '#050505' : '#F5F5F5', alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator size="large" color="#10b981" />
       </View>
     );
+  }
+
+  // Show Lock Screen if app is locked and biometrics are enabled
+  // We render this OVER or INSTEAD of the stack to ensure the navigator is mounted
+  if (session && isLocked && isBiometricsEnabled) {
+    return <GlassLockScreen />;
   }
 
   return (

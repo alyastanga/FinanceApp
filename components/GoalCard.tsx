@@ -11,16 +11,18 @@ interface GoalCardProps {
   onEdit: (goal: Goal) => void;
 }
 
+import { GoalProgressCard } from './ui/GoalProgressCard';
+
+import { calculateSmartIncrement } from '../lib/goal-utils';
+
 const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
   const { format } = useCurrency();
-  const progress = Math.min(1, (goal.currentAmount || 0) / (goal.targetAmount || 1));
-  const remaining = Math.max(0, goal.targetAmount - (goal.currentAmount || 0));
-
   const handleQuickAdd = async () => {
+    const increment = calculateSmartIncrement(goal.targetAmount);
     try {
       await database.write(async () => {
         await goal.update((record) => {
-          record.currentAmount += 50; // Custom increment for quick demo
+          record.currentAmount += increment;
         });
       });
     } catch (error) {
@@ -48,66 +50,27 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
   };
 
   return (
-    <View className="mb-4 overflow-hidden rounded-[32px] bg-card/40 border border-white/5">
-      <LinearGradient
-        colors={progress >= 1 ? ['#10b98125', 'transparent'] : ['#ffffff05', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View className="px-6 pt-5 pb-6">
-          <View className="flex-row justify-between items-start mb-3">
-            <View className="flex-1 mr-4">
-              <Text className="text-[9px] font-bold uppercase tracking-[1px] text-muted-foreground/60 mb-2 pl-0.5">
-                Active Target
-              </Text>
-              <Text className="text-xl font-black text-white" numberOfLines={1}>{goal.name}</Text>
-            </View>
-            <View className="items-end pt-1">
-               <Text className="text-sm font-bold text-primary">{Math.round(progress * 100)}%</Text>
-            </View>
+    <GoalProgressCard goal={goal}>
+      <View className="flex-row gap-x-3">
+        <TouchableOpacity 
+          onPress={handleQuickAdd}
+          className="flex-1 overflow-hidden"
+        >
+          <View className="bg-primary/20 rounded-2xl py-3.5 items-center border border-primary/20">
+            <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ {format(calculateSmartIncrement(goal.targetAmount), goal.currency)} Quick Add</Text>
           </View>
-
-          {/* Progress Bar */}
-          <View className="h-2 w-full bg-white/5 rounded-full overflow-hidden mb-6">
-            <View 
-              style={{ width: `${progress * 100}%` }}
-              className="h-full bg-primary rounded-full" 
-            />
+        </TouchableOpacity>
+        <TouchableOpacity 
+          onLongPress={handleDelete}
+          onPress={() => onEdit(goal)}
+          className="overflow-hidden"
+        >
+          <View className="bg-white/5 rounded-2xl px-6 py-3.5 items-center border border-white/5">
+            <Text className="text-white/60 font-black text-[10px] uppercase tracking-[1px] pl-0.5">Edit</Text>
           </View>
-
-          <View className="flex-row justify-between mb-6">
-            <View>
-              <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pl-0.5">Saved</Text>
-              <Text className="text-base font-bold text-white">{format(goal.currentAmount || 0, goal.currency)}</Text>
-            </View>
-            <View className="items-end">
-              <Text className="text-[9px] font-black uppercase tracking-[1px] text-muted-foreground/40 mb-1.5 pr-0.5">Target</Text>
-              <Text className="text-base font-bold text-white/40">{format(goal.targetAmount || 0, goal.currency)}</Text>
-            </View>
-          </View>
-
-          <View className="flex-row gap-x-3">
-            <TouchableOpacity 
-              onPress={handleQuickAdd}
-              className="flex-1 overflow-hidden"
-            >
-              <View className="bg-primary/20 rounded-2xl py-3.5 items-center border border-primary/20">
-                <Text className="text-primary font-black text-[10px] uppercase tracking-[1px] pl-0.5">+ {format(50, goal.currency)} Quick Add</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              onLongPress={handleDelete}
-              onPress={() => onEdit(goal)}
-              className="overflow-hidden"
-            >
-              <View className="bg-white/5 rounded-2xl px-6 py-3.5 items-center border border-white/5">
-                <Text className="text-white/60 font-black text-[10px] uppercase tracking-[1px] pl-0.5">Edit</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </LinearGradient>
-    </View>
+        </TouchableOpacity>
+      </View>
+    </GoalProgressCard>
   );
 };
 

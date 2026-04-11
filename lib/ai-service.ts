@@ -3,7 +3,7 @@ import { getFinancialContext } from './budget-engine';
 import { generateLocalResponse, initLocalModel } from './llama-service';
 
 // const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
-// Option A (V1Beta + 2.5 Flash): Recommended for systemInstruction support
+// Option A (V1Beta + 3.0 Flash): Recommended for systemInstruction support
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 
@@ -15,7 +15,8 @@ import { AI_AGENTS, DEFAULT_AGENT } from './ai-agents';
 export async function generateAIResponse(
   messages: { role: string; content: string }[],
   useLocal: boolean = false,
-  agentId?: string
+  agentId?: string,
+  onToken?: (token: string) => void
 ) {
   const agent = agentId ? (AI_AGENTS[agentId] || DEFAULT_AGENT) : DEFAULT_AGENT;
 
@@ -23,7 +24,7 @@ export async function generateAIResponse(
   if (useLocal) {
     console.log(`[AI Assistant] Using LOCAL mode with agent: ${agent.name}`);
     await initLocalModel();
-    return generateLocalResponse(messages, agent.id);
+    return generateLocalResponse(messages, agent.id, onToken);
   }
 
   const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
@@ -35,7 +36,7 @@ export async function generateAIResponse(
     // No API key — auto-fallback to local
     console.log(`[AI Assistant] No Gemini API key, falling back to local mode with agent: ${agent.name}.`);
     await initLocalModel();
-    return generateLocalResponse(messages, agent.id);
+    return generateLocalResponse(messages, agent.id, onToken);
   }
 
   const context = await getFinancialContext();
@@ -110,7 +111,7 @@ export async function generateAIResponse(
           temperature: 0.7,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 2048,
+          maxOutputTokens: 4096,
         }
       }),
     });
@@ -138,7 +139,7 @@ export async function generateAIResponse(
     console.warn('[AI Service] Gemini failed, falling back to local mode:', error.message);
     try {
       await initLocalModel();
-      return generateLocalResponse(messages, agent.id);
+      return generateLocalResponse(messages, agent.id, onToken);
     } catch (localError) {
       console.error('[AI Service] Local fallback also failed:', localError);
       return `Connection Error: ${error.message || 'I had trouble connecting.'} - Try switching to Local mode for offline use.`;

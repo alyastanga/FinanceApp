@@ -174,7 +174,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       <View style={{ width, height }}>
         {/* Y-Axis Labels */}
         {!simple && (
-          <View className="absolute right-0 top-0 bottom-0 justify-between py-2 z-10 items-end pr-1">
+          <View 
+            className="absolute right-0 top-0 bottom-0 justify-between z-10 items-end pr-1"
+            style={{ paddingVertical: paddingVertical }}
+          >
             <View className="items-end">
               <Text className={`${isDark ? 'text-white/10' : 'text-black/10'} text-[7px] font-black uppercase tracking-widest`}>Peak</Text>
               <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>{formattedMax}</Text>

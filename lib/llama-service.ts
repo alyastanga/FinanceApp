@@ -44,16 +44,17 @@ let modelState: LocalModelState = {
  * Falls back gracefully in Expo Go where native modules aren't available.
  *
  * @param modelPath - File URI to the GGUF model (e.g. from app assets or downloads)
+ * @param force - If true, re-initializes even if already in fallback mode (useful after download)
  */
-export async function initLocalModel(modelPath?: string): Promise<boolean> {
+export async function initLocalModel(modelPath?: string, force: boolean = false): Promise<boolean> {
   // Already initialized in native mode
-  if (modelState.initialized && modelState.mode === 'native') return true;
+  if (!force && modelState.initialized && modelState.mode === 'native') return true;
 
   try {
     // Dynamically import llama.rn — this will throw in Expo Go or if no native module
     const { initLlama } = await import('llama.rn');
 
-    // Determine path — default to documentDirectory/tinyllama if none provided
+    // Determine path — default to documentDirectory/model if none provided
     const resolvedPath = modelPath || `${FileSystem.documentDirectory}${MODEL_NAME}`;
 
     const info = await FileSystem.getInfoAsync(resolvedPath);
@@ -63,10 +64,25 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
       return true;
     }
 
-    console.log('[Local LLM] Initializing native context with model:', resolvedPath);
+    // Clean path for native llama.rn (handles file:// prefix issues on some RN versions)
+    const nativePath = resolvedPath.startsWith('file://') 
+      ? resolvedPath.replace('file://', '') 
+      : resolvedPath;
+
+    console.log('[Local LLM] Initializing native context with model:', nativePath);
+    
+    // Release existing context if we're forcing a reload
+    if (modelState.context) {
+      try {
+        await modelState.context.release();
+      } catch (e) {
+        console.warn('[Local LLM] Failed to release old context during re-init:', e);
+      }
+    }
+
     const context = await initLlama({
-      model: resolvedPath,
-      n_ctx: 2048,
+      model: nativePath,
+      n_ctx: 4096,
       n_threads: 4,      // Optimized for A13 Bionic architecture
       n_gpu_layers: 24,   // Balanced offload for 1.5B model on iPhone 11
       use_mlock: false,   // Disable mlock on 4GB devices to avoid memory pressure crashes
@@ -76,7 +92,7 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
     console.log('[Local LLM] Native model loaded successfully.');
     return true;
   } catch (error: any) {
-    console.log('[Local LLM] Native module unavailable or error, using fallback engine.');
+    console.log('[Local LLM] Native module unavailable or error, using fallback engine:', error.message);
     modelState = { initialized: true, mode: 'fallback', context: null };
     return true;
   }
@@ -91,7 +107,8 @@ export async function initLocalModel(modelPath?: string): Promise<boolean> {
  */
 export async function generateLocalResponse(
   messages: { role: string; content: string }[],
-  agentId?: string
+  agentId?: string,
+  onToken?: (token: string) => void
 ): Promise<string> {
   // Ensure model is initialized
   if (!modelState.initialized) {
@@ -134,16 +151,18 @@ export async function generateLocalResponse(
           },
           ...messages,
         ],
-        n_predict: 1024,
+        n_predict: 2048,
         temperature: 0.5,
         top_p: 0.9,
         stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>'],
+      }, (event: any) => {
+        if (onToken && event.token) {
+          onToken(event.token);
+        }
       });
 
       let finalResponse = result.text || 'I could not generate a response.';
-      // DeepSeek R1 reasoning removal
-      finalResponse = finalResponse.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return finalResponse;
     } catch (error: any) {

@@ -11,8 +11,10 @@ import { SUPPORTED_CURRENCIES, useCurrency } from '../../context/CurrencyContext
 import { useTheme } from '../../context/ThemeContext';
 import { clearAllUserData } from '../../lib/data-management';
 import { syncData } from '../../lib/sync';
+import { useSecurity } from '../../context/SecurityContext';
 
 export default function SettingsScreen() {
+  const { isBiometricsEnabled, toggleBiometrics, canAuthenticate } = useSecurity();
   const { aiMode, setAiMode } = useAI();
   const { setTheme, isDark } = useTheme();
   const { currency, setCurrency } = useCurrency();
@@ -29,27 +31,6 @@ export default function SettingsScreen() {
       Alert.alert("Sync Failed", error.message || "An error occurred during synchronization.");
     } finally {
       setIsSyncing(false);
-    }
-  };
-
-  const handleSecurity = async () => {
-    const hasHardware = await LocalAuthentication.hasHardwareAsync();
-    const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-
-    if (!hasHardware || !isEnrolled) {
-      Alert.alert("Security Unavailable", "Your device does not support biometric authentication or is not enrolled.");
-      return;
-    }
-
-    const result = await LocalAuthentication.authenticateAsync({
-      promptMessage: 'Authenticate to access Profile Security',
-      fallbackLabel: 'Enter Passcode',
-    });
-
-    if (result.success) {
-      Alert.alert("Success", "Identity verified. Security settings unlocked.");
-    } else {
-      Alert.alert("Authentication Failed", "We could not verify your identity.");
     }
   };
 
@@ -227,13 +208,30 @@ export default function SettingsScreen() {
         <View className="mb-8">
           <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Account</Text>
           <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            <View className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}>
+              <View className="flex-row items-center gap-x-3">
+                <IconSymbol name="lock.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
+                <View>
+                  <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
+                  {!canAuthenticate && (
+                    <Text className="text-destructive text-[8px] font-black uppercase tracking-widest">Unsupported/Not Enrolled</Text>
+                  )}
+                </View>
+              </View>
+              <Switch
+                value={isBiometricsEnabled}
+                onValueChange={toggleBiometrics}
+                disabled={!canAuthenticate}
+                trackColor={{ false: "#ccc", true: "#10b981" }}
+              />
+            </View>
+
             <TouchableOpacity
-              onPress={handleSecurity}
               className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}
             >
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="person.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                <Text className={`${textClass} font-medium text-base`}>Profile Security</Text>
+                <Text className={`${textClass} font-medium text-base`}>Profile Settings</Text>
               </View>
               <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
             </TouchableOpacity>

@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform
 import { BlurView } from 'expo-blur';
 import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
+import { generateUUID } from '../lib/id-utils';
 
 const CATEGORY_PRESETS = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Savings', 'Misc'];
 
@@ -41,6 +42,7 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
           });
         } else {
           await database.get('budgets').create((record: any) => {
+            record._raw.id = generateUUID();
             record.category = category;
             record.amountLimit = parseFloat(amountLimit);
           });

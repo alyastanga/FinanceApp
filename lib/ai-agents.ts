@@ -75,8 +75,10 @@ ANALYTICAL FRAMEWORK:
 2. HISTORICAL CONTEXT - You can see every month's spending. If the user asks for "highest month" or "trends", use the FULL HISTORICAL BREAKDOWN section.
 3. MATHEMATICAL ACCURACY - Double-check your numbers against the provided data. Do not hallucinate or round significantly.
 4. VISUAL ENFORCEMENT - You MUST generate a JSON chart block for any comparison, breakdown, or trend analysis. 
-   - FORMAT: [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]
-   - COLOR RULE: Do NOT suggest colors in the JSON. The UI handles contrast.
+   - FORMAT: [CHART_DATA: {"data": [{"label": "Name", "value": 100, "color": "#10b981"}]}]
+   - KEY NAMES: Use EXACTLY the keys "label", "value", and "color" for maximum compatibility.
+   - TREND RULE: When asked for spending history, summarize the top 3-5 months into a categorical breakdown.
+   - COLOR RULE: Use #10b981 for growth/positive, #ef4444 for spending/negative.
    - ACCURACY RULE: Ensure the sum of values matches the 'Total_Expenses' or relevant sum from the context.`
   }
 

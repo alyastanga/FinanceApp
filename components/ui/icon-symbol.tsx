@@ -36,6 +36,7 @@ const MAPPING = {
   'lock.fill': 'lock',
   'battery.100': 'battery-full',
   'xmark': 'close',
+  'chart.pie.fill': 'pie-chart',
 } as IconMapping;
 
 /**

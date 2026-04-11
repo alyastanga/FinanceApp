@@ -5,6 +5,7 @@ import Portfolio from '../database/models/Portfolio';
 import { IconSymbol } from './ui/icon-symbol';
 import { useAuth } from '../context/AuthContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
+import { generateUUID } from '../lib/id-utils';
 
 interface PortfolioFormProps {
   asset?: Portfolio | null;
@@ -86,6 +87,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
         } else {
           // Create new asset
           await database.get('portfolio').create((record: any) => {
+            record._raw.id = generateUUID();
             record.name = name;
             record.assetType = assetType;
             record.symbol = symbol.toUpperCase();

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, ScrollView, Platform, Alert } from 'react-native';
 import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
+import { generateUUID } from '../lib/id-utils';
 
 const CATEGORIES = [
   'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'
@@ -30,6 +31,7 @@ export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
     try {
       await database.write(async () => {
         await database.get('expenses').create((expense: any) => {
+          expense._raw.id = generateUUID();
           expense.amount = parsedAmount;
           expense.category = category;
           expense._currency = currency;

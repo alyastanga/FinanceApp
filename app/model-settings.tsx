@@ -4,9 +4,9 @@ import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system/legacy';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BlurView } from 'expo-blur';
-import { releaseLocalModel } from '@/lib/llama-service';
+import { releaseLocalModel, initLocalModel } from '@/lib/llama-service';
 
-const MODEL_URL = 'https://huggingface.co/tensorblock/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true';
+const MODEL_URL = 'https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true';
 const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
 const MODEL_SIZE_MB = 952;
 
@@ -35,6 +35,7 @@ export default function ModelSettings() {
   };
 
   const handleDownload = async () => {
+    console.log('[Model Settings] Starting download from:', MODEL_URL);
     setIsDownloading(true);
     setDownloadProgress(0);
 
@@ -43,20 +44,43 @@ export default function ModelSettings() {
       modelPath,
       {},
       (downloadProgress) => {
-        const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setDownloadProgress(progress);
+        // Guard against division by zero or NaN if server doesn't provide content-length
+        const total = downloadProgress.totalBytesExpectedToWrite;
+        if (total > 0) {
+          const progress = downloadProgress.totalBytesWritten / total;
+          setDownloadProgress(progress);
+        } else {
+          // Fallback: estimate based on expected size or just show indeterminate movement
+          // For now we'll just log
+          console.log(`[Download] Progress: ${downloadProgress.totalBytesWritten} bytes written...`);
+        }
       }
     );
 
     try {
       const result = await downloadResumable.downloadAsync();
-      if (result) {
+      
+      if (result && result.status === 200) {
+        console.log('[Model Settings] Download completed. URI:', result.uri);
         setHasModel(true);
-        Alert.alert('Success', 'Model downloaded and ready for offline use.');
+        
+        // CRITICAL: Re-initialize the AI engine to use the newly downloaded file
+        console.log('[Model Settings] Re-initializing local AI engine...');
+        const success = await initLocalModel(modelPath, true);
+        
+        if (success) {
+          Alert.alert('Success', 'Model downloaded and engine initialized for offline use.');
+        } else {
+          Alert.alert('Download Finished', 'The model was downloaded but the engine failed to load it. Please restart the app.');
+        }
+      } else {
+        const status = result?.status;
+        console.error('[Model Settings] Download failed with status:', status);
+        Alert.alert('Download Failed', `Server returned status ${status || 'unknown'}.`);
       }
-    } catch (e) {
-      console.error(e);
-      Alert.alert('Download Error', 'Failed to download the model file.');
+    } catch (e: any) {
+      console.error('[Model Settings] Download Error:', e);
+      Alert.alert('Download Error', `Failed to download: ${e.message || 'Unknown error'}`);
     } finally {
       setIsDownloading(false);
     }
