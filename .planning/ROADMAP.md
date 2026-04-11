@@ -88,6 +88,19 @@ Plans:
 - [ ] 05-01: Electron integration and Desktop-specific builds.
 - [ ] 05-02: Global UI/UX refinement and final validation.
 
+### Phase 6: Improve Dashboard Empty States
+**Goal**: Enhance the first-time user experience by replacing empty charts with instructional prompts.
+**Depends on**: Phase 5
+**Requirements**: CORE-02, GOAL-01
+**Success Criteria**:
+  1. No empty/zeroed graphs are visible to users with no transaction or budget data.
+  2. Every dashboard panel shows a specific, helpful text prompt when its data source is empty.
+  3. Clicking any "empty" panel correctly routes the user to the setup screen for that feature.
+**Plans**: 1 plan
+
+Plans:
+- [ ] 06-01: Implement icon+text empty states across all dashboard tiles.
+
 ### Final Phase: 
 
 ## Progress
@@ -101,6 +114,36 @@ Plans:
 | 5. Desktop/Polish | 1/1 | Complete | 2026-04-04 |
 
 
+
+### Phase 6: Improve Dashboard Empty States
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 6 to break down)
+
+### Phase 7: Dashboard Visual Focus - Data Driven Tiles
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 6
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 7 to break down)
+
+### Phase 8: Dashboard Polish & Calculation Verification
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 7
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 8 to break down)
 
 ---
 *Last updated: 2026-04-02*

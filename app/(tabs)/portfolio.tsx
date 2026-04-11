@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, TextInput, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
@@ -108,14 +108,15 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
     if (isRefreshing) return;
     setIsRefreshing(true);
     try {
-      const symbols = portfolio.map(p => p.symbol).filter(Boolean);
+      const marketAssets = portfolio.filter(p => p.assetType === 'stock' || p.assetType === 'crypto');
+      const symbols = marketAssets.map(p => p.symbol).filter(Boolean);
       if (symbols.length === 0) return;
 
       const quotes = await fetchMultipleQuotes(symbols);
       
       await database.write(async () => {
-        for (const asset of portfolio) {
-          // Guard against trying to update a record that was just deleted (e.g. during a seed reset)
+        for (const asset of marketAssets) {
+          // Guard against trying to update a record that was just deleted
           if ((asset as any)._raw?._status === 'deleted') continue;
 
           const quote = quotes[asset.symbol];
@@ -134,9 +135,10 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
     }
   }, [portfolio, isRefreshing]);
 
-  React.useEffect(() => {
-    refreshPrices();
-  }, [refreshPrices]);
+  // Removed automatic effect to make market data pulls explicitly user-driven
+  // React.useEffect(() => {
+  //   refreshPrices();
+  // }, [refreshPrices]);
 
   const handleAddAsset = () => {
     setActiveAsset(null);
@@ -154,6 +156,14 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
         className="flex-1 px-5" 
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl 
+            refreshing={isRefreshing} 
+            onRefresh={refreshPrices} 
+            tintColor="#10b981" 
+            colors={['#10b981']}
+          />
+        }
       >
         {/* Header Section */}
         <View className="pt-8 pb-10">

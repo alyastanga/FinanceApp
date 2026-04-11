@@ -22,8 +22,9 @@ import { useTheme } from '../context/ThemeContext';
 
 // Services
 import { explainFinancialGraph } from '@/lib/ai-service';
-import { calculateBudgetInsights } from '@/lib/budget-engine';
+import { calculateBudgetInsights, calculateRunway } from '@/lib/budget-engine';
 import { useCurrency } from '@/context/CurrencyContext';
+import { normalizeDate } from '@/lib/date-utils';
 
 interface InsightsDashboardProps {
   incomes: any[];
@@ -82,15 +83,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
   const [spendingMode, setSpendingMode] = useState<'current' | 'overall' | 'history'>('current');
   const [selectedHistoryMonth, setSelectedHistoryMonth] = useState<string | null>(null);
 
-  const normalizeDate = (record: any) => {
-    if (!record) return 0;
-    const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
-    if (!val) return 0;
-    if (val instanceof Date) return val.getTime();
-    const num = Number(val);
-    if (isNaN(num) || num === 0) return 0;
-    return num < 30000000000 ? num * 1000 : num;
-  };
+
 
   const availableMonths = useMemo(() => {
     const months = new Set<string>();
@@ -127,14 +120,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     const trend = [];
     const now = new Date();
 
-    const normalizeDateLocal = (record: any) => {
-      if (!record) return 0;
-      const val = record.createdAt || record.created_at || (record._raw && record._raw.created_at);
-      if (val instanceof Date) return val.getTime();
-      const num = Number(val);
-      if (!val || isNaN(num) || num === 0) return 0;
-      return num < 30000000000 ? num * 1000 : num;
-    };
+
 
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -144,14 +130,14 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
       const incomeValue = incomes
         .filter(inc => {
-          const t = normalizeDateLocal(inc);
+          const t = normalizeDate(inc);
           return t >= monthStart && t <= monthEnd;
         })
         .reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
 
       const expenseValue = expenses
         .filter(exp => {
-          const t = normalizeDateLocal(exp);
+          const t = normalizeDate(exp);
           return t >= monthStart && t <= monthEnd;
         })
         .reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
@@ -246,9 +232,10 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
   };
 
 
-  const insights = calculateBudgetInsights(incomes, expenses, goals);
-  const totalPortfolioValue = portfolio.reduce((sum, p) => sum + (p.value || 0), 0);
-  const netFlowValue = insights.monthlyIncome - insights.monthlyFixedExpenses;
+  const insights = calculateBudgetInsights(incomes, expenses, goals, convertFrom, currency);
+  const runway = calculateRunway(portfolio, expenses, convertFrom, currency);
+  const totalPortfolioValue = portfolio.reduce((sum, p) => sum + convertFrom(p.value || 0, p.currency || p._currency || currency), 0);
+  const netFlowValue = insights.monthlyIncome - insights.monthlyFixedExpenses - (insights.variableSpent || 0);
   const netWorthValue = totalPortfolioValue + (netFlowValue > 0 ? netFlowValue : 0);
 
   return (
@@ -270,11 +257,19 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
           <View className="mb-8">
             <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-xs font-bold uppercase tracking-widest mb-1`}>Total Net Worth</Text>
-            <View className="flex-row items-baseline">
+            <View className="flex-row items-baseline gap-x-3 flex-wrap">
               <Text className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-black tracking-tighter`}>
                 {format(netWorthValue)}
               </Text>
+              <View className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                <Text className="text-primary font-black text-[10px] uppercase tracking-widest">
+                  {runway.runwayDays > 365 ? `${(runway.runwayDays / 365).toFixed(1)}YR` : `${runway.runwayDays} Days`} Freedom
+                </Text>
+              </View>
             </View>
+            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[9px] font-black uppercase tracking-[2px] mt-2`}>
+              Survival Capacity at {format(runway.dailyBurnRate)}/day burn
+            </Text>
           </View>
 
           <View className="flex-row gap-x-4">
@@ -307,7 +302,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 totalMonthlyIncome={insights.monthlyIncome}
                 isDark={isDark}
               />
-              <View className={`mx-6 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
+              <View className={`mx-6 my-4 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
               <SavingsRateView incomes={incomes} expenses={expenses} isDark={isDark} />
             </BlurView>
             {renderAIInsight('budget')}

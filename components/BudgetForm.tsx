@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import database from '../database';
+import { useCurrency } from '../context/CurrencyContext';
 
 const CATEGORY_PRESETS = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Savings', 'Misc'];
 
@@ -12,6 +13,8 @@ interface BudgetFormProps {
 }
 
 export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) => {
+  const { currency, symbolFor } = useCurrency();
+  const currentSymbol = symbolFor(currency);
   const [category, setCategory] = useState('');
   const [amountLimit, setAmountLimit] = useState('');
 
@@ -120,7 +123,7 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
               <TextInput
                 value={amountLimit}
                 onChangeText={setAmountLimit}
-                placeholder="$0"
+                placeholder={`${currentSymbol}0`}
                 placeholderTextColor="rgba(255,255,255,0.2)"
                 keyboardType="numeric"
                 className="text-white text-3xl font-black bg-white/5 rounded-2xl px-5 py-4 mb-8 border border-white/5"

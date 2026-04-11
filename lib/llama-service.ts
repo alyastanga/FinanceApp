@@ -12,6 +12,7 @@
  */
 
 import * as FileSystem from 'expo-file-system/legacy';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import database from '../database';
 
 const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
@@ -154,6 +155,8 @@ async function generateFallbackResponse(
   const query = (lastUserMessage?.content || '').toLowerCase();
 
   try {
+    const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
+    
     // Fetch real data from the local database
     const incomes = await database.get('incomes').query().fetch();
     const expenses = await database.get('expenses').query().fetch();
@@ -194,10 +197,10 @@ async function generateFallbackResponse(
 
     if (query.includes('safe') || query.includes('spend') || query.includes('budget')) {
       return `[Offline Mode] Based on your current data:\n\n` +
-        `Your safe-to-spend amount is $${safeToSpend}/day for the remaining ${daysLeft} days this month.\n\n` +
-        `Monthly Income: $${totalIncome.toLocaleString()}\n` +
-        `Monthly Expenses: $${totalExpenses.toLocaleString()}\n` +
-        `Net Flow: ${netFlow >= 0 ? '+' : ''}$${netFlow.toLocaleString()}\n` +
+        `Your safe-to-spend amount is ${baseCurrency} ${safeToSpend}/day for the remaining ${daysLeft} days this month.\n\n` +
+        `Monthly Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
+        `Monthly Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
+        `Net Flow: ${netFlow >= 0 ? '+' : ''}${baseCurrency} ${netFlow.toLocaleString()}\n` +
         `Savings Rate: ${savingsRate}%`;
     }
 
@@ -215,8 +218,8 @@ async function generateFallbackResponse(
         return `[Offline Mode] No expense data found. Log some transactions to see your spending breakdown.`;
       }
       return `[Offline Mode] Your top spending categories:\n\n` +
-        topCategories.map(([cat, amt], i) => `  ${i + 1}. ${cat}: $${amt.toLocaleString()}`).join('\n') +
-        `\n\nTotal Expenses: $${totalExpenses.toLocaleString()}`;
+        topCategories.map(([cat, amt], i) => `  ${i + 1}. ${cat}: ${baseCurrency} ${amt.toLocaleString()}`).join('\n') +
+        `\n\nTotal Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
     }
 
     if (query.includes('worth') || query.includes('portfolio') || query.includes('asset')) {
@@ -224,18 +227,18 @@ async function generateFallbackResponse(
         return `[Offline Mode] Your Portfolio is currently empty. You can add assets in the Portfolio hub to track your Net Worth.`;
       }
       return `[Offline Mode] Your Net Worth Overview:\n\n` +
-        `Total Assets: $${totalPortfolioValue.toLocaleString()}\n` +
-        `Liquid Flow: $${netFlow.toLocaleString()}/mo\n\n` +
+        `Total Assets: ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n` +
+        `Liquid Flow: ${baseCurrency} ${netFlow.toLocaleString()}/mo\n\n` +
         `Asset Breakdown:\n` +
-        portfolio.map(p => `  - ${(p as any).name}: $${(p as any).value.toLocaleString()}`).join('\n');
+        portfolio.map(p => `  - ${(p as any).name}: ${baseCurrency} ${(p as any).value.toLocaleString()}`).join('\n');
     }
 
     // Default summary
     return `[Offline Mode] Here's your financial snapshot:\n\n` +
-      `Monthly Income: $${totalIncome.toLocaleString()}\n` +
-      `Monthly Expenses: $${totalExpenses.toLocaleString()}\n` +
-      `Net Worth (Assets): $${totalPortfolioValue.toLocaleString()}\n` +
-      `Safe to Spend: $${safeToSpend}/day (${daysLeft} days left)\n` +
+      `Monthly Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
+      `Monthly Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
+      `Net Worth (Assets): ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n` +
+      `Safe to Spend: ${baseCurrency} ${safeToSpend}/day (${daysLeft} days left)\n` +
       `Active Goals: ${goals.length}\n\n` +
       `Tip: For deeper AI analysis, switch to Cloud mode when you have internet access.`;
   } catch (error: any) {

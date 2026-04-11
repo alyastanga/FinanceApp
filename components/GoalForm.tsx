@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Modal, FlatList } from 'react-
 import database from '../database';
 import Goal from '../database/models/Goal';
 import { IconSymbol } from './ui/icon-symbol';
+import { useCurrency } from '../context/CurrencyContext';
 
 interface GoalFormProps {
   goal?: Goal | null;
@@ -11,6 +12,8 @@ interface GoalFormProps {
 }
 
 export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
+  const { currency, symbolFor } = useCurrency();
+  const currentSymbol = symbolFor(currency);
   const [name, setName] = useState(goal?.name || '');
   const [targetAmount, setTargetAmount] = useState(goal?.targetAmount?.toString() || '');
   const [currentAmount, setCurrentAmount] = useState(goal?.currentAmount?.toString() || '0');
@@ -77,7 +80,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
 
         <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
           <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
-            Target Amount ($)
+            Target Amount ({currentSymbol})
           </Text>
           <TextInput
             value={targetAmount}
@@ -92,7 +95,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
         {goal && (
           <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
             <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
-              Saved Amount ($)
+              Saved Amount ({currentSymbol})
             </Text>
             <TextInput
               value={currentAmount}

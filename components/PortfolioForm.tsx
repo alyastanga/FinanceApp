@@ -31,6 +31,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
   const [value, setValue] = useState(asset?.value ? asset.value.toString() : '');
   const [change24h, setChange24h] = useState(asset?.change24h ? asset.change24h.toString() : '0');
   const [assetCurrency, setAssetCurrency] = useState(asset?.currency || appCurrency);
+  const [isSaving, setIsSaving] = useState(false);
 
   const currentSymbol = symbolFor(assetCurrency);
 
@@ -43,21 +44,43 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
       return;
     }
 
-    try {
-      await database.write(async () => {
-        const amt = parseFloat(investedAmount) || 0;
-        const val = isCash ? amt : (parseFloat(value) || 0);
+    setIsSaving(true);
 
+    try {
+      let finalValue = (isCash && value === '') ? (parseFloat(investedAmount) || 0) : (parseFloat(value) || 0);
+      let finalChange = parseFloat(change24h) || 0;
+      const amt = parseFloat(investedAmount) || 0;
+      const qty = parseFloat(quantity) || 1;
+
+      // Automatically fetch current market value for stocks and crypto
+      if (isAutomated && symbol) {
+        try {
+          const { fetchMarketQuote } = require('../lib/market-service');
+          const quote = await fetchMarketQuote(symbol.toUpperCase());
+          if (quote) {
+             finalValue = quote.currentPrice * qty;
+             finalChange = quote.percentChange;
+          } else {
+             // Fallback if quote fails
+             finalValue = amt;
+          }
+        } catch (e) {
+          console.warn('Failed to auto-fetch quote during creation', e);
+          finalValue = amt; // Fallback so it doesn't show 0
+        }
+      }
+
+      await database.write(async () => {
         if (asset) {
           // Update existing asset
           await asset.update((record: any) => {
             record.name = name;
             record.assetType = assetType;
             record.symbol = symbol.toUpperCase();
-            record.quantity = parseFloat(quantity);
+            record.quantity = qty;
             record.investedAmount = amt;
-            record.value = val;
-            record.change24h = parseFloat(change24h);
+            record.value = finalValue;
+            record.change24h = finalChange;
             record.currency = assetCurrency;
           });
         } else {
@@ -66,10 +89,10 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
             record.name = name;
             record.assetType = assetType;
             record.symbol = symbol.toUpperCase();
-            record.quantity = parseFloat(quantity);
+            record.quantity = qty;
             record.investedAmount = amt;
-            record.value = val;
-            record.change24h = parseFloat(change24h);
+            record.value = finalValue;
+            record.change24h = finalChange;
             record.currency = assetCurrency;
             record.userId = session?.user?.id || 'anonymous';
           });
@@ -79,6 +102,8 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
     } catch (error) {
       console.error('Failed to save portfolio asset:', error);
       Alert.alert('Error', 'Failed to save asset. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -132,23 +157,41 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
             onChangeText={setName}
             placeholder="Enter name..."
             placeholderTextColor="rgba(255,255,255,0.2)"
-            className="text-lg font-bold text-white px-2 py-1"
+            style={{ includeFontPadding: false }}
+            className="text-lg font-bold text-white px-2 h-14 py-2"
           />
         </View>
 
         {(assetType === 'stock' || assetType === 'crypto') && (
-          <View className="bg-white/5 rounded-[24px] p-4 border border-white/5">
-            <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
-              Ticker Symbol (e.g. AAPL, BTCUSDT)
-            </Text>
-            <TextInput
-              value={symbol}
-              onChangeText={setSymbol}
-              placeholder="Search symbol..."
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              autoCapitalize="characters"
-              className="text-lg font-bold text-white px-2 py-1"
-            />
+          <View className="flex-row gap-x-4">
+            <View className="flex-[2] bg-white/5 rounded-[24px] p-4 border border-white/5">
+              <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+                Ticker Symbol (e.g. AAPL, BTCUSDT)
+              </Text>
+              <TextInput
+                value={symbol}
+                onChangeText={setSymbol}
+                placeholder="Search symbol..."
+                placeholderTextColor="rgba(255,255,255,0.2)"
+                autoCapitalize="characters"
+                style={{ includeFontPadding: false }}
+                className="text-lg font-bold text-white px-2 h-14 py-2"
+              />
+            </View>
+            <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
+              <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+                Quantity
+              </Text>
+              <TextInput
+                value={quantity}
+                onChangeText={setQuantity}
+                placeholder="1"
+                placeholderTextColor="rgba(255,255,255,0.2)"
+                keyboardType="numeric"
+                style={{ includeFontPadding: false }}
+                className="text-lg font-bold text-white px-2 h-14 py-2"
+              />
+            </View>
           </View>
         )}
 
@@ -156,7 +199,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
           {/* Invested Amount Input - Always Show */}
           <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
             <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
-              {assetType === 'cash' ? `Current Balance (${currentSymbol})` : `Total Invested (${currentSymbol})`}
+              {`Total Invested (${currentSymbol})`}
             </Text>
             <TextInput
               value={investedAmount}
@@ -164,15 +207,15 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               placeholder="0.00"
               placeholderTextColor="rgba(255,255,255,0.2)"
               keyboardType="numeric"
-              className="text-lg font-bold text-white px-2 py-1"
+              style={{ includeFontPadding: false }}
+              className="text-lg font-bold text-white px-2 h-14 py-2"
             />
           </View>
 
-          {/* Manual Value Input - Only for non-automated, non-cash assets */}
-          {assetType !== 'stock' && assetType !== 'crypto' && assetType !== 'cash' && (
+          {assetType !== 'stock' && assetType !== 'crypto' && (
             <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
               <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
-                Current Value ({currentSymbol})
+                {assetType === 'cash' ? 'Current Balance' : 'Current Value'} ({currentSymbol})
               </Text>
               <TextInput
                 value={value}
@@ -180,7 +223,8 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
                 placeholder="0.00"
                 placeholderTextColor="rgba(255,255,255,0.2)"
                 keyboardType="numeric"
-                className="text-lg font-bold text-primary px-2 py-1"
+                style={{ includeFontPadding: false }}
+                className="text-lg font-bold text-primary px-2 h-14 py-2"
               />
             </View>
           )}
@@ -198,7 +242,8 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               placeholder="0.00"
               placeholderTextColor="rgba(255,255,255,0.2)"
               keyboardType="numeric"
-              className={`text-lg font-bold px-2 py-1 ${parseFloat(change24h) >= 0 ? 'text-primary' : 'text-destructive'}`}
+              style={{ includeFontPadding: false }}
+              className={`text-lg font-bold px-2 h-14 py-2 ${parseFloat(change24h) >= 0 ? 'text-primary' : 'text-destructive'}`}
             />
           </View>
         )}
@@ -252,11 +297,16 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
            </TouchableOpacity>
            <TouchableOpacity 
              onPress={handleSubmit}
-             className="flex-1 bg-primary rounded-2xl p-5 items-center shadow-lg shadow-primary/20"
+             disabled={isSaving}
+             className={`flex-1 bg-primary rounded-2xl p-5 items-center shadow-lg shadow-primary/20 ${isSaving ? 'opacity-70' : ''}`}
            >
-              <Text className="text-primary-foreground font-black text-[12px] uppercase tracking-widest">
-                {asset ? 'Update' : 'Commit Asset'}
-              </Text>
+              {isSaving ? (
+                <Text className="text-primary-foreground font-black text-[12px] uppercase tracking-widest">Saving...</Text>
+              ) : (
+                <Text className="text-primary-foreground font-black text-[12px] uppercase tracking-widest">
+                  {asset ? 'Update' : 'Commit Asset'}
+                </Text>
+              )}
            </TouchableOpacity>
         </View>
 

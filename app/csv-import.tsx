@@ -9,6 +9,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { getCSVHeaders, guessMappings, transformRows, generateCSV, CSVMapping } from '@/lib/csv-utils';
 import database from '@/database';
 import * as Sharing from 'expo-sharing';
+import { useCurrency } from '@/context/CurrencyContext';
 
 export default function CSVImportScreen() {
   const router = useRouter();
@@ -21,6 +22,8 @@ export default function CSVImportScreen() {
     type: 'auto'
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const { currency, symbolFor } = useCurrency();
+  const currentSymbol = symbolFor(currency);
 
   const handlePickFile = async () => {
     try {
@@ -221,7 +224,7 @@ export default function CSVImportScreen() {
               
               {renderMappingRow('Transaction Date', 'dateHeader', 'calendar')}
               {renderMappingRow('Source / Description', 'sourceHeader', 'text.alignleft')}
-              {renderMappingRow('Amount ($)', 'amountHeader', 'dollarsign.circle')}
+              {renderMappingRow(`Amount (${currentSymbol})`, 'amountHeader', 'dollarsign.circle')}
 
               <TouchableOpacity 
                 onPress={executeImport}

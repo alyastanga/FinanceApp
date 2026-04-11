@@ -72,7 +72,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
     const totalAlloc = budgets.reduce((acc, b) => acc + convertFrom(b.amountLimit, b.currency || currency), 0);
     const totalSpt = (Object.values(expenseMap) as number[]).reduce((acc, amt) => acc + amt, 0);
 
-    const insights = calculateBudgetInsights(incomes, expenses, []); // temp goals check later
+    const insights = calculateBudgetInsights(incomes, expenses, [], convertFrom, currency); // temp goals check later
     const mIncome = insights.monthlyIncome;
 
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
@@ -211,17 +211,16 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
         {activeTab === 'overview' && (
           <View className="mb-10">
              <BudgetChart 
-               data={categoryData.length > 0 ? categoryData.map((c, i) => ({
-                 label: c.category,
-                 value: c.limit,
-                 color: ['#10b981', '#3b82f6', '#f59e0b', '#064e3b', '#1f2937'][i % 5]
-               })) : [
-                 { label: 'Unallocated', value: 1, color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
-               ]} 
-               size={240}
-               title="Current Allocation"
-               isDark={isDark}
-             />
+                data={categoryData.length > 0 ? categoryData.map((c, i) => ({
+                  label: c.category,
+                  value: c.limit,
+                  color: ['#10b981', '#3b82f6', '#f59e0b', '#064e3b', '#1f2937'][i % 5]
+                })) : []} 
+                size={240}
+                title="Current Allocation"
+                emptyMessage="Start allocation to see budget distribution"
+                isDark={isDark}
+              />
              
              <View className="flex-row gap-x-4 mt-8">
                <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>

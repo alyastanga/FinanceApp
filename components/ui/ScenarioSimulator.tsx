@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { IconSymbol } from './icon-symbol';
 import { simulatePurchaseImpact, SimulationResult } from '@/lib/simulation-engine';
+import { useCurrency } from '../../context/CurrencyContext';
 
 interface ScenarioSimulatorProps {
   incomes: any[];
@@ -11,14 +12,16 @@ interface ScenarioSimulatorProps {
 }
 
 export default function ScenarioSimulator({ incomes, expenses, goals, isDark = true }: ScenarioSimulatorProps) {
+  const { currency, symbolFor, convertFrom } = useCurrency();
   const [amount, setAmount] = useState('');
   const [results, setResults] = useState<SimulationResult[]>([]);
+  const currentSymbol = symbolFor(currency);
 
   const handleSimulate = () => {
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) return;
     
-    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals);
+    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals, convertFrom, currency);
     setResults(impacts);
   };
 
@@ -40,9 +43,10 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark = t
 
       <View className="flex-row gap-x-3 mb-8">
         <View className={`flex-1 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-2xl border ${isDark ? 'border-white/5' : 'border-black/5'} px-4 py-1 flex-row items-center`}>
-          <Text className={`${subTextClass} mr-2`}>$</Text>
+          <Text className={`${subTextClass} mr-2`}>{currentSymbol}</Text>
           <TextInput
-            className={`flex-1 h-12 ${textClass} font-black text-lg`}
+            style={{ includeFontPadding: false }}
+            className={`flex-1 h-14 py-2 ${textClass} font-black text-lg`}
             placeholder="2500.00"
             placeholderTextColor={isDark ? "#666" : "#999"}
             keyboardType="numeric"

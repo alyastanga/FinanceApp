@@ -119,25 +119,33 @@ export const SavingsRateView = ({ incomes, expenses, isDark = true }: SavingsRat
       fillPath.close();
     }
 
+    const hasData = trendData.some(d => d.rate !== 0);
+
     return (
       <View className="py-4">
-        <Canvas style={{ width: effectiveWidth, height: chartHeight }}>
-          <Path path={fillPath}>
-            <LinearGradient
-              start={vec(0, 0)}
-              end={vec(0, chartHeight)}
-              colors={['#10b98130', 'transparent']}
+        {hasData ? (
+          <Canvas style={{ width: effectiveWidth, height: chartHeight }}>
+            <Path path={fillPath}>
+              <LinearGradient
+                start={vec(0, 0)}
+                end={vec(0, chartHeight)}
+                colors={['#10b98130', 'transparent']}
+              />
+            </Path>
+            <Path
+              path={strokePath}
+              strokeWidth={3}
+              style="stroke"
+              strokeJoin="round"
+              strokeCap="round"
+              color="#10b981"
             />
-          </Path>
-          <Path
-            path={strokePath}
-            strokeWidth={3}
-            style="stroke"
-            strokeJoin="round"
-            strokeCap="round"
-            color="#10b981"
-          />
-        </Canvas>
+          </Canvas>
+        ) : (
+          <View style={{ width: effectiveWidth, height: chartHeight, alignItems: 'center', justifyContent: 'center' }}>
+            <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest opacity-30`}>Insufficient data for trend</Text>
+          </View>
+        )}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 8 }}>
           {trendData.map((d, i) => (
             <Text key={i} style={{ fontSize: 8, fontWeight: '900', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase' }}>

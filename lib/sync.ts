@@ -118,18 +118,22 @@ export async function syncData() {
 
           dateFields.forEach(field => {
             let value = sanitized[field];
-            if (value) {
+            // Check for any non-null/undefined value including 0
+            if (value !== undefined && value !== null) {
               if (typeof value === 'number') {
                 value = new Date(value).toISOString();
               } else if (typeof value === 'string' && /^\d{13}$/.test(value)) {
                 value = new Date(parseInt(value, 10)).toISOString();
               }
 
-              // Apply unified invalid date blocking
+              // Apply unified invalid date blocking (including epoch zero)
               if (!isValidDate(value)) {
                 value = nowIso;
               }
               sanitized[field] = value;
+            } else if (field !== 'target_completion_date') {
+              // Ensure created_at and updated_at are never null
+              sanitized[field] = nowIso;
             }
           });
           delete sanitized._status;

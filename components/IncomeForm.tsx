@@ -55,6 +55,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
           <View>
             <Text className="mb-3 text-sm font-bold text-foreground/60 uppercase tracking-tighter">Amount ({symbolFor(currency)})</Text>
             <TextInput
+              style={{ includeFontPadding: false }}
               placeholder="0.00"
               keyboardType="decimal-pad"
               value={amount}
@@ -67,6 +68,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
           <View>
             <Text className="mb-3 text-sm font-bold text-foreground/60 uppercase tracking-tighter">Source</Text>
             <TextInput
+              style={{ includeFontPadding: false }}
               placeholder="e.g. Salary, Freelance"
               value={source}
               onChangeText={setSource}

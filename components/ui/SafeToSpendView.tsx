@@ -1,15 +1,19 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withRepeat, 
-  withSequence,
-  interpolateColor
+import {
+  Canvas,
+  Path,
+  Shadow,
+  Skia,
+  vec
+} from '@shopify/react-native-skia';
+import React, { useEffect, useMemo } from 'react';
+import { Dimensions, Text, View } from 'react-native';
+import {
+  useDerivedValue,
+  useSharedValue,
+  withTiming
 } from 'react-native-reanimated';
-import { IconSymbol } from './icon-symbol';
 import { useCurrency } from '../../context/CurrencyContext';
+import { IconSymbol } from './icon-symbol';
 
 interface SafeToSpendViewProps {
   amount: number;
@@ -19,98 +23,124 @@ interface SafeToSpendViewProps {
 
 export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark = true }: SafeToSpendViewProps) {
   const { format } = useCurrency();
-  const pulse = useSharedValue(1);
-  const opacity = useSharedValue(0);
+  const width = Dimensions.get('window').width - 64;
+  const size = width * 0.85;
+  const strokeWidth = 24;
+  const radius = (size - strokeWidth) / 2;
+  const canvasPadding = 32; // Increased padding for shadow and arc stroke
+  const center = vec(size / 2, size / 2);
+
+  // Animated progress (0 to 1)
+  const progress = useSharedValue(0);
+
+  // Calculate percentage used
+  const used = Math.max(0, totalMonthlyIncome - amount);
+  const percentage = totalMonthlyIncome > 0 ? Math.min(1.2, used / totalMonthlyIncome) : 0;
 
   useEffect(() => {
-    opacity.value = withTiming(1, { duration: 1000 });
-    pulse.value = withRepeat(
-      withSequence(
-        withTiming(1.05, { duration: 1500 }),
-        withTiming(1, { duration: 1500 })
-      ),
-      -1,
-      true
-    );
-  }, []);
+    progress.value = withTiming(percentage, { duration: 1500 });
+  }, [percentage]);
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: pulse.value }],
-      opacity: opacity.value,
-    };
+  const animatedEnd = useDerivedValue(() => {
+    // Semi-circle is 180 degrees (0.5 of a full circle)
+    return progress.value * 0.5;
   });
 
-  // Calculate health color (Green -> Yellow -> Red)
-  const isHealthy = amount > 50; 
-  const isRunningLow = amount > 0 && amount <= 50;
-  const isOverspent = amount <= 0;
+  // Health color logic
+  const getStatusColor = (p: number) => {
+    if (p > 0.9) return '#ef4444'; // Red
+    if (p > 0.7) return '#f59e0b'; // Amber
+    return '#10b981'; // Green
+  };
 
-  const statusColor = isOverspent ? '#ef4444' : isRunningLow ? '#f59e0b' : '#10b981';
-  const textClass = isDark ? 'text-white' : 'text-black';
+  const statusColor = getStatusColor(percentage);
+
+  // Background arc path (Semi-circle at the top)
+  const backgroundPath = useMemo(() => {
+    const p = Skia.Path.Make();
+    const rect = Skia.XYWHRect(strokeWidth / 2, strokeWidth / 2 + canvasPadding, size - strokeWidth, size - strokeWidth);
+    p.addArc(rect, 180, 180);
+    return p;
+  }, [size, canvasPadding]);
+
+  // Active progress path
+  const progressPath = useDerivedValue(() => {
+    const p = Skia.Path.Make();
+    // Path goes from 180 to 180 + (180 * progress)
+    const sweep = Math.min(180, progress.value * 180);
+    const rect = Skia.XYWHRect(strokeWidth / 2, strokeWidth / 2 + canvasPadding, size - strokeWidth, size - strokeWidth);
+    p.addArc(rect, 180, sweep);
+    return p;
+  });
 
   return (
-    <Animated.View 
-      style={[styles.container, animatedStyle]}
-      className={`${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]'} rounded-[48px] p-8 overflow-hidden items-center justify-center h-80`}
-    >
-      {/* Background Decor */}
-      <View 
-        style={{ borderColor: statusColor + '20' }}
-        className="absolute inset-0 border-[40px] rounded-full opacity-10 scale-[1.5]" 
-      />
-      
-      <View className="items-center z-10">
-        <View 
-          style={{ backgroundColor: statusColor + '20' }}
-          className="h-12 w-12 rounded-2xl items-center justify-center mb-6"
-        >
-          <IconSymbol name="bolt.fill" size={24} color={statusColor} />
-        </View>
+    <View className="items-center justify-center py-8">
+      <View style={{ width: size, height: (size / 2) + canvasPadding + 60 }} className="items-center justify-center">
+        {totalMonthlyIncome > 0 ? (
+          <Canvas style={{ width: size, height: (size / 2) + canvasPadding + 60 }}>
+            {/* Background Track */}
+            <Path
+              path={backgroundPath}
+              color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+              style="stroke"
+              strokeWidth={strokeWidth}
+              strokeCap="round"
+            />
 
-        <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[4px] mb-4 text-center`}>
-          Safe to Spend Today
-        </Text>
+            {/* Active Progress */}
+            <Path
+              path={progressPath}
+              color={statusColor}
+              style="stroke"
+              strokeWidth={strokeWidth}
+              strokeCap="round"
+            >
+              <Shadow dx={0} dy={0} blur={15} color={statusColor + '60'} />
+            </Path>
+          </Canvas>
+        ) : (
+          <View 
+            style={{ 
+              width: size - strokeWidth, 
+              height: radius + canvasPadding, 
+              borderRadius: radius,
+              borderWidth: strokeWidth,
+              borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+              borderBottomWidth: 0,
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+            }} 
+          />
+        )}
 
-        <View className="flex-row items-start">
-          <Text 
-            style={{ color: statusColor }}
-            className="text-7xl font-black tracking-tighter"
+        {/* Center Content */}
+        <View className="absolute top-[30%] items-center justify-center w-full">
+          <View
+            style={{ backgroundColor: statusColor + '15' }}
+            className="h-10 w-10 rounded-2xl items-center justify-center mb-4"
+          >
+            <IconSymbol name="bolt.fill" size={20} color={statusColor} />
+          </View>
+
+          <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[9px] font-black uppercase tracking-[4px] mb-1.5 text-center`}>
+            Safe to Spend Today
+          </Text>
+
+          <Text
+            style={{ color: isDark ? '#fff' : '#000' }}
+            className="text-5xl font-black tracking-tighter"
           >
             {format(amount)}
           </Text>
-        </View>
 
-        <View className={`mt-8 px-6 py-2 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-full border ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-          <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[10px] font-bold uppercase tracking-wider`}>
-            {isOverspent ? 'Budget Exhausted' : isRunningLow ? 'Caution: Slow Down' : 'Spending Power: High'}
-          </Text>
+          <View className={`mt-6 px-4 py-1.5 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-full border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+            <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[8px] font-black uppercase tracking-widest`}>
+              {percentage > 0.9 ? 'Budget Exhausted' : percentage > 0.7 ? 'Caution: Slow Down' : 'Spending Power: High'}
+            </Text>
+          </View>
         </View>
       </View>
-
-      {/* Progress Arc (Simulated for v1) */}
-      <View 
-        style={{ 
-          position: 'absolute', 
-          bottom: -120, 
-          width: 400, 
-          height: 400, 
-          borderRadius: 200, 
-          borderWidth: 2, 
-          borderColor: statusColor + '10',
-          borderStyle: 'dashed'
-        }} 
-      />
-    </Animated.View>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.1,
-    shadowRadius: 40,
-    elevation: 20,
-  }
-});

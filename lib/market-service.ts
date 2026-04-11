@@ -25,8 +25,8 @@ export const fetchMarketQuote = async (symbol: string): Promise<MarketQuote | nu
     const response = await fetch(`${BASE_URL}/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`);
     const data = await response.json();
 
-    if (!data || data.c === 0 || data.c === null) {
-      console.warn(`No market data found for symbol: ${symbol}`);
+    if (!data || data.error || data.c === undefined || data.c === null || data.c === 0) {
+      console.warn(`Market fetch failed for ${symbol}: ${data?.error || 'Invalid data'}`);
       return null;
     }
 

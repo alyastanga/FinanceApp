@@ -58,6 +58,7 @@ export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
           <View>
             <Text className="mb-3 text-sm font-black text-foreground/40 uppercase tracking-[2px]">Amount ({symbolFor(currency)})</Text>
             <TextInput
+              style={{ includeFontPadding: false }}
               placeholder="0.00"
               keyboardType="decimal-pad"
               value={amount}

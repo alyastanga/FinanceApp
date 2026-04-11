@@ -14,9 +14,22 @@ interface BudgetChartProps {
   title?: string;
   size?: number;
   isDark?: boolean;
+  hideLegend?: boolean;
+  hideTitle?: boolean;
+  showCenterLabel?: boolean;
+  emptyMessage?: string;
 }
 
-export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 200, isDark = true }) => {
+export const BudgetChart: React.FC<BudgetChartProps> = ({ 
+  data, 
+  title, 
+  size = 200, 
+  isDark = true,
+  hideLegend = false,
+  hideTitle = false,
+  showCenterLabel = true,
+  emptyMessage = "No data"
+}) => {
   const { format } = useCurrency();
   const radius = size / 2;
   const strokeWidth = 30;
@@ -34,7 +47,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
     
     return data.map((item) => {
       const percentage = item.value / total;
-      const angle = percentage * 360;
+      const angle = percentage >= 1 ? 359.99 : percentage * 360;
       const endAngle = startAngle + angle;
       
       // Calculate arc coordinates manually for SVG-style path string
@@ -66,30 +79,21 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
   }, [data, size, total]);
 
   return (
-    <View className="items-center py-4">
-      {title && (
+    <View className={`items-center ${hideLegend ? 'py-0' : 'py-4'}`}>
+      {title && !hideTitle && (
         <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[3px] mb-6`}>
           {title}
         </Text>
       )}
       
       <View style={{ width: size, height: size }}>
-        <Canvas 
-          style={{ flex: 1 }}
-          // @ts-ignore - Web-only property to prevent WebGL context collision/overload (err 0)
-          __destroyWebGLContextAfterRender={true}
-        >
-          {total === 0 ? (
-            <Circle
-              cx={radius}
-              cy={radius}
-              r={radius - strokeWidth / 2}
-              color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
-              style="stroke"
-              strokeWidth={strokeWidth}
-            />
-          ) : (
-            paths.map((p, i) => (
+        {total > 0 ? (
+          <Canvas 
+            style={{ flex: 1 }}
+            // @ts-ignore - Web-only property to prevent WebGL context collision/overload (err 0)
+            __destroyWebGLContextAfterRender={true}
+          >
+            {paths.map((p, i) => (
               <Path
                 key={i}
                 path={p.path}
@@ -98,40 +102,77 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({ data, title, size = 20
                 strokeWidth={strokeWidth}
                 strokeCap="round"
               />
-            ))
-          )}
-        </Canvas>
+            ))}
+          </Canvas>
+        ) : (
+          <View className="flex-1 items-center justify-center">
+             {/* Standard non-Skia View for empty state track */}
+             <View 
+               style={{ 
+                 width: size - strokeWidth, 
+                 height: size - strokeWidth, 
+                 borderRadius: radius, 
+                 borderWidth: strokeWidth, 
+                 borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' 
+               }} 
+             />
+          </View>
+        )}
         
-        {/* Center Content (Donut Hole) */}
-        <View 
-          className="absolute items-center justify-center" 
-          style={{ 
-            top: strokeWidth, 
-            left: strokeWidth, 
-            width: size - (strokeWidth * 2), 
-            height: size - (strokeWidth * 2),
-            borderRadius: radius
-          }}
-        >
-          <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[10px] font-black uppercase tracking-widest`}>Total</Text>
-          <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>{format(total)}</Text>
-        </View>
+        {showCenterLabel && (
+          <View 
+            className="absolute items-center justify-center p-4" 
+            style={{ 
+              top: strokeWidth, 
+              left: strokeWidth, 
+              width: size - (strokeWidth * 2), 
+              height: size - (strokeWidth * 2),
+              borderRadius: radius
+            }}
+          >
+            {total === 0 ? (
+              <Text 
+                className={`${isDark ? 'text-white/40' : 'text-black/40'} font-black uppercase text-center tracking-widest leading-tight`}
+                style={{ fontSize: size < 150 ? 6 : 8 }}
+              >
+                {emptyMessage}
+              </Text>
+            ) : (
+              <>
+                <Text 
+                  className={`${isDark ? 'text-white/20' : 'text-black/20'} font-black uppercase tracking-widest`}
+                  style={{ fontSize: size < 150 ? 6 : 10 }}
+                >
+                  Total
+                </Text>
+                <Text 
+                  className={`${isDark ? 'text-white' : 'text-black'} font-black`}
+                  style={{ fontSize: size < 150 ? 12 : 20 }}
+                >
+                  {format(total)}
+                </Text>
+              </>
+            )}
+          </View>
+        )}
       </View>
 
       {/* Legend */}
-      <View className="flex-row flex-wrap justify-center mt-8 gap-4 px-4">
-        {data.map((item, index) => (
-          <View key={index} className="flex-row items-center gap-x-2">
-            <View 
-              className="h-2 w-2 rounded-full" 
-              style={{ backgroundColor: item.color }} 
-            />
-            <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[10px] font-bold uppercase tracking-widest leading-none`}>
-              {item.label}
-            </Text>
-          </View>
-        ))}
-      </View>
+      {!hideLegend && (
+        <View className="flex-row flex-wrap justify-center mt-8 gap-4 px-4">
+          {data.map((item, index) => (
+            <View key={index} className="flex-row items-center gap-x-2">
+              <View 
+                className="h-2 w-2 rounded-full" 
+                style={{ backgroundColor: item.color }} 
+              />
+              <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[10px] font-bold uppercase tracking-widest leading-none`}>
+                {item.label}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
     </View>
   );
 };

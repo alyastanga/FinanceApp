@@ -1,7 +1,8 @@
-import { Canvas, LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
+import { Canvas, LinearGradient, Path, Shadow, Skia, vec } from '@shopify/react-native-skia';
 import React, { useMemo } from 'react';
 import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 import { useCurrency } from '../../context/CurrencyContext';
+import { normalizeDate } from '../../lib/date-utils';
 
 interface TrendPoint {
   label: string;
@@ -35,15 +36,17 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const m = d.getMonth();
       const y = d.getFullYear();
+      const monthStart = new Date(y, m, 1).getTime();
+      const monthEnd = new Date(y, m + 1, 0, 23, 59, 59, 999).getTime();
 
       const mIncomes = (incomes || []).filter(inc => {
-        const id = new Date(inc.createdAt);
-        return id.getMonth() === m && id.getFullYear() === y;
+        const t = normalizeDate(inc);
+        return t >= monthStart && t <= monthEnd;
       }).reduce((sum, inc) => sum + (inc.amount || 0), 0);
 
       const mExpenses = (expenses || []).filter(exp => {
-        const ed = new Date(exp.createdAt);
-        return ed.getMonth() === m && ed.getFullYear() === y;
+        const t = normalizeDate(exp);
+        return t >= monthStart && t <= monthEnd;
       }).reduce((sum, exp) => sum + Math.abs(exp.amount || 0), 0);
 
       points.push({
@@ -58,15 +61,18 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
   const { maxValue, isAllZero, formattedMax } = useMemo(() => {
     if (!data || data.length === 0) return { maxValue: 1000, isAllZero: true, formattedMax: format(1000) };
     const allValues = data.flatMap(d => [d.income, d.expense]);
-    const max = Math.max(...allValues, 0);
-    
-    // Round to nearest nice number
-    const magnitude = Math.pow(10, Math.floor(Math.log10(max || 1)));
-    const roundedMax = Math.ceil((max || 1000) / (magnitude / 2)) * (magnitude / 2);
+    const highPoint = Math.max(...allValues, 0);
+
+    // Applying 15% margin buffer above peak
+    const bufferedMax = (highPoint || 1000) * 1.15;
+
+    // Snap to "nice" round numbers (mag / 2)
+    const magnitude = Math.pow(10, Math.floor(Math.log10(bufferedMax || 1)));
+    const roundedMax = Math.ceil(bufferedMax / (magnitude / 2)) * (magnitude / 2);
 
     return {
       maxValue: roundedMax,
-      isAllZero: max === 0,
+      isAllZero: highPoint === 0,
       formattedMax: format(roundedMax)
     };
   }, [data, format]);
@@ -88,10 +94,11 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       const y = getY(data[i].income);
       const prevX = getX(i - 1);
       const prevY = getY(data[i - 1].income);
-      const midX = (prevX + x) / 2;
-      const midY = (prevY + y) / 2;
-      path.quadTo(prevX, prevY, midX, midY);
-      if (i === data.length - 1) path.lineTo(x, y);
+
+      // Soften quadTo by adjusting control point toward current point
+      // Using a smoother organic midpoint approach
+      const cpX = (prevX + x) / 2;
+      path.quadTo(cpX, prevY, x, y);
     }
     return path;
   }, [data, maxValue, width]);
@@ -105,10 +112,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       const y = getY(data[i].expense);
       const prevX = getX(i - 1);
       const prevY = getY(data[i - 1].expense);
-      const midX = (prevX + x) / 2;
-      const midY = (prevY + y) / 2;
-      path.quadTo(prevX, prevY, midX, midY);
-      if (i === data.length - 1) path.lineTo(x, y);
+
+      const cpX = (prevX + x) / 2;
+      path.quadTo(cpX, prevY, x, y);
     }
     return path;
   }, [data, maxValue, width]);
@@ -168,12 +174,21 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       <View style={{ width, height }}>
         {/* Y-Axis Labels */}
         {!simple && (
-          <View className="absolute right-0 top-0 bottom-0 justify-between py-5 z-10 items-end">
-            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>{formattedMax}</Text>
-            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>
-              {format(maxValue / 2)}
-            </Text>
-            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black`}>{format(0)}</Text>
+          <View className="absolute right-0 top-0 bottom-0 justify-between py-2 z-10 items-end pr-1">
+            <View className="items-end">
+              <Text className={`${isDark ? 'text-white/10' : 'text-black/10'} text-[7px] font-black uppercase tracking-widest`}>Peak</Text>
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>{formattedMax}</Text>
+            </View>
+            <View className="items-end">
+              <Text className={`${isDark ? 'text-white/10' : 'text-black/10'} text-[7px] font-black uppercase tracking-widest`}>Mid</Text>
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>
+                {format(maxValue / 2)}
+              </Text>
+            </View>
+            <View className="items-end">
+              <Text className={`${isDark ? 'text-white/10' : 'text-black/10'} text-[7px] font-black uppercase tracking-widest`}>Base</Text>
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>{format(0)}</Text>
+            </View>
           </View>
         )}
 
@@ -208,17 +223,18 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
                 <LinearGradient
                   start={vec(0, 0)}
                   end={vec(0, height)}
-                  colors={[isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0)']}
+                  colors={[isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)', 'rgba(16, 185, 129, 0)']}
                 />
               </Path>
               <Path path={expenseArea}>
                 <LinearGradient
                   start={vec(0, 0)}
                   end={vec(0, height)}
-                  colors={[isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)', 'rgba(239, 68, 68, 0)']}
+                  colors={[isDark ? 'rgba(239, 68, 68, 0.08)' : 'rgba(239, 68, 68, 0.05)', 'rgba(239, 68, 68, 0)']}
                 />
               </Path>
 
+              {/* Main Paths with Glow Effects */}
               <Path
                 path={incomePath}
                 color="#10b981"
@@ -226,7 +242,10 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
                 strokeWidth={simple ? 2 : 3}
                 strokeCap="round"
                 strokeJoin="round"
-              />
+              >
+                {!simple && <Shadow dx={0} dy={0} blur={10} color="rgba(16, 185, 129, 0.5)" />}
+              </Path>
+
               <Path
                 path={expensePath}
                 color="#ef4444"
@@ -234,7 +253,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
                 strokeWidth={simple ? 2 : 3}
                 strokeCap="round"
                 strokeJoin="round"
-              />
+              >
+                {!simple && <Shadow dx={0} dy={0} blur={10} color="rgba(239, 68, 68, 0.4)" />}
+              </Path>
             </>
           )}
         </Canvas>
@@ -250,11 +271,21 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
 
       {!simple && (
         <View className="flex-row justify-between mt-6 px-1" style={{ width }}>
-          {data.map((point, i) => (
-            <Text key={i} className={`text-[10px] font-black text-muted-foreground uppercase`} style={{ opacity: parseFloat(textOpacity) }}>
-              {point.label}
-            </Text>
-          ))}
+          {data.map((point, i) => {
+            // Label Staggering: Hide labels on 12M view if they overlap
+            const isHidden = range === 12 && i % 2 !== 0;
+            if (isHidden) {
+              return <View key={i} className="w-4" />;
+            }
+            return (
+              <Text
+                key={i}
+                className="text-[9px] font-black uppercase tracking-widest text-white/40"
+              >
+                {point.label}
+              </Text>
+            );
+          })}
         </View>
       )}
     </View>

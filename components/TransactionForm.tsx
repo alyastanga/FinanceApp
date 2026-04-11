@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, Pressable, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import database from '../database';
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
-import { useCurrency, SUPPORTED_CURRENCIES, CurrencyCode } from '../context/CurrencyContext';
+import { CurrencyCode, SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
+import database from '../database';
+import { fetchExchangeRate } from '../lib/market-service';
 
 interface TransactionFormProps {
   initialType?: 'income' | 'expense';
@@ -11,7 +12,7 @@ interface TransactionFormProps {
 
 export default function TransactionForm({ initialType = 'expense', onSuccess }: TransactionFormProps) {
   const { user, loading: authLoading } = useAuth();
-  const { currency, symbolFor, convertFrom } = useCurrency();
+  const { currency, symbolFor } = useCurrency();
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<'income' | 'expense'>(initialType);
@@ -41,9 +42,21 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
     try {
       const inputAmount = parseFloat(amount);
       const isForeign = txCurrency !== currency;
-      const finalAmount = isForeign ? convertFrom(inputAmount, txCurrency) : inputAmount;
-      const finalDescription = isForeign 
-        ? `${description} (from ${symbolFor(txCurrency)}${inputAmount.toFixed(2)})`
+
+      let finalAmount = inputAmount;
+      if (isForeign) {
+        try {
+          // Await live authoritative conversion to ensure the database record is 100% accurate
+          const rate = await fetchExchangeRate(currency, txCurrency);
+          finalAmount = inputAmount * rate;
+        } catch (error) {
+          Alert.alert('Conversion Failed', 'Could not perform live currency conversion. Please check your network connection.');
+          return;
+        }
+      }
+
+      const finalDescription = isForeign
+        ? `${description} (${txCurrency}${inputAmount})`
         : description;
 
       await database.write(async () => {
@@ -82,13 +95,13 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
       {/* Hide toggle if we have a locked initialType */}
       {!initialType && (
         <View className="flex-row bg-white/5 p-1 rounded-2xl mb-8 border border-white/5">
-          <Pressable 
+          <Pressable
             className={`flex-1 py-3 rounded-xl items-center ${type === 'expense' ? 'bg-white/10 shadow-sm' : ''}`}
             onPress={() => setType('expense')}
           >
             <Text className={`font-black text-[11px] uppercase tracking-widest ${type === 'expense' ? 'text-white' : 'text-muted-foreground'}`}>Expense</Text>
           </Pressable>
-          <Pressable 
+          <Pressable
             className={`flex-1 py-3 rounded-xl items-center ${type === 'income' ? 'bg-white/10 shadow-sm' : ''}`}
             onPress={() => setType('income')}
           >
@@ -102,7 +115,8 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Amount ({symbolFor(txCurrency)})</Text>
           <View className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4">
             <TextInput
-              className="text-4xl font-black text-white p-0"
+              style={{ includeFontPadding: false }}
+              className="text-4xl font-black text-white py-2 h-16"
               placeholder="0.00"
               placeholderTextColor="rgba(255,255,255,0.1)"
               keyboardType="decimal-pad"
@@ -114,8 +128,8 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
 
         <View>
           <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Currency</Text>
-          <ScrollView 
-            horizontal 
+          <ScrollView
+            horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ gap: 8 }}
           >
@@ -123,15 +137,13 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
               <Pressable
                 key={info.code}
                 onPress={() => setTxCurrency(info.code)}
-                className={`px-5 py-3 rounded-2xl border ${
-                  txCurrency === info.code 
-                    ? 'bg-primary border-primary' 
-                    : 'bg-white/5 border-white/10'
-                }`}
+                className={`px-5 py-3 rounded-2xl border ${txCurrency === info.code
+                  ? 'bg-primary border-primary'
+                  : 'bg-white/5 border-white/10'
+                  }`}
               >
-                <Text className={`font-black text-[10px] uppercase tracking-widest ${
-                  txCurrency === info.code ? 'text-white' : 'text-muted-foreground'
-                }`}>
+                <Text className={`font-black text-[10px] uppercase tracking-widest ${txCurrency === info.code ? 'text-white' : 'text-muted-foreground'
+                  }`}>
                   {info.code}
                 </Text>
               </Pressable>
@@ -145,16 +157,17 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           </Text>
           <View className="bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-4">
             <TextInput
-              className="text-lg font-bold text-white p-0"
+              style={{ includeFontPadding: false }}
+              className="text-lg font-bold text-white py-2 h-14"
               placeholder={type === 'income' ? 'e.g. Salary' : 'e.g. Shopping'}
-            placeholderTextColor="rgba(255,255,255,0.1)"
+              placeholderTextColor="rgba(255,255,255,0.1)"
               value={description}
               onChangeText={setDescription}
             />
           </View>
         </View>
 
-        <Pressable 
+        <Pressable
           className={`mt-4 overflow-hidden rounded-2xl`}
           onPress={handleSubmit}
         >

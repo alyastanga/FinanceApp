@@ -8,36 +8,41 @@ const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/
 
 
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 export async function getFinancialContext() {
+  const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
+  
   const incomes = await database.get('incomes').query().fetch();
   const expenses = await database.get('expenses').query().fetch();
   const goals = await database.get('goals').query().fetch();
   const portfolio = await database.get('portfolio').query().fetch();
 
-  const insights = calculateBudgetInsights(incomes, expenses, goals);
+  const insights = calculateBudgetInsights(incomes, expenses, goals, (v) => v, baseCurrency);
 
+  // Note: The AI now receives explicitly tagged currencies so it doesn't assume USD
   const totalPortfolioValue = portfolio.reduce((sum, item) => sum + ((item as any).value || 0), 0);
   const netWorth = totalPortfolioValue + insights.monthlyIncome - insights.monthlyFixedExpenses;
 
-  // Sort and take last 10
   const recentExpenses = expenses
     .sort((a, b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime())
     .slice(0, 10);
 
   const contextString = `
-    Current context:
-    - Safe to Spend Daily: $${insights.dailySafeToSpend.toFixed(2)}
-    - Total Monthly Income: $${insights.monthlyIncome}
-    - Total Monthly (Fixed) Expenses: $${insights.monthlyFixedExpenses}
-    - Monthly Goal Commitment: $${insights.monthlyGoalTarget}
+    User Base Currency: ${baseCurrency}
+    
+    Current context (Amounts in ${baseCurrency} unless explicitly stated otherwise):
+    - Safe to Spend Daily: ${insights.dailySafeToSpend.toFixed(2)}
+    - Total Monthly Income: ${insights.monthlyIncome}
+    - Total Monthly (Fixed) Expenses: ${insights.monthlyFixedExpenses}
+    - Monthly Goal Commitment: ${insights.monthlyGoalTarget}
     - Days left in month: ${insights.remainingDays}
     
-    Portfolio & Net Worth:
-    - Total Portfolio Value: $${totalPortfolioValue.toLocaleString()}
-    - Asset Allocation: ${portfolio.map(p => `${(p as any).name} ($${(p as any).value.toLocaleString()})`).join(', ')}
+    Portfolio Assets (Multi-Currency):
+    - Asset Allocation: ${portfolio.map(p => `${(p as any).name} (Current Market Value: ${(p as any).value.toLocaleString()} ${(p as any)._currency})`).join(', ')}
     
     Last 10 transactions:
-    ${recentExpenses.map(e => `- ${(e as any).category}: $${(e as any).amount}`).join('\n')}
+    ${recentExpenses.map(e => `- ${(e as any).category}: ${(e as any).amount} ${(e as any)._currency || baseCurrency}`).join('\n')}
   `;
 
   return contextString;
@@ -182,15 +187,18 @@ export async function generateSuggestedBudget() {
   const goals = await database.get('goals').query().fetch();
   const incomes = await database.get('incomes').query().fetch();
   const totalIncome = incomes.reduce((acc, inc) => acc + (inc as any).amount, 0);
-  const goalSummary = goals.map((g: any) => `"${g.name}" (target: $${g.targetAmount}, saved: $${g.currentAmount})`).join(', ');
+  const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
+  const goalSummary = goals.map((g: any) => `"${g.name}" (target: ${g.targetAmount} ${g._currency || baseCurrency}, saved: ${g.currentAmount} ${g._currency || baseCurrency})`).join(', ');
 
   try {
     const systemInstruction = `You are a Senior Financial Consultant with 20 years of experience. Based on the following financial context, suggest a categorized monthly budget that aligns with the user's income, expenses, and specifically their goals.
     
+    The user's default currency is ${baseCurrency}. 
+    
     ${context}
     
     ADDITIONAL CONTEXT:
-    - Total Monthly Income: $${totalIncome}
+    - Total Monthly Income: ${totalIncome} ${baseCurrency}
     - Active Goals: ${goalSummary || 'None set'}
     
     IMPORTANT RULES:
@@ -273,9 +281,28 @@ export async function explainFinancialGraph(data: any, context: string, useLocal
     });
     */
 
+    const safeStringify = (obj: any) => {
+      const cache = new Set();
+      return JSON.stringify(obj, (key, value) => {
+        if (typeof value === 'object' && value !== null) {
+          if (cache.has(value)) return '[Circular]';
+          cache.add(value);
+        }
+        // Exclude WatermelonDB internals that cause massive bloat or circular refs
+        if (['collection', 'database', '_subscriber', 'subject'].includes(key)) return undefined;
+        return value;
+      });
+    };
+
+    const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
+
     const systemInstruction = `You are a Senior Financial Consultant with 20 years of experience. The user has requested an explanation of a financial graph titled: "${context}".
     
-    Here is the live data from that graph: ${JSON.stringify(data)}
+    The user's default display currency is ${baseCurrency}. 
+    Please report total net worths or balances in ${baseCurrency} when making general statements, but acknowledge if specific assets hold foreign currency.
+    For Portfolio/Asset data: Emphasize the 'value' (CURRENT MARKET VALUE) over 'investedAmount' (initial invested cash) when determining their total wealth.
+
+    Here is the live data from that graph: ${safeStringify(data)}
     
     Please provide a brief, professional, and insightful 2-3 sentence analysis of what this data means for the user's financial health. 
     - For Trend data: Highlight growth or decline in net worth/savings.

@@ -3,11 +3,14 @@ import { View, Text } from 'react-native';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { LinearGradient } from 'expo-linear-gradient';
 import database from '../database';
+import { useCurrency } from '../context/CurrencyContext';
 
 const BalanceSummary = ({ incomes, expenses }: { incomes: any[]; expenses: any[] }) => {
-  const totalIncome = incomes.reduce((acc, curr) => acc + curr.amount, 0);
-  const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const { currency, symbolFor, convertFrom } = useCurrency();
+  const totalIncome = incomes.reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
+  const totalExpenses = expenses.reduce((acc, curr) => acc + convertFrom(curr.amount, curr.currency || currency), 0);
   const balance = totalIncome - totalExpenses;
+  const currentSymbol = symbolFor(currency);
 
   return (
     <View className="mb-10 overflow-hidden rounded-[40px] bg-[#0A0A0A] border border-white/5">
@@ -22,7 +25,7 @@ const BalanceSummary = ({ incomes, expenses }: { incomes: any[]; expenses: any[]
             Total Wealth
           </Text>
           <Text className="text-5xl font-black tracking-tighter text-white mt-1">
-            ${balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+            {currentSymbol}{balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
           </Text>
         </View>
 
@@ -32,7 +35,7 @@ const BalanceSummary = ({ incomes, expenses }: { incomes: any[]; expenses: any[]
               <View className="h-2 w-2 rounded-full bg-primary" />
               <Text className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Income</Text>
             </View>
-            <Text className="text-xl font-bold text-primary">+${totalIncome.toLocaleString()}</Text>
+            <Text className="text-xl font-bold text-primary">+{currentSymbol}{totalIncome.toLocaleString()}</Text>
           </View>
           
           <View className="h-8 w-[1px] bg-white/10" />
@@ -42,7 +45,7 @@ const BalanceSummary = ({ incomes, expenses }: { incomes: any[]; expenses: any[]
               <Text className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Expenses</Text>
               <View className="h-2 w-2 rounded-full bg-destructive" />
             </View>
-            <Text className="text-xl font-bold text-destructive">-${totalExpenses.toLocaleString()}</Text>
+            <Text className="text-xl font-bold text-destructive">-{currentSymbol}{totalExpenses.toLocaleString()}</Text>
           </View>
         </View>
       </LinearGradient>

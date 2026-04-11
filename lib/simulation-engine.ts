@@ -12,26 +12,30 @@ export interface SimulationResult {
  * Predicts the impact of a potential purchase on active savings goals.
  */
 export const simulatePurchaseImpact = (
-  purchaseAmount: number,
+  purchaseAmount: number, // Intended to be passed in base currency
   incomes: any[],
   expenses: any[],
-  goals: any[]
+  goals: any[],
+  convertFn: (val: number, fromCurrency: string) => number,
+  baseCurrency: string
 ): SimulationResult[] => {
-  const insights = calculateBudgetInsights(incomes, expenses, goals);
+  const insights = calculateBudgetInsights(incomes, expenses, goals, convertFn, baseCurrency);
   const results: SimulationResult[] = [];
 
   goals.forEach(goal => {
-    const remaining = goal.targetAmount - goal.currentAmount;
+    const targetAmt = convertFn(goal.targetAmount || goal._targetAmount || 0, goal.currency || goal._currency || baseCurrency);
+    const currentAmt = convertFn(goal.currentAmount || goal._currentAmount || 0, goal.currency || goal._currency || baseCurrency);
+    const remaining = targetAmt - currentAmt;
     if (remaining <= 0) return;
 
     // Current Monthly velocity toward this goal
-    const targetDate = new Date(goal.targetCompletionDate);
+    const targetDate = new Date(goal.targetCompletionDate || goal.target_completion_date);
     const now = new Date();
     const monthsDiff = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
     const monthlyNeeded = remaining / Math.max(1, monthsDiff);
 
     // New remaining amount if we subtract the purchase from the 'current savings' 
-    // or assume it delays the goal by that amount.
+    // or assume it delays the goal by that amount (amount is assumed to be baseCurrency already)
     const newRemaining = remaining + purchaseAmount;
     const newMonthsRequired = newRemaining / Math.max(1, monthlyNeeded);
     
