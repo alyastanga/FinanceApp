@@ -5,6 +5,7 @@ import Goal from '../database/models/Goal';
 import { IconSymbol } from './ui/icon-symbol';
 import { useCurrency } from '../context/CurrencyContext';
 import { generateUUID } from '../lib/id-utils';
+import { useTheme } from '../context/ThemeContext';
 
 interface GoalFormProps {
   goal?: Goal | null;
@@ -13,6 +14,7 @@ interface GoalFormProps {
 }
 
 export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
+  const { isDark } = useTheme();
   const { currency, symbolFor } = useCurrency();
   const currentSymbol = symbolFor(currency);
   const [name, setName] = useState(goal?.name || '');
@@ -58,7 +60,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
   return (
     <View className="gap-y-6">
       <View>
-        <Text className="text-3xl font-black text-white mb-2">
+        <Text className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-black'}`}>
           {goal ? 'Refine Goal' : 'Set New Target'}
         </Text>
         <Text className="text-sm font-medium text-muted-foreground">
@@ -67,7 +69,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
       </View>
 
       <View className="gap-y-4">
-        <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
+        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
           <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
             Goal Title
           </Text>
@@ -76,11 +78,11 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
             onChangeText={setName}
             placeholder="e.g. New Garage, Vacation Fund"
             placeholderTextColor="#4b5563"
-            className="text-lg font-bold text-white px-2 py-1"
+            className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
           />
         </View>
 
-        <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
+        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
           <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
             Target Amount ({currentSymbol})
           </Text>
@@ -90,12 +92,12 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
             placeholder="0.00"
             placeholderTextColor="#4b5563"
             keyboardType="numeric"
-            className="text-lg font-bold text-white px-2 py-1"
+            className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
           />
         </View>
 
         {goal && (
-          <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
+          <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
             <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
               Saved Amount ({currentSymbol})
             </Text>
@@ -105,12 +107,12 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
               placeholder="0.00"
               placeholderTextColor="#4b5563"
               keyboardType="numeric"
-              className="text-lg font-bold text-white px-2 py-1"
+              className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
             />
           </View>
         )}
 
-        <View className="bg-white/5 rounded-3xl p-4 border border-white/5">
+        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
           <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
             Target Completion Date
           </Text>
@@ -121,29 +123,29 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
           </TouchableOpacity>
         </View>
 
-        <View className="bg-white/5 rounded-3xl p-4 border border-white/5 flex-row justify-between items-center px-6">
+        <View className={`rounded-3xl p-4 border flex-row justify-between items-center px-6 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
            <View>
-              <Text className="text-white font-bold text-sm">Sync to Google Calendar</Text>
+              <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>Sync to Google Calendar</Text>
               <Text className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Connect your timeline</Text>
            </View>
            <TouchableOpacity 
              onPress={() => setSyncToCalendar(!syncToCalendar)}
-             className={`w-12 h-6 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : 'bg-white/10'}`}
+             className={`w-12 h-6 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : (isDark ? 'bg-white/10' : 'bg-black/10')}`}
            >
-              <View className={`w-4 h-4 rounded-full bg-white ${syncToCalendar ? 'self-end' : 'self-start'}`} />
+              <View className={`w-4 h-4 rounded-full ${syncToCalendar ? 'self-end' : 'self-start'} ${isDark ? 'bg-white' : 'bg-white shadow'}`} />
            </TouchableOpacity>
         </View>
       </View>
 
       {/* Advanced Calendar Modal */}
       <Modal visible={showDatePicker} transparent animationType="fade">
-        <View className="flex-1 justify-center items-center bg-black/90 px-4">
-          <View className="bg-[#121212] p-6 rounded-[40px] w-full border border-white/10 shadow-2xl">
+        <View className={`flex-1 justify-center items-center px-4 ${isDark ? 'bg-black/90' : 'bg-black/50'}`}>
+          <View className={`p-6 rounded-[40px] w-full border shadow-2xl ${isDark ? 'bg-[#121212] border-white/10' : 'bg-[#FFFFFF] border-black/10'}`}>
               <View className="flex-row justify-between items-center mb-6">
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}>
                    <IconSymbol name="chevron.left" size={24} color="#10b981" />
                 </TouchableOpacity>
-                <Text className="text-white font-black text-lg">
+                <Text className={`font-black text-lg ${isDark ? 'text-white' : 'text-black'}`}>
                    {currentMonth.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}
                 </Text>
                 <TouchableOpacity onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}>
@@ -175,7 +177,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
                         }}
                         className={`w-[14.28%] h-10 items-center justify-center rounded-xl ${isSelected ? 'bg-primary' : ''} ${isToday && !isSelected ? 'border border-primary/30' : ''}`}
                       >
-                         <Text className={`font-bold ${isSelected ? 'text-[#050505]' : 'text-white/70'}`}>{day}</Text>
+                         <Text className={`font-bold ${isSelected ? (isDark ? 'text-[#050505]' : 'text-white') : (isDark ? 'text-white/70' : 'text-black/70')}`}>{day}</Text>
                       </TouchableOpacity>
                     );
                  })}
@@ -191,9 +193,9 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
       <View className="flex-row gap-x-4 pt-4">
         <TouchableOpacity 
           onPress={onCancel}
-          className="flex-1 bg-white/5 rounded-2xl p-5 items-center border border-white/5"
+          className={`flex-1 rounded-2xl p-5 items-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
         >
-          <Text className="text-white font-black text-[12px] uppercase tracking-widest">Cancel</Text>
+          <Text className={`font-black text-[12px] uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity 
           onPress={handleSubmit}

@@ -17,6 +17,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { generateAIResponse } from '@/lib/ai-service';
 import { useAI } from '../../context/AIContext';
 import { AI_AGENTS, getAgentFromMention, cleanMention, AIAgent } from '../../lib/ai-agents';
+import { useTheme } from '../../context/ThemeContext';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
 
@@ -29,6 +30,7 @@ interface Message {
 }
 
 const ChatBubble = ({ item }: { item: Message }) => {
+  const { isDark } = useTheme();
   // ── Robust Chart Extraction ──
   let chartData: any[] | null = null;
   let cleanText = item.text;
@@ -200,7 +202,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
   }
 
   // ── Prevent blank bubble: if we have chart data but no text, add a default label ──
-  if (chartData && chartData.length > 0 && !cleanText.trim()) {
+  if (chartData && (chartData as any[]).length > 0 && !cleanText.trim()) {
     cleanText = 'Here is the breakdown based on your financial data:';
   }
 
@@ -219,8 +221,8 @@ const ChatBubble = ({ item }: { item: Message }) => {
       {!isUser && item.agent && (
         <View className="flex-row items-center mb-2 ml-1">
           <View 
-            className="px-2 py-0.5 rounded-full flex-row items-center border border-white/10"
-            style={{ backgroundColor: `${item.agent.color}20` }}
+            className={`px-2 py-0.5 rounded-full flex-row items-center border ${isDark ? 'border-white/10' : 'border-black/10'}`}
+            style={{ backgroundColor: `${item.agent.color}${isDark ? '20' : '10'}` }}
           >
             <Text className="text-[10px] mr-1.5">{item.agent.icon}</Text>
             <Text 
@@ -235,29 +237,29 @@ const ChatBubble = ({ item }: { item: Message }) => {
 
       {isUser ? (
         <View 
-          className="p-4 rounded-[32px] rounded-tr-none bg-[#1A1A1A] border border-emerald-500/30 shadow-2xl"
+          className={`p-4 rounded-[32px] rounded-tr-none border shadow-2xl ${isDark ? 'bg-[#1A1A1A] border-emerald-500/30' : 'bg-white border-emerald-500/20'}`}
         >
-          <Text className="text-[15px] leading-6 font-bold text-white/90">
+          <Text className={`text-[15px] leading-6 font-bold ${isDark ? 'text-white/90' : 'text-black/90'}`}>
             {cleanText}
           </Text>
         </View>
       ) : (
-        <View className="p-4 rounded-[32px] bg-[#121212] border border-white/5 rounded-tl-none shadow-xl">
+        <View className={`p-4 rounded-[32px] border rounded-tl-none shadow-xl ${isDark ? 'bg-[#121212] border-white/5' : 'bg-white border-black/5'}`}>
           {thoughtProcess && (
-            <View className="mb-4 p-3 bg-white/5 rounded-2xl border-l-2 border-primary/40">
+            <View className={`mb-4 p-3 rounded-2xl border-l-2 ${isDark ? 'bg-white/5 border-primary/40' : 'bg-black/5 border-primary/60'}`}>
               <View className="flex-row items-center mb-1.5">
                 <IconSymbol name="lightbulb.fill" size={10} color="#10b981" />
-                <Text className="text-[9px] font-black uppercase text-primary/60 tracking-widest ml-2">
+                <Text className={`text-[9px] font-black uppercase tracking-widest ml-2 ${isDark ? 'text-primary/60' : 'text-primary/80'}`}>
                   Thought Process
                 </Text>
               </View>
-              <Text className="text-[12px] leading-5 text-white/40 italic font-medium">
+              <Text className={`text-[12px] leading-5 italic font-medium ${isDark ? 'text-white/40' : 'text-black/60'}`}>
                 {thoughtProcess}
               </Text>
             </View>
           )}
 
-          <Text className="text-[15px] leading-6 font-medium text-white/90">
+          <Text className={`text-[15px] leading-6 font-medium ${isDark ? 'text-white/90' : 'text-black/90'}`}>
             {cleanText}
           </Text>
           {chartData && (chartData as any[]).length > 0 && (
@@ -270,10 +272,10 @@ const ChatBubble = ({ item }: { item: Message }) => {
               </View>
               {/* Plain View wrapper — Skia Canvas cannot render inside BlurView (GlassCard) on iOS */}
               <View 
-                className="rounded-2xl border border-[#2A2A2A] overflow-hidden"
-                style={{ backgroundColor: '#121212', padding: 12 }}
+                className={`rounded-2xl border overflow-hidden ${isDark ? 'border-[#2A2A2A]' : 'border-[#EAEAEA]'}`}
+                style={{ backgroundColor: isDark ? '#121212' : '#FAFAFA', padding: 12 }}
               >
-                <BudgetChart data={chartData} size={180} hideLegend hideTitle showCenterLabel />
+                <BudgetChart data={chartData} size={180} hideLegend hideTitle showCenterLabel isDark={isDark} />
               </View>
               {/* Compact inline legend for chat context */}
               <View className="mt-3 gap-y-1.5">
@@ -284,9 +286,9 @@ const ChatBubble = ({ item }: { item: Message }) => {
                         className="h-2 w-2 rounded-full mr-2" 
                         style={{ backgroundColor: d.color }} 
                       />
-                      <Text className="text-white/70 text-[11px] font-bold">{d.label}</Text>
+                      <Text className={`text-[11px] font-bold ${isDark ? 'text-white/70' : 'text-black/70'}`}>{d.label}</Text>
                     </View>
-                    <Text className="text-white/90 text-[11px] font-black">{d.value.toLocaleString()}</Text>
+                    <Text className={`text-[11px] font-black ${isDark ? 'text-white/90' : 'text-black/90'}`}>{d.value.toLocaleString()}</Text>
                   </View>
                 ))}
               </View>
@@ -295,7 +297,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
         </View>
       )}
       
-      <Text className="text-[9px] uppercase font-black text-white/15 mt-1.5 ml-2 tracking-widest">
+      <Text className={`text-[9px] uppercase font-black mt-1.5 ml-2 tracking-widest ${isDark ? 'text-white/15' : 'text-black/20'}`}>
         {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
     </View>
@@ -336,39 +338,43 @@ const ThinkingAnimation = () => {
   );
 };
 
-const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void }) => (
-  <View className="items-center justify-center pt-10 px-4">
-    <View className="h-20 w-20 rounded-[30px] bg-[#10b98110] items-center justify-center border border-[#10b98120] mb-6">
-      <IconSymbol name="sparkles" size={32} color="#10b981" />
-    </View>
-    <Text className="text-3xl font-black text-white text-center tracking-tighter mb-2">Finance Intelligence</Text>
-    <Text className="text-white/40 text-center text-sm font-medium mb-10 px-6">
-      Summon specialized experts using @agent or ask a general strategy question.
-    </Text>
+const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void }) => {
+  const { isDark } = useTheme();
+  return (
+    <View className="items-center justify-center pt-10 px-4">
+      <View className="h-20 w-20 rounded-[30px] bg-[#10b98110] items-center justify-center border border-[#10b98120] mb-6">
+        <IconSymbol name="sparkles" size={32} color="#10b981" />
+      </View>
+      <Text className={`text-3xl font-black text-center tracking-tighter mb-2 ${isDark ? 'text-white' : 'text-black'}`}>Finance Intelligence</Text>
+      <Text className={`text-center text-sm font-medium mb-10 px-6 ${isDark ? 'text-white/40' : 'text-black/50'}`}>
+        Summon specialized experts using @agent or ask a general strategy question.
+      </Text>
 
-    <View className="flex-row flex-wrap justify-center gap-3">
-      {Object.values(AI_AGENTS).map(agent => (
-        <TouchableOpacity 
-          key={agent.id}
-          onPress={() => onFastQuery(`@${agent.slug} `)}
-          className="bg-white/5 border border-white/5 rounded-2xl px-4 py-3 flex-row items-center"
-        >
-          <Text className="text-lg mr-2">{agent.icon}</Text>
-          <View>
-            <Text className="text-[10px] font-black uppercase tracking-widest text-white/80">{agent.name}</Text>
-            <Text className="text-[8px] font-bold text-white/30 uppercase tracking-[1px]">Summon Specialist</Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+      <View className="flex-row flex-wrap justify-center gap-3">
+        {Object.values(AI_AGENTS).map(agent => (
+          <TouchableOpacity 
+            key={agent.id}
+            onPress={() => onFastQuery(`@${agent.slug} `)}
+            className={`border rounded-2xl px-4 py-3 flex-row items-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+          >
+            <Text className="text-lg mr-2">{agent.icon}</Text>
+            <View>
+              <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/80' : 'text-black/80'}`}>{agent.name}</Text>
+              <Text className={`text-[8px] font-bold uppercase tracking-[1px] ${isDark ? 'text-white/30' : 'text-black/40'}`}>Summon Specialist</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 import { useLocalSearchParams } from 'expo-router';
 
 export default function AIChatScreen() {
   const { agent, prompt, _t } = useLocalSearchParams<{ agent: string, prompt: string, _t: string }>();
   const { aiMode } = useAI();
+  const { isDark } = useTheme();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -525,12 +531,12 @@ export default function AIChatScreen() {
   }, [messages]);
 
   return (
-    <View className="flex-1 bg-[#050505]">
+    <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       {/* Floating Header */}
-      <BlurView intensity={30} tint="dark" className="absolute top-0 left-0 right-0 z-50 pt-16 pb-6 px-6 border-b border-white/5">
+      <BlurView intensity={isDark ? 30 : 80} tint={isDark ? "dark" : "light"} className={`absolute top-0 left-0 right-0 z-50 pt-16 pb-6 px-6 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
         <View className="flex-row items-center justify-between">
            <View>
-             <Text className="text-3xl font-black text-foreground tracking-tighter">AI Assistant</Text>
+             <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>AI Assistant</Text>
              <View className="flex-row items-center mt-1">
                <View className={`h-1.5 w-1.5 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
                <Text className={`text-[10px] font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'} ml-2`}>
@@ -540,9 +546,9 @@ export default function AIChatScreen() {
            </View>
            <TouchableOpacity 
              onPress={() => setMessages([])} 
-             className="h-10 w-10 rounded-2xl bg-white/5 items-center justify-center border border-white/5"
+             className={`h-10 w-10 rounded-2xl items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
            >
-              <IconSymbol name="trash" size={18} color="rgba(255,255,255,0.4)" />
+              <IconSymbol name="trash" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
            </TouchableOpacity>
         </View>
       </BlurView>
@@ -563,25 +569,25 @@ export default function AIChatScreen() {
         />
 
         {/* Input Area */}
-        <BlurView intensity={80} tint="dark" className="px-5 pb-8 pt-4 border-t border-white/5">
+        <BlurView intensity={isDark ? 80 : 100} tint={isDark ? "dark" : "light"} className={`px-5 pb-8 pt-4 border-t ${isDark ? 'border-white/5' : 'border-black/5'}`}>
           {/* Stacked Agent Suggestions */}
           {showSuggestions && (
-            <View className="mb-2 bg-[#121212]/90 rounded-3xl border border-white/10 overflow-hidden shadow-2xl">
+            <View className={`mb-2 rounded-3xl border overflow-hidden shadow-2xl ${isDark ? 'bg-[#121212]/90 border-white/10' : 'bg-white/90 border-black/10'}`}>
               {filteredAgents.map((agent, index) => (
                 <TouchableOpacity 
                   key={agent.id}
                   onPress={() => selectAgent(agent)}
-                  className={`flex-row items-center p-4 ${index !== filteredAgents.length - 1 ? 'border-b border-white/5' : ''}`}
+                  className={`flex-row items-center p-4 ${index !== filteredAgents.length - 1 ? (isDark ? 'border-b border-white/5' : 'border-b border-black/5') : ''}`}
                 >
                   <View 
                     className="h-10 w-10 rounded-2xl items-center justify-center mr-4"
-                    style={{ backgroundColor: `${agent.color}20` }}
+                    style={{ backgroundColor: `${agent.color}${isDark ? '20' : '10'}` }}
                   >
                     <Text className="text-xl">{agent.icon}</Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="font-bold text-white text-sm">{agent.name}</Text>
-                    <Text className="text-white/40 text-[10px] uppercase font-black tracking-widest mt-0.5">
+                    <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{agent.name}</Text>
+                    <Text className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                       Expert Intelligence
                     </Text>
                   </View>
@@ -591,28 +597,28 @@ export default function AIChatScreen() {
             </View>
           )}
 
-          <View className="flex-row items-center bg-[#181818] rounded-[32px] p-2 pr-2 border border-white/10 shadow-2xl" style={{ marginTop: showSuggestions ? 0 : 0 }}>
+          <View className={`flex-row items-center rounded-[32px] p-2 pr-2 border shadow-2xl ${isDark ? 'bg-[#181818] border-white/10' : 'bg-white border-black/10'}`} style={{ marginTop: showSuggestions ? 0 : 0 }}>
             {(!input || input.length === 0) && (
               <View className="pl-4 pr-1">
-                 <IconSymbol name="at" size={18} color="rgba(255,255,255,0.2)" />
+                 <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
               </View>
             )}
             <TextInput
               value={input}
               onChangeText={handleInputChange}
               placeholder="Summon an expert..."
-              placeholderTextColor="rgba(255,255,255,0.2)"
-              className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold text-white`}
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+              className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
               multiline
             />
             <TouchableOpacity 
               onPress={sendMessage}
               disabled={!input.trim()}
               className={`h-12 w-12 rounded-full items-center justify-center ${
-                input.trim() ? 'bg-primary' : 'bg-white/5'
+                input.trim() ? 'bg-primary' : (isDark ? 'bg-white/5' : 'bg-black/5')
               }`}
             >
-              <IconSymbol name="arrow.up" size={24} color={input.trim() ? '#000' : 'rgba(255,255,255,0.1)'} />
+              <IconSymbol name="arrow.up" size={24} color={input.trim() ? (isDark ? '#000' : '#FFF') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')} />
             </TouchableOpacity>
           </View>
         </BlurView>

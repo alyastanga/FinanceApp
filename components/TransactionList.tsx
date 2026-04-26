@@ -3,6 +3,7 @@ import { View, Text, FlatList, LayoutAnimation, Platform, UIManager, TextInput }
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme } from '../context/ThemeContext';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -12,8 +13,9 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 // Transaction Item component
 const TransactionItem = React.memo(({ item, type }: { item: any; type: 'income' | 'expense' }) => {
   const { format } = useCurrency();
+  const { isDark } = useTheme();
   return (
-  <View className="mb-4 flex-row items-center justify-between rounded-3xl bg-[#0A0A0A] p-5 border border-white/5 shadow-sm">
+  <View className={`mb-4 flex-row items-center justify-between rounded-3xl p-5 border shadow-sm ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-black/5'}`}>
     <View className="flex-row items-center flex-1 gap-x-4">
       <View 
         className={`h-12 w-12 rounded-2xl items-center justify-center ${
@@ -53,6 +55,7 @@ TransactionItem.displayName = 'TransactionItem';
 // Combined List component
 const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expenses: any[]; Header?: React.ComponentType<any> }) => {
   const { format, convertFrom, currency } = useCurrency();
+  const { isDark } = useTheme();
   const [searchQuery, setSearchQuery] = React.useState('');
   
   const totalIncome = incomes.reduce((acc, i) => acc + convertFrom(i.amount || 0, i.currency || currency), 0);
@@ -96,25 +99,25 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
             {Header && <Header />}
             
             {/* Search Bar */}
-            <View className="mb-8 flex-row items-center bg-[#0C0C0C] rounded-[24px] border border-white/5 px-6 py-4 shadow-sm">
+            <View className={`mb-8 flex-row items-center rounded-[24px] border px-6 py-4 shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}>
                <View className="opacity-40 mr-3">
-                 <Text className="text-white">🔍</Text>
+                 <Text className={isDark ? "text-white" : "text-black"}>🔍</Text>
                </View>
                <TextInput
                  value={searchQuery}
                  onChangeText={setSearchQuery}
                  placeholder="Search history (e.g. Food, Salary, 50.00)"
-                 placeholderTextColor="rgba(255,255,255,0.2)"
-                 className="flex-1 text-white font-bold"
+                 placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+                 className={`flex-1 font-bold ${isDark ? 'text-white' : 'text-black'}`}
                />
             </View>
             
             {/* Overall Summary Panel */}
-            <View className="mb-10 bg-[#0C0C0C] rounded-[48px] border border-white/5 p-8 shadow-2xl overflow-hidden">
+            <View className={`mb-10 rounded-[48px] border p-8 shadow-2xl overflow-hidden ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-[#FFFFFF] border-black/5'}`}>
                <View className="flex-row justify-between items-center mb-8">
                   <View>
-                    <Text className="text-[10px] font-black tracking-[4px] text-white/40 uppercase mb-1">Lifetime Flow</Text>
-                    <Text className="text-4xl font-black text-white tracking-tighter">
+                    <Text className={`text-[10px] font-black tracking-[4px] uppercase mb-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Lifetime Flow</Text>
+                    <Text className={`text-4xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>
                       {format(netBalance)}
                     </Text>
                   </View>
@@ -127,16 +130,16 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
 
                <View className="flex-row gap-x-8">
                   <View className="flex-1">
-                    <Text className="text-[9px] font-black text-white/30 uppercase tracking-[2px] mb-2 pl-1">Total Incomes</Text>
-                    <View className="bg-white/5 rounded-[24px] p-4 border border-white/5">
+                    <Text className={`text-[9px] font-black uppercase tracking-[2px] mb-2 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Total Incomes</Text>
+                    <View className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
                       <Text className="text-primary font-black text-lg tracking-tight">
                         +{format(totalIncome)}
                       </Text>
                     </View>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-[9px] font-black text-white/30 uppercase tracking-[2px] mb-2 pl-1">Total Expenses</Text>
-                    <View className="bg-white/5 rounded-[24px] p-4 border border-white/5">
+                    <Text className={`text-[9px] font-black uppercase tracking-[2px] mb-2 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Total Expenses</Text>
+                    <View className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
                       <Text className="text-destructive font-black text-lg tracking-tight">
                         -{format(totalExpense)}
                       </Text>
@@ -151,7 +154,7 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
               </Text>
             </View>
             {allTransactions.length === 0 && (
-              <View className="items-center justify-center py-20 rounded-[40px] bg-[#0A0A0A] border border-dashed border-white/10">
+              <View className={`items-center justify-center py-20 rounded-[40px] border border-dashed ${isDark ? 'bg-[#0A0A0A] border-white/10' : 'bg-[#FAFAFA] border-black/10'}`}>
                 <Text className="text-muted-foreground font-bold tracking-tighter opacity-40">No activity detected</Text>
               </View>
             )}

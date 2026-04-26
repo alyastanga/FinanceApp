@@ -11,6 +11,7 @@ import { SwipeableSheet } from '../../components/ui/SwipeableSheet';
 import { MicroExpenseBars } from '../../components/ui/MicroExpenseBars';
 import { MicroBudgetGauge } from '../../components/ui/MicroBudgetGauge';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 import database from '../../database';
 
 interface MissionControlProps {
@@ -37,13 +38,14 @@ const GoalProgressGlimpse = withObservables(['goal'], ({ goal }) => ({
 
 const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionControlProps) => {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const { format, convertFrom, currency } = useCurrency();
   const [activeType, setActiveType] = useState<'income' | 'expense' | undefined>(undefined);
 
   // Safely handle loading/empty states
   if (!incomes || !expenses || !goals || !budgets) {
     return (
-      <SafeAreaView className="flex-1 bg-[#050505] items-center justify-center">
+      <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'} items-center justify-center`}>
         <ActivityIndicator color="#10b981" />
       </SafeAreaView>
     );
@@ -104,36 +106,36 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
     .slice(0, 3);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050505]" edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`} edges={['top']}>
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: 24, paddingBottom: 40 }}>
         <View className="mb-8 flex-row justify-between items-end">
           <View>
-            <Text className="text-[10px] font-black uppercase tracking-[4px] text-primary/60 mb-1">Mission Control</Text>
-            <Text className="text-4xl font-black text-white tracking-tighter">Dashboard</Text>
+            <Text className={`text-[10px] font-black uppercase tracking-[4px] mb-1 ${isDark ? 'text-primary/60' : 'text-primary'}`}>Mission Control</Text>
+            <Text className={`text-4xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Dashboard</Text>
           </View>
         </View>
 
         {/* 1. Monthly Pulse Card */}
-        <View className="overflow-hidden rounded-[40px] bg-[#0A0A0A] border border-white/5 mb-8 shadow-2xl shadow-primary/5">
+        <View className={`overflow-hidden rounded-[40px] border mb-8 shadow-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5 shadow-primary/5' : 'bg-white border-black/5 shadow-black/5'}`}>
           <LinearGradient
-            colors={['#10b98115', 'transparent']}
+            colors={[isDark ? '#10b98115' : '#10b98110', 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
             <View className="p-8">
-              <Text className="text-[10px] font-black uppercase tracking-[2px] text-white/30 mb-2">
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-2 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
                 Available Liquidity
               </Text>
-              <Text className="text-5xl font-black tracking-tighter text-white mb-2" numberOfLines={1} adjustsFontSizeToFit>
+              <Text className={`text-5xl font-black tracking-tighter mb-2 ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
                 {format(netFlow)}
               </Text>
               <View className="flex-row items-center gap-x-4 mt-6">
-                <View className="flex-1 rounded-[24px] bg-white/[0.03] px-5 py-4 border border-white/5">
-                  <Text className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1.5">Income</Text>
+                <View className={`flex-1 rounded-[24px] px-5 py-4 border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+                  <Text className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Income</Text>
                   <Text className="text-lg font-bold text-primary" numberOfLines={1} adjustsFontSizeToFit>+{format(totalIncome)}</Text>
                 </View>
-                <View className="flex-1 rounded-[24px] bg-white/[0.03] px-5 py-4 border border-white/5">
-                  <Text className="text-[9px] font-black uppercase tracking-widest text-white/40 mb-1.5">Expenses</Text>
+                <View className={`flex-1 rounded-[24px] px-5 py-4 border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+                  <Text className={`text-[9px] font-black uppercase tracking-widest mb-1.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Expenses</Text>
                   <Text className="text-lg font-bold text-destructive" numberOfLines={1} adjustsFontSizeToFit>-{format(totalExpenses)}</Text>
                 </View>
               </View>
@@ -169,30 +171,30 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
              {/* Portfolio Panel */}
              <TouchableOpacity
                onPress={() => router.push('/portfolio')}
-               className="rounded-[36px] bg-[#0C0C0C] border border-white/5 p-8 shadow-2xl"
+               className={`rounded-[36px] border p-8 shadow-2xl ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}
              >
                <View className="flex-row justify-between items-center mb-6">
                  <View className="flex-row items-center gap-x-3">
-                   <View className="h-10 w-10 rounded-2xl bg-[#10b98115] items-center justify-center">
+                   <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-[#10b98115]' : 'bg-[#10b98120]'}`}>
                      <IconSymbol name="chart.pie.fill" size={18} color="#10b981" />
                    </View>
-                   <Text className="text-sm font-black uppercase tracking-widest text-white">Full Portfolio</Text>
+                   <Text className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Full Portfolio</Text>
                  </View>
-                 <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.2)" />
+                 <IconSymbol name="chevron.right" size={16} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
                </View>
 
                {portfolio.length === 0 ? (
                  <View className="items-center py-4">
-                   <View className="h-12 w-12 rounded-2xl bg-primary/10 items-center justify-center mb-3">
+                   <View className={`h-12 w-12 rounded-2xl items-center justify-center mb-3 ${isDark ? 'bg-primary/10' : 'bg-primary/20'}`}>
                      <IconSymbol name="plus" size={20} color="#10b981" />
                    </View>
                    <Text className="text-primary font-black text-sm uppercase tracking-widest">Add Your First Asset</Text>
-                   <Text className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">Tap to get started</Text>
+                   <Text className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Tap to get started</Text>
                  </View>
                ) : (
                  <View className="flex-row items-baseline justify-between">
                     <View className="flex-1 mr-4">
-                      <Text className="text-4xl font-black text-white tracking-tighter" numberOfLines={1} adjustsFontSizeToFit>
+                      <Text className={`text-4xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
                         {format(totalPortfolioValue)}
                       </Text>
                       <Text className={`text-[10px] font-black uppercase tracking-widest mt-1 ${
@@ -202,7 +204,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                         {format(Math.abs(portfolioTotalGain))} Total Gain
                       </Text>
                     </View>
-                    <View className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
+                    <View className={`px-3 py-1 rounded-full border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/20 border-primary/30'}`}>
                        <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Manage Assets</Text>
                     </View>
                  </View>
@@ -213,9 +215,9 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                  {/* Performance Panel */}
                  <TouchableOpacity
                    onPress={() => router.push('/monitoring')}
-                   className="flex-1 rounded-[36px] bg-[#0C0C0C] border border-white/5 p-6 h-48 justify-between overflow-hidden"
+                   className={`flex-1 rounded-[36px] border p-6 h-48 justify-between overflow-hidden ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}
                  >
-                   <View className="h-10 w-10 rounded-2xl bg-white/5 items-center justify-center">
+                   <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
                      <IconSymbol name="chart.pie.fill" size={18} color="#999" />
                    </View>
 
@@ -223,17 +225,17 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                       <View className="items-center flex-1 justify-center">
                         <View className="flex-row items-center gap-x-2">
                           <IconSymbol name="pencil" size={14} color="#999" />
-                          <Text className="text-white/60 font-black text-[10px] uppercase tracking-widest">Log an Expense</Text>
+                          <Text className={`font-black text-[10px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Log an Expense</Text>
                         </View>
                       </View>
                     ) : (
                       <View className="flex-1 items-center justify-center pt-4">
-                        <MicroExpenseBars data={topExpensesData} isDark={true} />
+                        <MicroExpenseBars data={topExpensesData} isDark={isDark} />
                       </View>
                     )}
 
                    {currentMonthExpenses.length > 0 && (
-                     <Text className="text-[10px] font-black uppercase tracking-widest text-white/20 absolute top-6 right-6">
+                     <Text className={`text-[10px] font-black uppercase tracking-widest absolute top-6 right-6 ${isDark ? 'text-white/20' : 'text-black/20'}`}>
                        Monitoring
                      </Text>
                    )}
@@ -242,88 +244,88 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                  {/* Budget Panel */}
                  <TouchableOpacity
                    onPress={() => router.push('/budget')}
-                   className="flex-1 rounded-[36px] bg-[#0C0C0C] border border-white/5 p-6 h-48 justify-between overflow-hidden"
+                   className={`flex-1 rounded-[36px] border p-6 h-48 justify-between overflow-hidden ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}
                  >
-                   <View className="h-10 w-10 rounded-2xl bg-primary/10 items-center justify-center">
+                   <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/20'}`}>
                      <IconSymbol name="dollarsign.circle.fill" size={18} color="#10b981" />
                    </View>
 
-                    {budgets.length === 0 ? (
-                      <View className="items-center flex-1 justify-center">
-                        <View className="flex-row items-center gap-x-2">
-                          <IconSymbol name="plus" size={14} color="#10b981" />
-                          <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Create a Budget</Text>
-                        </View>
-                      </View>
-                    ) : (
-                      <View className="flex-1 items-center justify-center pt-2">
-                        <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (totalExpenses / totalBudgetLimit) : 0} size={110} isDark={true} />
-                      </View>
+                     {budgets.length === 0 ? (
+                       <View className="items-center flex-1 justify-center">
+                         <View className="flex-row items-center gap-x-2">
+                           <IconSymbol name="plus" size={14} color="#10b981" />
+                           <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Create a Budget</Text>
+                         </View>
+                       </View>
+                     ) : (
+                       <View className="flex-1 items-center justify-center pt-2">
+                         <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (totalExpenses / totalBudgetLimit) : 0} size={110} isDark={isDark} />
+                       </View>
+                     )}
+
+                    {budgets.length > 0 && (
+                      <Text className={`text-[10px] font-black uppercase tracking-widest absolute top-6 right-6 ${isDark ? 'text-primary/40' : 'text-primary/60'}`}>
+                        Budget
+                      </Text>
                     )}
+                  </TouchableOpacity>
+              </View>
 
-                   {budgets.length > 0 && (
-                     <Text className="text-[10px] font-black uppercase tracking-widest text-primary/40 absolute top-6 right-6">
-                       Budget
-                     </Text>
-                   )}
-                 </TouchableOpacity>
+           {/* Activity Panel */}
+           <TouchableOpacity
+             onPress={() => router.push('/activity')}
+             className={`rounded-[40px] border p-8 ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}
+           >
+             <View className="flex-row justify-between items-center mb-6">
+               <View className="flex-row items-center gap-x-3">
+                 <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                   <IconSymbol name="list.bullet" size={18} color="#999" />
+                 </View>
+                 <Text className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Recent Activity</Text>
+               </View>
+               <IconSymbol name="chevron.right" size={16} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
              </View>
+             <View className="gap-y-3">
+               {recentTransactions.map((tx, idx) => (
+                 <View key={idx} className={`flex-row justify-between items-center p-4 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-black/5'}`}>
+                   <View>
+                     <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{tx.source || tx.category}</Text>
+                     <Text className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/30' : 'text-black/30'}`}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
+                   </View>
+                   <Text className={tx.source ? "text-primary font-black" : "text-destructive font-black"}>
+                     {tx.source ? '+' : '-'} {format(tx.amount)}
+                   </Text>
+                 </View>
+               ))}
+               {recentTransactions.length === 0 && (
+                 <Text className={`text-xs italic text-center py-4 ${isDark ? 'text-white/20' : 'text-black/20'}`}>No recent history.</Text>
+               )}
+             </View>
+           </TouchableOpacity>
 
-          {/* Activity Panel */}
-          <TouchableOpacity
-            onPress={() => router.push('/activity')}
-            className="rounded-[40px] bg-[#0C0C0C] border border-white/5 p-8"
-          >
-            <View className="flex-row justify-between items-center mb-6">
-              <View className="flex-row items-center gap-x-3">
-                <View className="h-10 w-10 rounded-2xl bg-white/5 items-center justify-center">
-                  <IconSymbol name="list.bullet" size={18} color="#999" />
-                </View>
-                <Text className="text-sm font-black uppercase tracking-widest text-white">Recent Activity</Text>
-              </View>
-              <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.2)" />
-            </View>
-            <View className="gap-y-3">
-              {recentTransactions.map((tx, idx) => (
-                <View key={idx} className="flex-row justify-between items-center bg-white/[0.02] p-4 rounded-2xl border border-white/5">
-                  <View>
-                    <Text className="text-white font-bold text-sm">{tx.source || tx.category}</Text>
-                    <Text className="text-[10px] text-white/30 uppercase font-black tracking-widest mt-0.5">{new Date(tx.createdAt).toLocaleDateString()}</Text>
-                  </View>
-                  <Text className={tx.source ? "text-primary font-black" : "text-destructive font-black"}>
-                    {tx.source ? '+' : '-'} {format(tx.amount)}
-                  </Text>
-                </View>
-              ))}
-              {recentTransactions.length === 0 && (
-                <Text className="text-white/20 text-xs italic text-center py-4">No recent history.</Text>
-              )}
-            </View>
-          </TouchableOpacity>
-
-          {/* Goals Panel */}
-          <TouchableOpacity
-            onPress={() => router.push('/goals')}
-            className="rounded-[40px] bg-[#0C0C0C] border border-white/5 p-8 mb-4 shadow-xl"
-          >
-            <View className="flex-row justify-between items-center mb-6">
-              <View className="flex-row items-center gap-x-3">
-                <View className="h-10 w-10 rounded-2xl bg-[#8b5cf615] items-center justify-center">
-                  <IconSymbol name="target" size={18} color="#8b5cf6" />
-                </View>
-                <Text className="text-sm font-black uppercase tracking-widest text-white">Goal Progress</Text>
-              </View>
-              <IconSymbol name="chevron.right" size={16} color="rgba(255,255,255,0.2)" />
-            </View>
-            {goals[0] ? (
-              <GoalProgressGlimpse goal={goals[0]} />
-            ) : (
-              <View className="flex-row items-center justify-center gap-x-2 py-2">
-                 <IconSymbol name="plus" size={14} color="#8b5cf6" />
-                 <Text className="text-[#8b5cf6] font-black text-[10px] uppercase tracking-widest">Set a Savings Goal</Text>
-              </View>
-            )}
-          </TouchableOpacity>
+           {/* Goals Panel */}
+           <TouchableOpacity
+             onPress={() => router.push('/goals')}
+             className={`rounded-[40px] border p-8 mb-4 shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-black/5'}`}
+           >
+             <View className="flex-row justify-between items-center mb-6">
+               <View className="flex-row items-center gap-x-3">
+                 <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-[#8b5cf615]' : 'bg-[#8b5cf620]'}`}>
+                   <IconSymbol name="target" size={18} color="#8b5cf6" />
+                 </View>
+                 <Text className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Goal Progress</Text>
+               </View>
+               <IconSymbol name="chevron.right" size={16} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+             </View>
+             {goals[0] ? (
+               <GoalProgressGlimpse goal={goals[0]} />
+             ) : (
+               <View className="flex-row items-center justify-center gap-x-2 py-2">
+                  <IconSymbol name="plus" size={14} color="#8b5cf6" />
+                  <Text className="text-[#8b5cf6] font-black text-[10px] uppercase tracking-widest">Set a Savings Goal</Text>
+               </View>
+             )}
+           </TouchableOpacity>
         </View>
       </ScrollView>
 

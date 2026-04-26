@@ -10,6 +10,7 @@ import { SwipeableSheet } from '../../components/ui/SwipeableSheet';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 // @ts-ignore
 import { fetchMultipleQuotes } from '../../lib/market-service';
@@ -18,7 +19,7 @@ interface PortfolioScreenProps {
   portfolio: Portfolio[];
 }
 
-const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => void }) => {
+const PortfolioCard = ({ asset, onPress, isDark }: { asset: Portfolio, onPress: () => void, isDark: boolean }) => {
   const { formatRaw, convertFrom, currency, symbolFor } = useCurrency();
   const assetCurrency = asset.currency || currency;
   const displayValue = convertFrom(asset.value, assetCurrency);
@@ -31,10 +32,10 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="bg-[#111111] border border-white/5 rounded-[32px] p-6 mb-4 flex-row items-center justify-between"
+      className={`${isDark ? 'bg-[#111111] border-white/5' : 'bg-white border-black/5'} border rounded-[32px] p-6 mb-4 flex-row items-center justify-between shadow-sm`}
     >
       <View className="flex-row items-center gap-x-4">
-        <View className={`h-12 w-12 rounded-2xl items-center justify-center bg-white/5 border border-white/5`}>
+        <View className={`h-12 w-12 rounded-2xl items-center justify-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'} border`}>
            <IconSymbol 
              name={
                asset.assetType === 'crypto' ? 'bitcoinsign.circle' : 
@@ -42,26 +43,26 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
                asset.assetType === 'realestate' ? 'house.fill' : 'banknote'
              } 
              size={20} 
-             color="#fff" 
+             color={isDark ? "#fff" : "#000"} 
            />
         </View>
         <View>
           <View className="flex-row items-center gap-x-2">
-            <Text className="text-white font-black text-base">{asset.name || asset.symbol}</Text>
+            <Text className={`${isDark ? 'text-white' : 'text-black'} font-black text-base`}>{asset.name || asset.symbol}</Text>
             {showCurrencyBadge && (
-              <View className="px-2 py-0.5 rounded-full bg-white/10">
-                <Text className="text-[8px] font-black text-white/60">{symbolFor(assetCurrency)} {assetCurrency}</Text>
+              <View className={`px-2 py-0.5 rounded-full ${isDark ? 'bg-white/10' : 'bg-black/10'}`}>
+                <Text className={`text-[8px] font-black ${isDark ? 'text-white/60' : 'text-black/60'}`}>{symbolFor(assetCurrency)} {assetCurrency}</Text>
               </View>
             )}
           </View>
-          <Text className="text-white/40 text-[10px] font-black uppercase tracking-widest">
+          <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-widest`}>
             {asset.quantity} {asset.symbol}
           </Text>
         </View>
       </View>
 
       <View className="items-end">
-        <Text className="text-white font-black text-lg">{formatRaw(displayValue)}</Text>
+        <Text className={`${isDark ? 'text-white' : 'text-black'} font-black text-lg`}>{formatRaw(displayValue)}</Text>
         <View className="flex-row items-center gap-x-2">
            <Text className={`text-[10px] font-black ${isGainsPositive ? 'text-primary' : 'text-destructive'}`}>
              {isGainsPositive ? '+' : '-'} {formatRaw(Math.abs(gains))} ({gainsPercent.toFixed(1)}%)
@@ -74,6 +75,7 @@ const PortfolioCard = ({ asset, onPress }: { asset: Portfolio, onPress: () => vo
 
 const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const { formatRaw, convertFrom, currency, refreshRates } = useCurrency();
   const [activeAsset, setActiveAsset] = useState<Portfolio | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
@@ -153,7 +155,7 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050505]" edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`} edges={['top']}>
       <ScrollView 
         className="flex-1 px-5" 
         showsVerticalScrollIndicator={false} 
@@ -172,18 +174,18 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
           <View className="flex-row justify-between items-center mb-10">
             <View>
               <Text className="text-[10px] font-black text-primary uppercase tracking-[4px] mb-1">Asset Management</Text>
-              <Text className="text-4xl font-black text-white tracking-tighter">Net Worth</Text>
+              <Text className={`text-4xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Net Worth</Text>
             </View>
             <View className="flex-row gap-x-3">
               <TouchableOpacity 
                 onPress={refreshPrices}
                 disabled={isRefreshing}
-                className="h-12 w-12 rounded-2xl bg-white/5 border border-white/5 items-center justify-center"
+                className={`h-12 w-12 rounded-2xl border items-center justify-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
               >
                  {isRefreshing ? (
                    <ActivityIndicator size="small" color="#10b981" />
                  ) : (
-                   <IconSymbol name="arrow.clockwise" size={20} color="#fff" />
+                   <IconSymbol name="arrow.clockwise" size={20} color={isDark ? "#fff" : "#000"} />
                  )}
               </TouchableOpacity>
               <TouchableOpacity 
@@ -195,15 +197,15 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
             </View>
           </View>
 
-          <View className="bg-[#111111] rounded-[48px] border border-white/5 p-10 overflow-hidden shadow-2xl">
+          <View className={`rounded-[48px] border p-10 overflow-hidden shadow-2xl ${isDark ? 'bg-[#111111] border-white/5' : 'bg-white border-black/5'}`}>
              <LinearGradient
-               colors={['#10b98115', 'transparent']}
+               colors={[isDark ? '#10b98115' : '#10b98110', 'transparent']}
                start={{ x: 0, y: 0 }}
                end={{ x: 1, y: 1 }}
                className="absolute inset-0"
              />
-             <Text className="text-white/40 text-[10px] font-black uppercase tracking-[3px] mb-2 text-center">Cumulative Assets</Text>
-             <Text className="text-6xl font-black text-white tracking-tighter text-center">
+             <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[3px] mb-2 text-center`}>Cumulative Assets</Text>
+             <Text className={`text-6xl font-black tracking-tighter text-center ${isDark ? 'text-white' : 'text-black'}`}>
                {formatRaw(totalValue)}
              </Text>
              <View className="mt-8 flex-row justify-center gap-x-2">
@@ -217,29 +219,29 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
         </View>
 
         {/* Search Bar */}
-        <View className="mb-8 flex-row items-center bg-[#111111] rounded-[24px] border border-white/5 px-6 py-4">
-           <IconSymbol name="magnifyingglass" size={16} color="rgba(255,255,255,0.2)" />
+        <View className={`mb-8 flex-row items-center rounded-[24px] border px-6 py-4 ${isDark ? 'bg-[#111111] border-white/5' : 'bg-white border-black/5'}`}>
+           <IconSymbol name="magnifyingglass" size={16} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
            <TextInput
              value={searchQuery}
              onChangeText={setSearchQuery}
              placeholder="Search assets or tickers..."
-             placeholderTextColor="rgba(255,255,255,0.2)"
-             className="flex-1 ml-3 text-white font-bold"
+             placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+             className={`flex-1 ml-3 font-bold ${isDark ? 'text-white' : 'text-black'}`}
            />
         </View>
 
         {/* Asset List */}
         <View className="gap-y-2">
-          <Text className="text-[10px] font-black text-white/40 uppercase tracking-[3px] mb-4 pl-2">Asset Inventory</Text>
+          <Text className={`text-[10px] font-black uppercase tracking-[3px] mb-4 pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Asset Inventory</Text>
           {filteredPortfolio.map((asset) => (
-            <PortfolioCard key={asset.id} asset={asset} onPress={() => handleEditAsset(asset)} />
+            <PortfolioCard key={asset.id} asset={asset} onPress={() => handleEditAsset(asset)} isDark={isDark} />
           ))}
           {filteredPortfolio.length === 0 && (
              <View className="py-20 items-center">
-               <View className="h-20 w-20 bg-white/5 rounded-[32px] items-center justify-center mb-4">
-                  <IconSymbol name="plus.circle.fill" size={32} color="rgba(255,255,255,0.1)" />
+               <View className={`h-20 w-20 rounded-[32px] items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                  <IconSymbol name="plus.circle.fill" size={32} color={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"} />
                </View>
-               <Text className="text-white/20 text-sm font-black uppercase tracking-widest">No assets found</Text>
+               <Text className={`text-sm font-black uppercase tracking-widest ${isDark ? 'text-white/20' : 'text-black/20'}`}>No assets found</Text>
              </View>
           )}
         </View>

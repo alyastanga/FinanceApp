@@ -6,6 +6,7 @@ import { IconSymbol } from './ui/icon-symbol';
 import { useAuth } from '../context/AuthContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
 import { generateUUID } from '../lib/id-utils';
+import { useTheme } from '../context/ThemeContext';
 
 interface PortfolioFormProps {
   asset?: Portfolio | null;
@@ -22,6 +23,7 @@ const ASSET_TYPES = [
 ];
 
 export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, onCancel }) => {
+  const { isDark } = useTheme();
   const { session } = useAuth();
   const { currency: appCurrency, symbolFor } = useCurrency();
   const [name, setName] = useState(asset?.name || '');
@@ -140,58 +142,58 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
   return (
     <ScrollView className="gap-y-8" showsVerticalScrollIndicator={false}>
       <View>
-        <Text className="text-3xl font-black text-white tracking-tighter">
+        <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>
           {asset ? 'Manage Asset' : 'Add New Wealth'}
         </Text>
-        <Text className="text-sm font-medium text-white/40 mt-1 uppercase tracking-widest">
+        <Text className={`text-sm font-medium mt-1 uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>
            Track your growing net worth
         </Text>
       </View>
 
       <View className="gap-y-5">
         {/* Name Input */}
-        <View className="bg-white/5 rounded-[24px] p-4 border border-white/5">
-          <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+        <View className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+          <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
             Asset Name (e.g. My Savings, Apple Stock)
           </Text>
           <TextInput
             value={name}
             onChangeText={setName}
             placeholder="Enter name..."
-            placeholderTextColor="rgba(255,255,255,0.2)"
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
             style={{ includeFontPadding: false }}
-            className="text-lg font-bold text-white px-2 h-14 py-2"
+            className={`text-lg font-bold px-2 h-14 py-2 ${isDark ? 'text-white' : 'text-black'}`}
           />
         </View>
 
         {(assetType === 'stock' || assetType === 'crypto') && (
           <View className="flex-row gap-x-4">
-            <View className="flex-[2] bg-white/5 rounded-[24px] p-4 border border-white/5">
-              <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+            <View className={`flex-[2] rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+              <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                 Ticker Symbol (e.g. AAPL, BTCUSDT)
               </Text>
               <TextInput
                 value={symbol}
                 onChangeText={setSymbol}
                 placeholder="Search symbol..."
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
                 autoCapitalize="characters"
                 style={{ includeFontPadding: false }}
-                className="text-lg font-bold text-white px-2 h-14 py-2"
+                className={`text-lg font-bold px-2 h-14 py-2 ${isDark ? 'text-white' : 'text-black'}`}
               />
             </View>
-            <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
-              <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+            <View className={`flex-1 rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+              <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                 Quantity
               </Text>
               <TextInput
                 value={quantity}
                 onChangeText={setQuantity}
                 placeholder="1"
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
                 keyboardType="numeric"
                 style={{ includeFontPadding: false }}
-                className="text-lg font-bold text-white px-2 h-14 py-2"
+                className={`text-lg font-bold px-2 h-14 py-2 ${isDark ? 'text-white' : 'text-black'}`}
               />
             </View>
           </View>
@@ -199,31 +201,31 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
 
         <View className="flex-row gap-x-4">
           {/* Invested Amount Input - Always Show */}
-          <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
-            <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+          <View className={`flex-1 rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+            <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               {`Total Invested (${currentSymbol})`}
             </Text>
             <TextInput
               value={investedAmount}
               onChangeText={setInvestedAmount}
               placeholder="0.00"
-              placeholderTextColor="rgba(255,255,255,0.2)"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
               keyboardType="numeric"
               style={{ includeFontPadding: false }}
-              className="text-lg font-bold text-white px-2 h-14 py-2"
+              className={`text-lg font-bold px-2 h-14 py-2 ${isDark ? 'text-white' : 'text-black'}`}
             />
           </View>
 
           {assetType !== 'stock' && assetType !== 'crypto' && (
-            <View className="flex-1 bg-white/5 rounded-[24px] p-4 border border-white/5">
-              <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+            <View className={`flex-1 rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+              <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                 {assetType === 'cash' ? 'Current Balance' : 'Current Value'} ({currentSymbol})
               </Text>
               <TextInput
                 value={value}
                 onChangeText={setValue}
                 placeholder="0.00"
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
                 keyboardType="numeric"
                 style={{ includeFontPadding: false }}
                 className="text-lg font-bold text-primary px-2 h-14 py-2"
@@ -234,15 +236,15 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
 
         {/* Change 24h Input - Only for manual assets */}
         {assetType !== 'stock' && assetType !== 'crypto' && assetType !== 'cash' && (
-          <View className="bg-white/5 rounded-[24px] p-4 border border-white/5">
-            <Text className="text-[10px] font-black uppercase text-white/40 mb-1 tracking-widest pl-2">
+          <View className={`rounded-[24px] p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+            <Text className={`text-[10px] font-black uppercase mb-1 tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               24 Hour Performance (%)
             </Text>
             <TextInput
               value={change24h}
               onChangeText={setChange24h}
               placeholder="0.00"
-              placeholderTextColor="rgba(255,255,255,0.2)"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
               keyboardType="numeric"
               style={{ includeFontPadding: false }}
               className={`text-lg font-bold px-2 h-14 py-2 ${parseFloat(change24h) >= 0 ? 'text-primary' : 'text-destructive'}`}
@@ -252,7 +254,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
 
         {/* Asset Type Selector */}
         <View className="gap-y-3">
-          <Text className="text-[10px] font-black uppercase text-white/40 tracking-widest pl-2">
+          <Text className={`text-[10px] font-black uppercase tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
             Category
           </Text>
           <View className="flex-row flex-wrap gap-2">
@@ -260,10 +262,10 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               <TouchableOpacity
                 key={type.id}
                 onPress={() => setAssetType(type.id)}
-                className={`flex-row items-center gap-x-2 px-4 py-3 rounded-2xl border ${assetType === type.id ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5 opacity-50'}`}
+                className={`flex-row items-center gap-x-2 px-4 py-3 rounded-2xl border ${assetType === type.id ? 'bg-primary/20 border-primary/40' : (isDark ? 'bg-white/5 border-white/5 opacity-50' : 'bg-black/5 border-black/5 opacity-50')}`}
               >
-                <IconSymbol name={type.icon as any} size={14} color={assetType === type.id ? '#10b981' : '#fff'} />
-                <Text className={`text-[10px] font-black uppercase tracking-widest ${assetType === type.id ? 'text-primary' : 'text-white'}`}>
+                <IconSymbol name={type.icon as any} size={14} color={assetType === type.id ? '#10b981' : (isDark ? '#fff' : '#000')} />
+                <Text className={`text-[10px] font-black uppercase tracking-widest ${assetType === type.id ? 'text-primary' : (isDark ? 'text-white' : 'text-black')}`}>
                   {type.label}
                 </Text>
               </TouchableOpacity>
@@ -273,7 +275,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
 
         {/* Asset Currency Selector */}
         <View className="gap-y-3">
-          <Text className="text-[10px] font-black uppercase text-white/40 tracking-widest pl-2">
+          <Text className={`text-[10px] font-black uppercase tracking-widest pl-2 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
             Asset Currency
           </Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ columnGap: 8 }}>
@@ -281,10 +283,10 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               <TouchableOpacity
                 key={c.code}
                 onPress={() => setAssetCurrency(c.code)}
-                className={`px-4 py-3 rounded-2xl border ${assetCurrency === c.code ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5'}`}
+                className={`px-4 py-3 rounded-2xl border ${assetCurrency === c.code ? 'bg-primary/20 border-primary/40' : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
               >
-                <Text className={`text-sm font-black ${assetCurrency === c.code ? 'text-primary' : 'text-white/60'}`}>{c.symbol}</Text>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${assetCurrency === c.code ? 'text-primary/60' : 'text-white/30'}`}>{c.code}</Text>
+                <Text className={`text-sm font-black ${assetCurrency === c.code ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>{c.symbol}</Text>
+                <Text className={`text-[8px] font-black uppercase tracking-widest ${assetCurrency === c.code ? 'text-primary/60' : (isDark ? 'text-white/30' : 'text-black/30')}`}>{c.code}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -293,9 +295,9 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
         <View className="flex-row gap-x-4 mt-8">
            <TouchableOpacity 
              onPress={onCancel}
-             className="flex-1 bg-white/[0.03] rounded-2xl p-5 items-center border border-white/5"
+             className={`flex-1 rounded-2xl p-5 items-center border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}
            >
-              <Text className="text-white font-black text-[12px] uppercase tracking-widest">Discard</Text>
+              <Text className={`font-black text-[12px] uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Discard</Text>
            </TouchableOpacity>
            <TouchableOpacity 
              onPress={handleSubmit}

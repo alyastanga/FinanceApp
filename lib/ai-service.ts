@@ -58,8 +58,9 @@ export async function generateAIResponse(
     CRITICAL FORMATTING RULES:
     1. DO NOT say you cannot access data. Use the provided context.
     2. USE PLAIN TEXT ONLY. NO BOLDING (**), NO HASHTAGS (#), NO ASTERISKS (*).
-    3. NO MARKDOWN EXCEPT FOR CHARTS: Avoid all markdown formatting in your conversational text. Do not use bold (**) or headers (#).
-    4. VISUALIZATION TRIGGER: If the user explicitly requests a "chart", "graph", "visual", or "breakdown", OR if it is mandated by your specialist instructions, you MUST append this EXACT block at the very end of your response, on its own line:
+    3. NO MARKDOWN EXCEPT FOR CHARTS AND TABLES: Avoid all markdown formatting in your conversational text. Do not use bold (**) or headers (#).
+    4. TABLE FORMATTING: If you are presenting historical data, structured data, or lists of transactions, you MUST format it as a Markdown table.
+    5. VISUALIZATION TRIGGER: If the user explicitly requests a "chart", "graph", "visual", or "breakdown", OR if it is mandated by your specialist instructions, you MUST append this EXACT block at the very end of your response, on its own line:
        [CHART_DATA: {"data": [{"label": "<NAME>", "value": <NUMBER>, "color": "<HEX_COLOR>"}, ...]}]
        
        DO NOT wrap the CHART_DATA block in markdown code blocks (\`\`\`). Output it raw.

@@ -7,15 +7,18 @@ import { GoalForm } from '../../components/GoalForm';
 import { SwipeableSheet } from '../../components/ui/SwipeableSheet';
 import Goal from '../../database/models/Goal';
 
+import { useTheme } from '../../context/ThemeContext';
+
 export default function GoalsScreen() {
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
   const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050505]" edges={['top']}>
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`} edges={['top']}>
       <View className="px-6 pt-6 pb-2">
-        <Text className="text-3xl font-black text-white mb-2">My Goals</Text>
+        <Text className={`text-3xl font-black ${isDark ? 'text-white' : 'text-black'} mb-2`}>My Goals</Text>
         <Text className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
           Future Proofing
         </Text>

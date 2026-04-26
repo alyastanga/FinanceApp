@@ -46,7 +46,7 @@ export default function ActivityScreen() {
         onClose={() => setActiveType(null)}
       >
         <TransactionForm
-          initialType={activeType}
+          initialType={activeType || undefined}
           onSuccess={() => setActiveType(null)}
         />
       </SwipeableSheet>

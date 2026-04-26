@@ -7,19 +7,22 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { useTheme } from '../../context/ThemeContext';
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { isDark } = useTheme();
 
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#10b981',
-        tabBarInactiveTintColor: 'rgba(255,255,255,0.4)',
+        tabBarInactiveTintColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)',
         headerShown: false,
         tabBarButton: HapticTab,
         tabBarStyle: {
-          backgroundColor: '#000',
-          borderTopColor: 'rgba(255,255,255,0.05)',
+          backgroundColor: isDark ? '#000' : '#FFF',
+          borderTopColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
           paddingBottom: Platform.OS === 'ios' ? 24 : 12,
           paddingTop: 10,
           height: Platform.OS === 'ios' ? 88 : 68,

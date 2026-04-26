@@ -180,7 +180,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     }
   };
 
-  const renderAIInsight = (id: string) => {
+  const renderAIInsight = (id: string, chatPrompt?: string) => {
     const text = explanations[id];
     const isLoading = loadingExplains[id];
     if (!text && !isLoading) return null;
@@ -189,15 +189,45 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
       <View
         className={`mt-4 p-5 rounded-[32px] border ${isDark ? 'bg-primary/5 border-primary/20' : 'bg-primary/10 border-primary/30'} overflow-hidden shadow-sm shadow-primary/10`}
       >
-        <View className="flex-row items-center gap-x-2 mb-2">
-          <IconSymbol name="sparkles" size={12} color="#10b981" />
-          <Text className="text-[10px] font-black text-primary uppercase tracking-widest">AI Financial Insight</Text>
+        <View className="flex-row items-center justify-between mb-2">
+          <View className="flex-row items-center gap-x-2">
+            <IconSymbol name="sparkles" size={12} color="#10b981" />
+            <Text className="text-[10px] font-black text-primary uppercase tracking-widest">AI Financial Insight</Text>
+          </View>
+          {/* Dismiss button */}
+          {!isLoading && text && (
+            <TouchableOpacity
+              onPress={() => setExplanations(prev => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              })}
+              className="h-6 w-6 rounded-full bg-white/5 items-center justify-center"
+            >
+              <IconSymbol name="xmark" size={10} color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {isLoading ? (
-          <ActivityIndicator size="small" color="#10b981" />
+          <View className="py-3 items-center">
+            <ActivityIndicator size="small" color="#10b981" />
+            <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[9px] font-black uppercase tracking-widest mt-2`}>Analyzing...</Text>
+          </View>
         ) : (
-          <Text className={`${isDark ? 'text-white/80' : 'text-black/80'} text-xs leading-5`}>{text}</Text>
+          <>
+            <Text className={`${isDark ? 'text-white/80' : 'text-black/80'} text-xs leading-5 mb-4`}>{text}</Text>
+            {/* Continue with Chat button */}
+            {chatPrompt && (
+              <TouchableOpacity
+                onPress={() => router.push(`/ai?agent=consultant&prompt=${encodeURIComponent(chatPrompt)}&_t=${Date.now()}`)}
+                className="flex-row items-center self-start gap-x-2 px-4 py-2.5 rounded-full bg-primary/20 border border-primary/30"
+              >
+                <IconSymbol name="bubble.left.fill" size={12} color="#10b981" />
+                <Text className="text-primary text-[9px] font-black uppercase tracking-widest">Continue with Chat</Text>
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
     );
@@ -222,7 +252,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             colors={[isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.05)', 'transparent']}
             className="absolute top-0 left-0 right-0 h-96"
           />
-          <Text className="text-3xl font-black text-white mb-2">Monitoring</Text>
+          <Text className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-black'}`}>Monitoring</Text>
           <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[4px] mb-4`}>
             Real-time financial analytics
           </Text>
@@ -273,10 +303,10 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             <View className="flex-row justify-between items-center px-2">
               <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Budget Intelligence</Text>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Explain the Daily Budget Health and Safe-to-Spend limit based on my current month.')}
+                onPress={() => handleExplain('budget', 'Daily Budget Health & Safe-to-Spend', { dailySafeToSpend: insights.dailySafeToSpend, monthlyIncome: insights.monthlyIncome, fixedExpenses: insights.monthlyFixedExpenses })}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['budget'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
             <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden`}>
@@ -288,7 +318,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
               <View className={`mx-6 my-4 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
               <SavingsRateView incomes={incomes} expenses={expenses} isDark={isDark} />
             </BlurView>
-            {renderAIInsight('budget')}
+            {renderAIInsight('budget', 'Explain the Daily Budget Health and Safe-to-Spend limit based on my current month in more detail.')}
           </View>
 
           {/* Performance & Trends */}
@@ -296,10 +326,10 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             <View className="flex-row justify-between items-center px-2">
               <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Performance</Text>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Analyze my 6-month wealth velocity and performance trends.')}
+                onPress={() => handleExplain('performance', '6-Month Performance Trends', trendData)}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['performance'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
             <TouchableOpacity
@@ -310,7 +340,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
               </BlurView>
             </TouchableOpacity>
-            {renderAIInsight('performance')}
+            {renderAIInsight('performance', 'Analyze my 6-month wealth velocity and performance trends in more detail.')}
           </View>
 
           {/* Spending Habits */}
@@ -323,15 +353,15 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 </Text>
               </View>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Provide a detailed breakdown of my categorical spending habits.')}
+                onPress={() => handleExplain('spending', 'Categorical Spending Habits', categorySpending)}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['spending'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
 
             {/* Mode Selector */}
-            <View className="flex-row bg-white/5 rounded-2xl p-1 border border-white/5 mx-2">
+            <View className={`flex-row rounded-2xl p-1 border mx-2 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
               {[
                 { id: 'current', label: 'Current' },
                 { id: 'overall', label: 'Overall' },
@@ -342,7 +372,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                   onPress={() => setSpendingMode(m.id as any)}
                   className={`flex-1 py-2.5 rounded-xl items-center ${spendingMode === m.id ? 'bg-primary' : ''}`}
                 >
-                  <Text className={`text-[9px] font-black uppercase tracking-widest ${spendingMode === m.id ? 'text-[#050505]' : 'text-white/40'}`}>
+                  <Text className={`text-[9px] font-black uppercase tracking-widest ${spendingMode === m.id ? 'text-[#050505]' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
                     {m.label}
                   </Text>
                 </TouchableOpacity>
@@ -366,9 +396,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                     <TouchableOpacity
                       key={mString}
                       onPress={() => setSelectedHistoryMonth(mString)}
-                      className={`px-4 py-3 rounded-2xl border ${isSelected ? 'bg-primary/20 border-primary/40' : 'bg-white/5 border-white/5'}`}
+                      className={`px-4 py-3 rounded-2xl border ${isSelected ? (isDark ? 'bg-primary/20 border-primary/40' : 'bg-primary/20 border-primary/40') : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
                     >
-                      <Text className={`text-[10px] font-black uppercase tracking-[1.5px] ${isSelected ? 'text-primary' : 'text-white/60'}`}>
+                      <Text className={`text-[10px] font-black uppercase tracking-[1.5px] ${isSelected ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>
                         {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
                       </Text>
                     </TouchableOpacity>
@@ -387,7 +417,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 />
               </View>
             </BlurView>
-            {renderAIInsight('spending')}
+            {renderAIInsight('spending', 'Provide a detailed breakdown of my categorical spending habits with actionable advice.')}
           </View>
 
           {/* Wealth Management */}
@@ -395,14 +425,14 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             <View className="flex-row justify-between items-center px-2">
               <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Wealth Management</Text>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Evaluate my current Asset Allocation diversity and Wealth Management strategy.')}
+                onPress={() => handleExplain('wealth', 'Asset Allocation & Wealth Management', portfolio)}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['wealth'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
             <PortfolioSnapshot portfolio={portfolio} isDark={isDark} />
-            {renderAIInsight('wealth')}
+            {renderAIInsight('wealth', 'Evaluate my current Asset Allocation diversity and Wealth Management strategy in more detail.')}
           </View>
 
           {/* Strategy */}
@@ -410,14 +440,14 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             <View className="flex-row justify-between items-center px-2">
               <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Strategy</Text>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Run a scenario simulation on my current financial strategy and wealth projections.')}
+                onPress={() => handleExplain('strategy', 'Financial Strategy & Projections', { incomes: incomes.length, expenses: expenses.length, goals: goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })) })}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
             <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} isDark={isDark} />
-            {renderAIInsight('strategy')}
+            {renderAIInsight('strategy', 'Run a scenario simulation on my current financial strategy and wealth projections in more detail.')}
           </View>
 
           {/* Goal Progress Monitoring */}
@@ -425,10 +455,10 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             <View className="flex-row justify-between items-center px-2">
               <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Goal Monitoring</Text>
               <TouchableOpacity
-                onPress={() => router.push('/ai?agent=data&prompt=Summarize my progress across all financial goals and milestones.')}
+                onPress={() => handleExplain('goals', 'Goal Progress & Milestones', goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })))}
                 className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
               >
-                <IconSymbol name="sparkles" size={14} color="#10b981" />
+                {loadingExplains['goals'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
               </TouchableOpacity>
             </View>
             <View className="gap-y-4">
@@ -441,7 +471,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 </View>
               )}
             </View>
-            {renderAIInsight('goals')}
+            {renderAIInsight('goals', 'Summarize my progress across all financial goals and milestones in more detail.')}
           </View>
         </View>
       </ScrollView>
