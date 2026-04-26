@@ -107,7 +107,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({
       <View style={{ width: size, height: size }}>
         {total > 0 ? (
           <Canvas 
-            style={{ flex: 1 }}
+            style={{ width: size, height: size }}
             // @ts-ignore - Web-only property to prevent WebGL context collision/overload (err 0)
             __destroyWebGLContextAfterRender={true}
           >

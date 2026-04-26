@@ -82,10 +82,10 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
 
     const context = await initLlama({
       model: nativePath,
-      n_ctx: 4096,
-      n_threads: 4,      // Optimized for A13 Bionic architecture
-      n_gpu_layers: 24,   // Balanced offload for 1.5B model on iPhone 11
-      use_mlock: false,   // Disable mlock on 4GB devices to avoid memory pressure crashes
+      n_ctx: 1024,        // Reduced context for low-RAM stability (iPhone 11)
+      n_threads: 4,      // Optimized for A13 performance cores
+      n_gpu_layers: 16,   // Moderated offload to leave head-room for OS
+      use_mlock: false,   // Disable memory locking for better swap handling on 4GB devices
     });
 
     modelState = { initialized: true, mode: 'native', context };
@@ -166,7 +166,8 @@ export async function generateLocalResponse(
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return finalResponse;
     } catch (error: any) {
-      console.error('[Local LLM] Native inference failed:', error.message);
+      console.error('[Local LLM] Native inference failed. Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      console.warn('[Local LLM] Falling back to rule-based engine.');
       // Fall through to fallback
     }
   }

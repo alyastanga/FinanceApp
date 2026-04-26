@@ -78,7 +78,7 @@ ANALYTICAL FRAMEWORK:
    - FORMAT: [CHART_DATA: {"data": [{"label": "Name", "value": 100, "color": "#10b981"}]}]
    - KEY NAMES: Use EXACTLY the keys "label", "value", and "color" for maximum compatibility.
    - TREND RULE: When asked for spending history, summarize the top 3-5 months into a categorical breakdown.
-   - COLOR RULE: Use #10b981 for growth/positive, #ef4444 for spending/negative.
+   - COLOR RULE: Each data item MUST have a UNIQUE color. Assign colors in order: #10b981, #3b82f6, #8b5cf6, #f59e0b, #ef4444, #ec4899, #06b6d4, #f97316, #a855f7. NEVER repeat a color.
    - ACCURACY RULE: Ensure the sum of values matches the 'Total_Expenses' or relevant sum from the context.`
   }
 

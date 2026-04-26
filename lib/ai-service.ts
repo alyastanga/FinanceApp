@@ -59,15 +59,23 @@ export async function generateAIResponse(
     1. DO NOT say you cannot access data. Use the provided context.
     2. USE PLAIN TEXT ONLY. NO BOLDING (**), NO HASHTAGS (#), NO ASTERISKS (*).
     3. NO MARKDOWN EXCEPT FOR CHARTS: Avoid all markdown formatting in your conversational text. Do not use bold (**) or headers (#).
-    4. VISUALIZATION TRIGGER: If the user explicitly requests a "chart", "graph", "visual", or "breakdown", OR if it is mandated by your specialist instructions, you MUST append this EXACT block at the end of your response:
+    4. VISUALIZATION TRIGGER: If the user explicitly requests a "chart", "graph", "visual", or "breakdown", OR if it is mandated by your specialist instructions, you MUST append this EXACT block at the very end of your response, on its own line:
        [CHART_DATA: {"data": [{"label": "<NAME>", "value": <NUMBER>, "color": "<HEX_COLOR>"}, ...]}]
        
-       COLOR PALETTE:
-       - Green/Positive: #10b981
-       - Red/Negative/Spent: #ef4444
-       - Blue/Savings: #3b82f6
-       - Purple/Investment: #8b5cf6
-       - Gray/Other: #6b7280`;
+       DO NOT wrap the CHART_DATA block in markdown code blocks (\`\`\`). Output it raw.
+       
+       CRITICAL COLOR RULE: Each category in a pie/donut chart MUST use a UNIQUE, DISTINCT color so the user can differentiate segments visually.
+        Assign colors in this order (one per data item, cycling if needed):
+        1. #10b981 (Emerald)
+        2. #3b82f6 (Blue)
+        3. #8b5cf6 (Purple)
+        4. #f59e0b (Amber)
+        5. #ef4444 (Red)
+        6. #ec4899 (Pink)
+        7. #06b6d4 (Cyan)
+        8. #f97316 (Orange)
+        9. #a855f7 (Violet)
+        NEVER use the same color for multiple categories.`;
 
   // Add a 25-second timeout for the free tier
   const controller = new AbortController();

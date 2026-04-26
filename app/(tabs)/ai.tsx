@@ -19,7 +19,6 @@ import { useAI } from '../../context/AIContext';
 import { AI_AGENTS, getAgentFromMention, cleanMention, AIAgent } from '../../lib/ai-agents';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
-import { GlassCard } from '../../components/ui/GlassCard';
 
 interface Message {
   id: string;
@@ -36,6 +35,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
   
   // Helper to reliably extract nested JSON from a string by counting braces
   const extractNestedJson = (str: string) => {
+    // Look for the first structural character [ or {
     const startIdx = str.search(/[\{\[]/);
     if (startIdx === -1) return null;
     
@@ -70,10 +70,9 @@ const ChatBubble = ({ item }: { item: Message }) => {
     let finalEndIdx = endIdx;
 
     if (endIdx === -1 && (braceCount > 0 || bracketCount > 0)) {
-        console.log(`[AI Parser] Truncated JSON detected (Braces: ${braceCount}, Brackets: ${bracketCount}). Attempting healing...`);
         jsonStr = str.substring(startIdx);
-        // Append missing closers in reverse order of how they were opened
-        // This is a simple heuristic but works for standard JSON nesting
+        // Append missing closers
+        if (inString) jsonStr += '"';
         jsonStr += '}'.repeat(Math.max(0, braceCount));
         jsonStr += ']'.repeat(Math.max(0, bracketCount));
         finalEndIdx = str.length - 1;
@@ -91,76 +90,94 @@ const ChatBubble = ({ item }: { item: Message }) => {
     return null;
   };
 
+  const HIGH_CONTRAST_PALETTE = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#f97316', '#a855f7'];
+
   const processExtractedJson = (jsonStr: string, textToRemove: string) => {
     try {
-      // Clean up common AI response noise
       let cleanJson = jsonStr.trim();
-      
-      // Fix common AI trailing commas
-      cleanJson = cleanJson.replace(/,\s*([\}\]])/g, '$1');
+      cleanJson = cleanJson.replace(/,\s*([\}\]])/g, '$1'); // Fix trailing commas
       
       const parsed = JSON.parse(cleanJson);
-      
       const dataArr = Array.isArray(parsed) ? parsed : (parsed.data && Array.isArray(parsed.data) ? parsed.data : (parsed.items && Array.isArray(parsed.items) ? parsed.items : null));
       
       if (dataArr && Array.isArray(dataArr)) {
-        const HIGH_CONTRAST_PALETTE = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#f97316', '#a855f7'];
-        
-        // Map common AI field names to the Chart interface robustly
         chartData = dataArr.map((d: any, index: number) => {
-            // Fuzzy match for labels
             const label = d.label || d.name || d.category || d.item || d.asset || d.description || d.month || d.date || d.type || 'Item';
-            
-            // Fuzzy match for values
             const value = Math.abs(Number(
               d.value || d.amount || d.total || d.price || d.balance || 
               d.Total_Expenses || d.spending || d.cost || d.sum || d.limit || 0
             ));
-            
-            // FORCE contrast by using the palette based on index
-            const color = HIGH_CONTRAST_PALETTE[index % HIGH_CONTRAST_PALETTE.length];
+            const color = d.color || HIGH_CONTRAST_PALETTE[index % HIGH_CONTRAST_PALETTE.length];
             return { label, value, color };
         }).filter(d => d.value > 0);
 
+        // Safeguard: if all items have the same color (AI ignored distinct color rule),
+        // override with the palette so the chart is visually distinguishable
+        if (chartData && chartData.length > 1) {
+          const uniqueColors = new Set(chartData.map(d => d.color.toLowerCase()));
+          if (uniqueColors.size === 1) {
+            chartData = chartData.map((d, i) => ({ ...d, color: HIGH_CONTRAST_PALETTE[i % HIGH_CONTRAST_PALETTE.length] }));
+          }
+        }
+
         if (chartData && chartData.length > 0) {
-          // Remove the matched block and any residual tags
-          cleanText = item.text.replace(textToRemove, '').replace(/\[?CHART_DATA:?\]?/gi, '').trim();
+          cleanText = cleanText.replace(textToRemove, '').trim();
           return true;
         }
       }
     } catch (e) {
-        console.warn("[AI UI] Aggressive JSON recovery failed:", e);
+        // Parsing failed (common during streaming)
     }
     return false;
   };
 
-  // Check if there is CHART_DATA tag
-  const chartTagIdx = item.text.indexOf('CHART_DATA');
-  
+  // ── Pre-processing: Strip markdown code fences around chart data ──
+  // Gemini frequently wraps CHART_DATA or JSON in ```json ... ``` despite instructions.
+  // We normalize the raw text first so downstream extraction works on clean JSON.
+  let workingText = item.text;
+
+  // Strip code fences that wrap CHART_DATA tags
+  workingText = workingText.replace(/```(?:json)?\s*(\[?\s*CHART_DATA[\s\S]*?)\s*```/gi, '$1');
+  // Strip code fences that wrap bare JSON arrays/objects (potential chart data)
+  workingText = workingText.replace(/```(?:json)?\s*([\[\{][\s\S]*?[\]\}])\s*```/g, '$1');
+
+  cleanText = workingText;
+
+  // ── 1. Primary: Extract [CHART_DATA: ...] tag ──
+  const chartTagIdx = workingText.toUpperCase().indexOf('CHART_DATA');
   if (chartTagIdx !== -1) {
-     // Extract JSON starting after the tag
-     const afterTag = item.text.substring(chartTagIdx);
+     const afterTag = workingText.substring(chartTagIdx);
      const extraction = extractNestedJson(afterTag);
      
      if (extraction) {
-         // Tightly scope the fullMatch to avoid over-greedy deletion
-         const startOfBlock = Math.max(0, item.text.lastIndexOf('[', chartTagIdx));
-         const possibleEnd = chartTagIdx + extraction.end + 2; 
-         // Check if there's a trailing bracket
-         const fullMatch = item.text.substring(startOfBlock, possibleEnd).includes(']') 
-            ? item.text.substring(startOfBlock, possibleEnd)
-            : item.text.substring(startOfBlock, chartTagIdx + extraction.end + 1);
+         // Find the outermost enclosure: from the `[` before CHART_DATA to the closing `]`
+         const startOfBlock = Math.max(0, workingText.lastIndexOf('[', chartTagIdx));
+         let endOfBlock = chartTagIdx + extraction.end + 1;
+         // Capture a trailing ] if the outer block is [CHART_DATA: {...}]
+         if (endOfBlock < workingText.length && workingText[endOfBlock] === ']') endOfBlock++;
          
-         const success = processExtractedJson(extraction.jsonStr, fullMatch);
-         if (!success) {
-            // Even if parsing failed, remove the block to avoid showing JSON to user
-            cleanText = item.text.replace(fullMatch, '').replace(/\[?CHART_DATA:?\]?/gi, '').trim();
-         }
+         const fullMatch = workingText.substring(startOfBlock, endOfBlock);
+         processExtractedJson(extraction.jsonStr, fullMatch);
      }
   }
 
-  // Final cleanup for any residual tags (handled by processExtractedJson/above failure block, but good to ensure)
-  cleanText = cleanText.replace(/\[?CHART_DATA:?\]?/gi, '').trim();
+  // ── 2. Fallback: Any remaining JSON block that looks like chart data ──
+  if (!chartData) {
+      // Try to find a standalone JSON array or object in the text
+      const extraction = extractNestedJson(workingText);
+      if (extraction) {
+          // Only process if it looks like structured data (has label/value-like keys)
+          const looksLikeChartData = /("label"|"name"|"category"|"value"|"amount"|"total")/i.test(extraction.jsonStr);
+          if (looksLikeChartData) {
+              processExtractedJson(extraction.jsonStr, extraction.jsonStr);
+          }
+      }
+  }
+
+  // Cleanup residual CHART_DATA tags and empty bracket remnants
+  cleanText = cleanText.replace(/\[?\s*CHART_DATA\s*:?\s*\]?/gi, '').trim();
+  // Clean up any remaining orphaned code fences
+  cleanText = cleanText.replace(/```(?:json)?\s*```/g, '').trim();
 
   // ── Thinking Process Extraction ──
   let thoughtProcess: string | null = null;
@@ -182,15 +199,9 @@ const ChatBubble = ({ item }: { item: Message }) => {
     }
   }
 
-  // Fallback: Just look for any JSON block if CHART_DATA wasn't found but there's still no chart
-  if (!chartData) {
-      const codeBlockMatch = /```(?:json)?\s*([\s\S]*?)\s*```/g.exec(item.text);
-      if (codeBlockMatch && codeBlockMatch[1]) {
-          const extraction = extractNestedJson(codeBlockMatch[1]);
-          if (extraction) {
-             processExtractedJson(extraction.jsonStr, codeBlockMatch[0]);
-          }
-      }
+  // ── Prevent blank bubble: if we have chart data but no text, add a default label ──
+  if (chartData && chartData.length > 0 && !cleanText.trim()) {
+    cleanText = 'Here is the breakdown based on your financial data:';
   }
 
 
@@ -257,9 +268,28 @@ const ChatBubble = ({ item }: { item: Message }) => {
                   Intelligence Report
                 </Text>
               </View>
-              <GlassCard intensity={40} style={{ padding: 12 }}>
-                <BudgetChart data={chartData} size={160} />
-              </GlassCard>
+              {/* Plain View wrapper — Skia Canvas cannot render inside BlurView (GlassCard) on iOS */}
+              <View 
+                className="rounded-2xl border border-[#2A2A2A] overflow-hidden"
+                style={{ backgroundColor: '#121212', padding: 12 }}
+              >
+                <BudgetChart data={chartData} size={180} hideLegend hideTitle showCenterLabel />
+              </View>
+              {/* Compact inline legend for chat context */}
+              <View className="mt-3 gap-y-1.5">
+                {(chartData as any[]).map((d: any, i: number) => (
+                  <View key={i} className="flex-row items-center justify-between">
+                    <View className="flex-row items-center flex-1">
+                      <View 
+                        className="h-2 w-2 rounded-full mr-2" 
+                        style={{ backgroundColor: d.color }} 
+                      />
+                      <Text className="text-white/70 text-[11px] font-bold">{d.label}</Text>
+                    </View>
+                    <Text className="text-white/90 text-[11px] font-black">{d.value.toLocaleString()}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           )}
         </View>
@@ -337,7 +367,7 @@ const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void
 import { useLocalSearchParams } from 'expo-router';
 
 export default function AIChatScreen() {
-  const { agent, prompt } = useLocalSearchParams<{ agent: string, prompt: string }>();
+  const { agent, prompt, _t } = useLocalSearchParams<{ agent: string, prompt: string, _t: string }>();
   const { aiMode } = useAI();
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -391,31 +421,38 @@ export default function AIChatScreen() {
 
   // Handle incoming agent links and auto-trigger if prompt is present
   useEffect(() => {
-    const currentTriggerId = `${agent}-${prompt}`;
-    if (agent && prompt && lastTriggerId.current !== currentTriggerId) {
-      const targetAgent = Object.values(AI_AGENTS).find(a => a.slug === agent || a.id === agent);
-      if (targetAgent) {
-        const initialInput = `@${targetAgent.slug} ${prompt}`;
-        setInput(initialInput);
-        
-        if (!isTyping) {
-          lastTriggerId.current = currentTriggerId;
-          // Small delay to ensure state and keyboard settle
-          setTimeout(() => {
-            performSendMessage(initialInput);
-            setInput('');
-          }, 600);
-        }
-      }
-    } else if (!agent && !prompt) {
+    if (!agent || !prompt) {
       // Reset trigger ID if we land on AI screen without params (e.g. manual tab click)
       // This allows clicking the same insight again after navigating away and back.
       lastTriggerId.current = null;
+      return;
     }
-  }, [agent, prompt]);
+
+    // Use the full param string as the trigger ID. Budget.tsx now appends a
+    // unique timestamp (_t=...) so even repeated clicks produce a new ID.
+    const currentTriggerId = `${agent}-${prompt}`;
+    if (lastTriggerId.current === currentTriggerId) return;
+
+    const targetAgent = Object.values(AI_AGENTS).find(a => a.slug === agent || a.id === agent);
+    if (!targetAgent) return;
+
+    const initialInput = `@${targetAgent.slug} ${prompt}`;
+    setInput(initialInput);
+
+    if (!isTyping) {
+      lastTriggerId.current = currentTriggerId;
+      // Small delay to ensure state and keyboard settle
+      setTimeout(() => {
+        performSendMessage(initialInput);
+        setInput('');
+      }, 600);
+    }
+  }, [agent, prompt, _t]);
 
   const performSendMessage = async (text: string) => {
     if (!text.trim() || !mounted.current) return;
+
+    setIsTyping(true);
 
     const userMsg: Message = {
       id: Date.now().toString(),
@@ -435,7 +472,8 @@ export default function AIChatScreen() {
       timestamp: new Date(),
       agent: targetedAgent
     };
-    setMessages(prev => [...prev, initialAiMsg]);
+    // Add BOTH the user message and the AI placeholder to the chat
+    setMessages(prev => [...prev, userMsg, initialAiMsg]);
 
     try {
       const apiMessages = [...messages, userMsg].map(m => ({

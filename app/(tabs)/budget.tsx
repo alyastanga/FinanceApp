@@ -99,11 +99,11 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
   const remainingToAllocate = monthlyIncomeValue - totalAllocated;
 
   const handleExplain = async () => {
-    router.push('/ai?agent=budget&prompt=Analyze my current budget allocation and spending velocity trends for this month.');
+    router.push(`/ai?agent=budget&prompt=Analyze my current budget allocation and spending velocity trends for this month.&_t=${Date.now()}`);
   };
 
   const handleGenerateAI = async () => {
-    router.push('/ai?agent=budget&prompt=Suggest a new, optimized budget allocation based on my monthly income and financial goals.');
+    router.push(`/ai?agent=budget&prompt=Suggest a new, optimized budget allocation based on my monthly income and financial goals.&_t=${Date.now()}`);
   };
 
   const handleApplyAI = async () => {
