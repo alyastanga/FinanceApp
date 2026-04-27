@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 export default function LoginScreen() {
+  const { isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,18 +35,19 @@ export default function LoginScreen() {
   }
 
   return (
-    <View className="flex-1 justify-center px-6 bg-slate-50">
+    <View className={`flex-1 justify-center px-6 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       <View className="mb-8 items-center">
-        <Text className="text-4xl font-bold text-slate-900">FinanceApp</Text>
-        <Text className="text-slate-500 mt-2">Sign in to track your wealth</Text>
+        <Text className={`text-4xl font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>FinanceApp</Text>
+        <Text className={`mt-2 ${isDark ? 'text-white/60' : 'text-slate-500'}`}>Sign in to track your wealth</Text>
       </View>
 
       <View className="space-y-4">
         <View>
-          <Text className="text-sm font-medium text-slate-700 mb-1 ml-1">Email</Text>
+          <Text className={`text-sm font-medium mb-1 ml-1 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>Email</Text>
           <TextInput
-            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900"
+            className={`border rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
             placeholder="email@address.com"
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "#94a3b8"}
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -52,10 +55,11 @@ export default function LoginScreen() {
         </View>
 
         <View>
-          <Text className="text-sm font-medium text-slate-700 mb-1 ml-1">Password</Text>
+          <Text className={`text-sm font-medium mb-1 ml-1 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>Password</Text>
           <TextInput
-            className="bg-white border border-slate-200 rounded-xl px-4 py-3 text-slate-900"
+            className={`border rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
             placeholder="••••••••"
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "#94a3b8"}
             value={password}
             onChangeText={setPassword}
             secureTextEntry={true}
@@ -65,23 +69,23 @@ export default function LoginScreen() {
 
       <View className="mt-8 space-y-3">
         <TouchableOpacity
-          className="bg-blue-600 rounded-xl py-4 items-center shadow-sm"
+          className="bg-primary rounded-xl py-4 items-center shadow-sm"
           onPress={signInWithEmail}
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={isDark ? "white" : "black"} />
           ) : (
-            <Text className="text-white font-semibold text-lg">Sign In</Text>
+            <Text className={`font-semibold text-lg ${isDark ? 'text-[#050505]' : 'text-white'}`}>Sign In</Text>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity
-          className="border border-blue-600 rounded-xl py-4 items-center"
+          className="border border-primary rounded-xl py-4 items-center"
           onPress={signUpWithEmail}
           disabled={loading}
         >
-          <Text className="text-blue-600 font-semibold text-lg">Sign Up</Text>
+          <Text className="text-primary font-semibold text-lg">Sign Up</Text>
         </TouchableOpacity>
       </View>
     </View>

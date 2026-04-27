@@ -4,6 +4,7 @@ import withObservables from '@nozbe/watermelondb/react/withObservables';
 import database from '../database';
 import Goal from '../database/models/Goal';
 import { GoalCard } from './GoalCard';
+import { useTheme } from '../context/ThemeContext';
 
 interface GoalListProps {
   goals: Goal[];
@@ -12,11 +13,12 @@ interface GoalListProps {
 }
 
 const GoalList = ({ goals, onEdit, onAdd }: GoalListProps) => {
+  const { isDark } = useTheme();
   return (
     <View className="flex-1">
       <View className="flex-row justify-between items-end mb-8 pt-4">
         <View className="flex-1 mr-4">
-          <Text className="text-3xl font-black text-white mb-1">Goal Setting</Text>
+          <Text className={`text-3xl font-black mb-1 ${isDark ? 'text-white' : 'text-black'}`}>Goal Setting</Text>
           <Text className="text-sm font-medium text-muted-foreground leading-5">
             Monitor and adjust your savings targets.
           </Text>
@@ -37,7 +39,7 @@ const GoalList = ({ goals, onEdit, onAdd }: GoalListProps) => {
         {goals.length === 0 && (
           <TouchableOpacity 
             onPress={onAdd}
-            className="p-12 items-center justify-center bg-white/[0.02] rounded-[40px] border border-dashed border-white/10"
+            className={`p-12 items-center justify-center rounded-[40px] border border-dashed ${isDark ? 'bg-white/[0.02] border-white/10' : 'bg-black/[0.02] border-black/10'}`}
           >
              <Text className="text-primary font-black text-[12px] uppercase tracking-[1px] mb-3 pl-0.5">No Goals Locked In</Text>
              <Text className="text-muted-foreground text-xs text-center px-8 leading-5">

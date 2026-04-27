@@ -10,6 +10,7 @@ import { getCSVHeaders, guessMappings, transformRows, generateCSV, CSVMapping } 
 import database from '@/database';
 import * as Sharing from 'expo-sharing';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useTheme } from '@/context/ThemeContext';
 
 export default function CSVImportScreen() {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function CSVImportScreen() {
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const { currency, symbolFor } = useCurrency();
+  const { isDark } = useTheme();
   const currentSymbol = symbolFor(currency);
 
   const handlePickFile = async () => {
@@ -153,17 +155,17 @@ export default function CSVImportScreen() {
   const renderMappingRow = (label: string, field: keyof CSVMapping, icon: string) => (
     <View className="mb-6">
       <View className="flex-row items-center gap-x-2 mb-3">
-        <IconSymbol name={icon as any} size={14} color="#999" />
-        <Text className="text-[10px] font-black text-white/40 uppercase tracking-widest">{label}</Text>
+        <IconSymbol name={icon as any} size={14} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+        <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>{label}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-x-2">
         {headers.map((h) => (
           <TouchableOpacity
             key={h}
             onPress={() => setMapping(prev => ({ ...prev, [field]: h }))}
-            className={`px-4 py-2.5 rounded-xl border ${mapping[field] === h ? 'bg-primary/20 border-primary' : 'bg-white/5 border-white/10'}`}
+            className={`px-4 py-2.5 rounded-xl border ${mapping[field] === h ? 'bg-primary/20 border-primary' : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')}`}
           >
-            <Text className={`text-xs font-bold ${mapping[field] === h ? 'text-primary' : 'text-white/60'}`}>{h}</Text>
+            <Text className={`text-xs font-bold ${mapping[field] === h ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>{h}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -171,16 +173,16 @@ export default function CSVImportScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-[#050505]">
-      <BlurView intensity={20} className="flex-1">
+    <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
+      <BlurView intensity={isDark ? 20 : 80} tint={isDark ? "dark" : "light"} className="flex-1">
         <View className="p-6">
           <View className="flex-row justify-between items-center mb-8">
             <View>
-              <Text className="text-2xl font-black text-white">Data Hub</Text>
-              <Text className="text-white/40 text-xs uppercase tracking-widest mt-1">Export & Migration</Text>
+              <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'}`}>Data Hub</Text>
+              <Text className={`text-xs uppercase tracking-widest mt-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Export & Migration</Text>
             </View>
-            <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 bg-white/5 rounded-full items-center justify-center">
-              <IconSymbol name="xmark" size={20} color="white" />
+            <TouchableOpacity onPress={() => router.back()} className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+              <IconSymbol name="xmark" size={20} color={isDark ? "white" : "black"} />
             </TouchableOpacity>
           </View>
 
@@ -188,39 +190,39 @@ export default function CSVImportScreen() {
             <TouchableOpacity 
               onPress={handleExport}
               disabled={isProcessing}
-              className="flex-1 bg-white/5 p-5 rounded-[32px] border border-white/5 items-center gap-y-2"
+              className={`flex-1 p-5 rounded-[32px] border items-center gap-y-2 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
             >
-              <IconSymbol name="square.and.arrow.up" size={18} color="#999" />
-              <Text className="text-white font-black text-[10px] uppercase tracking-widest text-center">Export All</Text>
+              <IconSymbol name="square.and.arrow.up" size={18} color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"} />
+              <Text className={`font-black text-[10px] uppercase tracking-widest text-center ${isDark ? 'text-white' : 'text-black'}`}>Export All</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              className="flex-1 bg-white/5 p-5 rounded-[32px] border border-white/5 items-center gap-y-2 opacity-50"
+              className={`flex-1 p-5 rounded-[32px] border items-center gap-y-2 opacity-50 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
             >
-              <IconSymbol name="cloud.fill" size={18} color="#999" />
-              <Text className="text-white font-black text-[10px] uppercase tracking-widest text-center">Backup</Text>
+              <IconSymbol name="cloud.fill" size={18} color={isDark ? "rgba(255,255,255,0.6)" : "rgba(0,0,0,0.6)"} />
+              <Text className={`font-black text-[10px] uppercase tracking-widest text-center ${isDark ? 'text-white' : 'text-black'}`}>Backup</Text>
             </TouchableOpacity>
           </View>
 
           {!csvText ? (
             <TouchableOpacity 
               onPress={handlePickFile}
-              className="h-48 w-full border-2 border-dashed border-white/10 rounded-[32px] items-center justify-center bg-white/[0.02]"
+              className={`h-48 w-full border-2 border-dashed rounded-[32px] items-center justify-center ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.02]'}`}
             >
               <View className="h-12 w-12 bg-primary/20 rounded-2xl items-center justify-center mb-4">
                 <IconSymbol name="doc.fill" size={24} color="#10b981" />
               </View>
-              <Text className="text-white font-bold">Select CSV File</Text>
-              <Text className="text-white/30 text-[10px] uppercase mt-2">.csv files only</Text>
+              <Text className={`font-bold ${isDark ? 'text-white' : 'text-black'}`}>Select CSV File</Text>
+              <Text className={`text-[10px] uppercase mt-2 ${isDark ? 'text-white/30' : 'text-black/30'}`}>.csv files only</Text>
             </TouchableOpacity>
           ) : (
             <View>
-              <View className="bg-white/5 p-5 rounded-3xl border border-white/10 mb-8">
-                <Text className="text-white font-bold text-sm mb-1">File Loaded</Text>
-                <Text className="text-white/40 text-[10px]">{headers.length} columns identified.</Text>
+              <View className={`p-5 rounded-3xl border mb-8 ${isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}>
+                <Text className={`font-bold text-sm mb-1 ${isDark ? 'text-white' : 'text-black'}`}>File Loaded</Text>
+                <Text className={`text-[10px] ${isDark ? 'text-white/40' : 'text-black/40'}`}>{headers.length} columns identified.</Text>
               </View>
 
-              <Text className="text-[12px] font-black text-white uppercase tracking-[4px] mb-6">Column Mapping</Text>
+              <Text className={`text-[12px] font-black uppercase tracking-[4px] mb-6 ${isDark ? 'text-white' : 'text-black'}`}>Column Mapping</Text>
               
               {renderMappingRow('Transaction Date', 'dateHeader', 'calendar')}
               {renderMappingRow('Source / Description', 'sourceHeader', 'text.alignleft')}
@@ -232,9 +234,9 @@ export default function CSVImportScreen() {
                 className="mt-6 bg-primary p-5 rounded-2xl items-center shadow-lg shadow-primary/20"
               >
                 {isProcessing ? (
-                  <ActivityIndicator color="white" />
+                  <ActivityIndicator color={isDark ? "white" : "black"} />
                 ) : (
-                  <Text className="text-white font-black uppercase tracking-widest text-xs">Execute Import</Text>
+                  <Text className={`font-black uppercase tracking-widest text-xs ${isDark ? 'text-white' : 'text-black'}`}>Execute Import</Text>
                 )}
               </TouchableOpacity>
 
@@ -242,7 +244,7 @@ export default function CSVImportScreen() {
                 onPress={() => setCsvText(null)}
                 className="mt-4 p-4 rounded-2xl items-center"
               >
-                <Text className="text-white/40 font-bold text-xs">Reset File</Text>
+                <Text className={`font-bold text-xs ${isDark ? 'text-white/40' : 'text-black/40'}`}>Reset File</Text>
               </TouchableOpacity>
             </View>
           )}

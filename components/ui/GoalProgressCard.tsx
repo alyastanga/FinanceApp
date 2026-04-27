@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from './icon-symbol';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface GoalProgressCardProps {
   goal: any;
@@ -14,11 +15,13 @@ interface GoalProgressCardProps {
 
 export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ 
   goal, 
-  isDark = true, 
+  isDark: isDarkProp, 
   onPress,
   children,
   compact = false
 }) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const progress = Math.min((goal.currentAmount / goal.targetAmount) * 100, 100);
   const textClass = isDark ? 'text-white' : 'text-black';
@@ -47,7 +50,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
           </View>
         </View>
         <View className="items-end">
-            <Text className="text-primary font-black ${progressSizeClass} tracking-tighter">{Math.round(progress)}%</Text>
+            <Text className={`text-primary font-black ${progressSizeClass} tracking-tighter`}>{Math.round(progress)}%</Text>
             <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest`}>completion</Text>
         </View>
       </View>
@@ -75,7 +78,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
             <View>
                 <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-[2px] mb-1`}>Financial Target</Text>
                 <Text className={`${textClass} font-black text-sm`}>
-                    {format(goal.currentAmount)} <Text className="text-white/20">/ {format(goal.targetAmount)}</Text>
+                    {format(goal.currentAmount)} <Text className={isDark ? "text-white/20" : "text-black/20"}>/ {format(goal.targetAmount)}</Text>
                 </Text>
             </View>
             <View className="items-end">

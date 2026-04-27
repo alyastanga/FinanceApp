@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { Canvas, RoundedRect, Rect } from '@shopify/react-native-skia';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface BudgetComparisonProps {
   category: string;
@@ -15,9 +16,11 @@ export const BudgetComparison: React.FC<BudgetComparisonProps> = ({
   category,
   budgetLimit,
   actualSpent,
-  isDark = true,
+  isDark: isDarkProp,
   onEdit,
 }) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const screenWidth = Dimensions.get('window').width;
   const barWidth = screenWidth - 80; // Account for padding

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, Text } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ExpenseBarData {
   label: string;
@@ -15,7 +16,9 @@ interface MicroExpenseBarsProps {
   isDark?: boolean;
 }
 
-export const MicroExpenseBars = ({ data, isDark = true }: MicroExpenseBarsProps) => {
+export const MicroExpenseBars = ({ data, isDark: isDarkProp }: MicroExpenseBarsProps) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const textClass = isDark ? 'text-white' : 'text-black';
   const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
 

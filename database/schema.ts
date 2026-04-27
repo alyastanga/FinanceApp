@@ -1,13 +1,14 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb'
 
 export default appSchema({
-  version: 10,
+  version: 11,
   tables: [
     tableSchema({
       name: 'incomes',
       columns: [
         { name: 'amount', type: 'number' },
-        { name: 'source', type: 'string' },
+        { name: 'category', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
         { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },
@@ -19,6 +20,7 @@ export default appSchema({
       columns: [
         { name: 'amount', type: 'number' },
         { name: 'category', type: 'string' },
+        { name: 'description', type: 'string', isOptional: true },
         { name: 'user_id', type: 'string', isIndexed: true },
         { name: 'currency', type: 'string', isOptional: true },
         { name: 'created_at', type: 'number' },

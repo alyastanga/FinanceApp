@@ -8,6 +8,7 @@ import {
 } from '@shopify/react-native-skia';
 import { useSharedValue, withTiming, Easing } from 'react-native-reanimated';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ChartData {
   label: string;
@@ -30,12 +31,14 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({
   data, 
   title, 
   size = 200, 
-  isDark = true,
+  isDark: isDarkProp,
   hideLegend = false,
   hideTitle = false,
   showCenterLabel = true,
   emptyMessage = "No data"
 }) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const radius = size / 2;
   const strokeWidth = 28;
@@ -191,7 +194,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({
           {segments.map((item, index) => (
             <View 
               key={index} 
-              className="flex-row items-center justify-between py-2.5 border-b border-white/5 mb-1"
+              className={`flex-row items-center justify-between py-2.5 border-b mb-1 ${isDark ? 'border-white/5' : 'border-black/5'}`}
             >
               <View className="flex-row items-center flex-1">
                 <View 
@@ -208,7 +211,7 @@ export const BudgetChart: React.FC<BudgetChartProps> = ({
                     <Text className={`${isDark ? 'text-white/90' : 'text-black/90'} text-[11px] font-bold uppercase tracking-widest`}>
                     {item.label}
                     </Text>
-                    <Text className="text-white/20 text-[8px] font-black uppercase tracking-[1px] mt-0.5">
+                    <Text className={`text-[8px] font-black uppercase tracking-[1px] mt-0.5 ${isDark ? 'text-white/20' : 'text-black/20'}`}>
                         Categorical Insight
                     </Text>
                 </View>

@@ -5,6 +5,7 @@ import withObservables from '@nozbe/watermelondb/react/withObservables';
 import database from '../database';
 import Goal from '../database/models/Goal';
 import { useCurrency } from '../context/CurrencyContext';
+import { useTheme } from '../context/ThemeContext';
 
 interface GoalCardProps {
   goal: Goal;
@@ -17,6 +18,7 @@ import { calculateSmartIncrement } from '../lib/goal-utils';
 
 const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
   const { format } = useCurrency();
+  const { isDark } = useTheme();
   const handleQuickAdd = async () => {
     const increment = calculateSmartIncrement(goal.targetAmount);
     try {
@@ -50,7 +52,7 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
   };
 
   return (
-    <GoalProgressCard goal={goal}>
+    <GoalProgressCard goal={goal} isDark={isDark}>
       <View className="flex-row gap-x-3">
         <TouchableOpacity 
           onPress={handleQuickAdd}
@@ -65,8 +67,8 @@ const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
           onPress={() => onEdit(goal)}
           className="overflow-hidden"
         >
-          <View className="bg-white/5 rounded-2xl px-6 py-3.5 items-center border border-white/5">
-            <Text className="text-white/60 font-black text-[10px] uppercase tracking-[1px] pl-0.5">Edit</Text>
+          <View className={`rounded-2xl px-6 py-3.5 items-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+            <Text className={`font-black text-[10px] uppercase tracking-[1px] pl-0.5 ${isDark ? 'text-white/60' : 'text-black/60'}`}>Edit</Text>
           </View>
         </TouchableOpacity>
       </View>

@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { IconSymbol } from './icon-symbol';
+import { useTheme } from '../../context/ThemeContext';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -24,6 +25,7 @@ export const CollapsibleCard = ({
   onExplain,
   isExplaining = false
 }: CollapsibleCardProps) => {
+  const { isDark } = useTheme();
   const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
 
   const toggleCollapse = () => {
@@ -32,15 +34,15 @@ export const CollapsibleCard = ({
   };
 
   return (
-    <View className="rounded-[32px] bg-[#0A0A0A] border border-white/5 overflow-hidden mb-6 shadow-2xl">
+    <View className={`rounded-[32px] border overflow-hidden mb-6 shadow-2xl ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-[#FAFAFA] border-black/5'}`}>
       {/* Header */}
       <TouchableOpacity 
         activeOpacity={0.7}
         onPress={toggleCollapse}
-        className="p-6 flex-row justify-between items-center bg-white/[0.02]"
+        className={`p-6 flex-row justify-between items-center ${isDark ? 'bg-white/[0.02]' : 'bg-black/[0.02]'}`}
       >
         <View className="flex-1">
-          <Text className="text-lg font-black text-white tracking-tight">{title}</Text>
+          <Text className={`text-lg font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`}>{title}</Text>
           {subtitle && (
             <Text className="text-[10px] font-black text-muted-foreground uppercase tracking-widest mt-1 opacity-60">
               {subtitle}
@@ -62,14 +64,14 @@ export const CollapsibleCard = ({
             </TouchableOpacity>
           )}
           <View className={`transition-transform duration-300 ${isCollapsed ? 'rotate-0' : 'rotate-180'}`}>
-            <IconSymbol name="chevron.down" size={18} color="rgba(255,255,255,0.4)" />
+            <IconSymbol name="chevron.down" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
           </View>
         </View>
       </TouchableOpacity>
 
       {/* Content */}
       {!isCollapsed && (
-        <View className="p-6 pt-2 border-t border-white/[0.02]">
+        <View className={`p-6 pt-2 border-t ${isDark ? 'border-white/[0.02]' : 'border-black/[0.02]'}`}>
           {children}
         </View>
       )}

@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 import { useCurrency } from '../../context/CurrencyContext';
 import { normalizeDate } from '../../lib/date-utils';
+import { useTheme } from '../../context/ThemeContext';
 
 interface TrendPoint {
   label: string;
@@ -18,7 +19,9 @@ interface TrendChartProps {
   simple?: boolean;
 }
 
-export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 180, isDark = true, simple = false }) => {
+export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 180, isDark: isDarkProp, simple = false }) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const [range, setRange] = React.useState(6);
   const width = simple ? Dimensions.get('window').width / 2 : Dimensions.get('window').width - 120; // Adjusted for sparkline or full view
@@ -162,7 +165,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
                 onPress={() => setRange(m)}
                 className={`px-3 py-1.5 rounded-lg ${range === m ? 'bg-primary' : ''}`}
               >
-                <Text className={`text-[8px] font-black uppercase ${range === m ? 'text-[#050505]' : 'text-white/40'}`}>
+                <Text className={`text-[8px] font-black uppercase ${range === m ? 'text-primary-foreground' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
                   {m === 12 ? '1Y' : `${m}M`}
                 </Text>
               </TouchableOpacity>
@@ -283,7 +286,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
             return (
               <Text
                 key={i}
-                className="text-[9px] font-black uppercase tracking-widest text-white/40"
+                className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}
               >
                 {point.label}
               </Text>

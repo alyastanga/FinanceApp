@@ -43,9 +43,6 @@ export function AIProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Prevent flash of default value while loading from storage
-  if (loading) return <>{children}</>;
-
   return (
     <AIContext.Provider value={{ aiMode, setAiMode }}>
       {children}

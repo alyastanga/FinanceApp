@@ -11,6 +11,8 @@ This roadmap takes the FinanceApp from a blank Expo project to a fully functiona
 - [x] **Phase 4: Investment Insights** - Add portfolio analysis and educational investment AI.
 
 - [x] **Phase 5: Desktop Portability & Polish** - Finalize Electron integration and UI refinement for desktop/large screens.
+- [ ] **Phase 9: Multi-Agent Local AI** - Modular expert team with specialized system prompts.
+- [ ] **Phase 10: E2EE Cloud Storage (Zero-Knowledge)** - Implement end-to-end encrypted sync with BIP39 recovery.
 
 
 ## Phase Details
@@ -112,6 +114,8 @@ Plans:
 | 3. AI Budgeting | 4/4 | Complete | 2026-04-04 |
 | 4. AI Portfolio | 2/2 | Complete | 2026-04-04 |
 | 5. Desktop/Polish | 1/1 | Complete | 2026-04-04 |
+| 9. Multi-Agent AI | 1/1 | In Progress | 2026-04-27 |
+| 10. E2EE Storage | 0/5 | Not Started | 2026-04-27 |
 
 
 
@@ -144,6 +148,37 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 8 to break down)
+
+### Phase 9: Multi-Agent Local AI
+
+**Goal**: Transition the local AI from a single advisor into a modular team of financial experts.
+**Depends on**: Phase 4
+**Requirements**: CHAT-01, CHAT-02
+**Success Criteria**:
+  1. User can mention agents using `@consultant`, `@risk`, etc.
+  2. Each agent responds with a distinct personality and strategy.
+  3. UI correctly identifies the active responding specialist.
+
+Plans:
+- [ ] 09-01: Implement agent definitions and mention parsing logic.
+
+### Phase 10: E2EE Cloud Storage (Zero-Knowledge)
+
+**Goal**: Establish a true zero-knowledge, end-to-end encrypted sync system for absolute financial privacy.
+**Depends on**: Phase 5
+**Requirements**: PRIVACY-01, SYNC-01
+**Success Criteria**:
+  1. All financial data is encrypted on the client using AES-256-GCM before upload.
+  2. Server stores only encrypted blobs and cannot access raw data.
+  3. User can recover their account using a BIP39 24-word seed phrase.
+  4. DEK revocation and rotation works seamlessly across devices.
+
+Plans:
+- [ ] 10-01: Setup Cryptography Foundation (Argon2id, AES-GCM, Native Modules).
+- [ ] 10-02: Implement Secure Key Management and BIP39 Seed Phrase.
+- [ ] 10-03: Update Cloud Schema and Implement Encrypted Sync.
+- [ ] 10-04: Build E2EE Onboarding and Setup Wizard.
+- [ ] 10-05: Implement Tamper-Evident Logs and Security Verification.
 
 ---
 *Last updated: 2026-04-02*

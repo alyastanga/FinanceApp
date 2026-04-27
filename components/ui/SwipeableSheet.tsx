@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { View, TouchableOpacity, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { useTheme } from '../../context/ThemeContext';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { 
   useSharedValue, 
@@ -22,7 +23,9 @@ interface SwipeableSheetProps {
   isDark?: boolean;
 }
 
-export const SwipeableSheet = ({ isVisible, onClose, children, isDark = true }: SwipeableSheetProps) => {
+export const SwipeableSheet = ({ isVisible, onClose, children, isDark: isDarkProp }: SwipeableSheetProps) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const insets = useSafeAreaInsets();
   const translateY = useSharedValue(SCREEN_HEIGHT);
   const backdropOpacity = useSharedValue(0);

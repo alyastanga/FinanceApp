@@ -34,5 +34,23 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 11,
+      steps: [
+        addColumns({
+          table: 'incomes',
+          columns: [
+            { name: 'category', type: 'string' },
+            { name: 'description', type: 'string', isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: 'expenses',
+          columns: [
+            { name: 'description', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });

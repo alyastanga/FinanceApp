@@ -6,6 +6,7 @@ export default class Expense extends Model {
 
   @field('amount') amount!: number;
   @field('category') category!: string;
+  @field('description') description?: string;
   @field('user_id') userId!: string;
   @field('currency') _currency?: string;
 

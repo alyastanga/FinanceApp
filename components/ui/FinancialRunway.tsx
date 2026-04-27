@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Canvas, Path, Skia, LinearGradient, vec, RoundedRect, Rect, Shadow } from '@shopify/react-native-skia';
 import { useCurrency } from '@/context/CurrencyContext';
+import { useTheme } from '@/context/ThemeContext';
 
 interface FinancialRunwayProps {
   runwayDays: number;
@@ -14,8 +15,10 @@ export const FinancialRunway: React.FC<FinancialRunwayProps> = ({
   runwayDays, 
   totalLiquidCash, 
   dailyBurnRate,
-  isDark = true 
+  isDark: isDarkProp 
 }) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   
   // Benchmark: 180 days (6 months) is the safety target

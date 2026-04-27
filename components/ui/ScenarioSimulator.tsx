@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { IconSymbol } from './icon-symbol';
 import { simulatePurchaseImpact, SimulationResult } from '@/lib/simulation-engine';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface ScenarioSimulatorProps {
   incomes: any[];
@@ -11,7 +12,9 @@ interface ScenarioSimulatorProps {
   isDark?: boolean;
 }
 
-export default function ScenarioSimulator({ incomes, expenses, goals, isDark = true }: ScenarioSimulatorProps) {
+export default function ScenarioSimulator({ incomes, expenses, goals, isDark: isDarkProp }: ScenarioSimulatorProps) {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { currency, symbolFor, convertFrom } = useCurrency();
   const [amount, setAmount] = useState('');
   const [results, setResults] = useState<SimulationResult[]>([]);

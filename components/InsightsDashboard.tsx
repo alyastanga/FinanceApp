@@ -476,32 +476,31 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
         </View>
       </ScrollView>
 
-      {/* Trend Detail Modal */}
       <Modal
         visible={showTrendDetail}
         animationType="slide"
         transparent={true}
         onRequestClose={() => setShowTrendDetail(false)}
       >
-        <View className="flex-1 bg-[#050505]">
+        <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
           <SafeAreaView className="flex-1">
             <View className="px-6 pt-10 pb-6 flex-row justify-between items-center">
               <View>
-                <Text className="text-3xl font-black text-white tracking-tighter">Performance Analysis</Text>
-                <Text className="text-xs font-black uppercase tracking-[3px] text-white/40 mt-1">Full-Scale Context</Text>
+                <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Performance Analysis</Text>
+                <Text className={`text-xs font-black uppercase tracking-[3px] mt-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Full-Scale Context</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setShowTrendDetail(false)}
-                className="h-10 w-10 rounded-full bg-white/5 items-center justify-center border border-white/5"
+                className={`h-10 w-10 rounded-full items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
               >
-                <IconSymbol name="xmark" size={18} color="#fff" />
+                <IconSymbol name="xmark" size={18} color={isDark ? "#fff" : "#000"} />
               </TouchableOpacity>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
               <View className="px-6 py-10">
-                <BlurView intensity={30} tint="dark" className="rounded-[48px] border border-white/10 p-8 overflow-hidden bg-white/[0.02]">
-                  <TrendChart incomes={incomes} expenses={expenses} height={350} isDark={true} />
+                <BlurView intensity={30} tint={isDark ? "dark" : "light"} className={`rounded-[48px] border p-8 overflow-hidden ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.02]'}`}>
+                  <TrendChart incomes={incomes} expenses={expenses} height={350} isDark={isDark} />
                 </BlurView>
 
                 {/* Detailed Analysis Card */}
@@ -510,23 +509,23 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                       <IconSymbol name="chart.bar.xaxis" size={16} color="#10b981" />
                       <Text className="text-[10px] font-black uppercase text-primary tracking-widest">Monthly Breakdown</Text>
                    </View>
-                   <Text className="text-white/60 text-xs leading-5">
+                   <Text className={`text-xs leading-5 ${isDark ? 'text-white/60' : 'text-black/60'}`}>
                       This expanded view allows you to see the critical intersection of your income and expenses over the last 12 months. 
                       Notice the peak variances—these represent your highest opportunities for savings or investment reallocation.
                    </Text>
                 </View>
 
-                <View className="mt-6 p-8 rounded-[40px] bg-[#111] border border-white/5">
-                   <Text className="text-white/40 text-[10px] font-black uppercase tracking-[2px] mb-4">Historical Extremes</Text>
+                <View className={`mt-6 p-8 rounded-[40px] border ${isDark ? 'bg-[#111] border-white/5' : 'bg-white border-black/5'}`}>
+                   <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Historical Extremes</Text>
                    <View className="flex-row justify-between">
                       <View>
-                        <Text className="text-[9px] font-black text-white/30 uppercase tracking-[1px] mb-1">Max Monthly Income</Text>
+                        <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Income</Text>
                         <Text className="text-primary font-black text-xl tracking-tight">
                            +{format(Math.max(...trendData.map(d => d.income)))}
                         </Text>
                       </View>
                       <View className="items-end">
-                        <Text className="text-[9px] font-black text-white/30 uppercase tracking-[1px] mb-1">Max Monthly Expense</Text>
+                        <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Expense</Text>
                         <Text className="text-destructive font-black text-xl tracking-tight">
                            -{format(Math.max(...trendData.map(d => d.expense)))}
                         </Text>

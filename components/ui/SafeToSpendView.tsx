@@ -14,6 +14,7 @@ import {
 } from 'react-native-reanimated';
 import { useCurrency } from '../../context/CurrencyContext';
 import { IconSymbol } from './icon-symbol';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SafeToSpendViewProps {
   amount: number;
@@ -21,7 +22,9 @@ interface SafeToSpendViewProps {
   isDark?: boolean;
 }
 
-export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark = true }: SafeToSpendViewProps) {
+export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: isDarkProp }: SafeToSpendViewProps) {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const width = Dimensions.get('window').width - 64;
   const size = width * 0.85;

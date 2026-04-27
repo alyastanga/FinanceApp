@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { BlurView } from 'expo-blur';
 import { releaseLocalModel, initLocalModel } from '@/lib/llama-service';
+import { useTheme } from '@/context/ThemeContext';
 
 const MODEL_URL = 'https://huggingface.co/unsloth/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf?download=true';
 const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
@@ -12,6 +13,7 @@ const MODEL_SIZE_MB = 952;
 
 export default function ModelSettings() {
   const router = useRouter();
+  const { isDark } = useTheme();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [hasModel, setHasModel] = useState(false);
@@ -110,34 +112,34 @@ export default function ModelSettings() {
   };
 
   return (
-    <View className="flex-1 bg-[#050505] p-6">
+    <View className={`flex-1 p-6 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       <View className="flex-row items-center gap-x-4 mb-10 pt-12">
-        <TouchableOpacity onPress={() => router.back()} className="h-10 w-10 bg-white/5 rounded-full items-center justify-center">
-          <IconSymbol name="chevron.left" size={20} color="white" />
+        <TouchableOpacity onPress={() => router.back()} className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+          <IconSymbol name="chevron.left" size={20} color={isDark ? "white" : "black"} />
         </TouchableOpacity>
         <View>
-          <Text className="text-2xl font-black text-white">AI Engine</Text>
-          <Text className="text-white/40 text-xs uppercase tracking-widest">Model Management</Text>
+          <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'}`}>AI Engine</Text>
+          <Text className={`text-xs uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>Model Management</Text>
         </View>
       </View>
 
       <ScrollView className="flex-1">
-        <BlurView intensity={20} className="bg-white/[0.03] border border-white/5 rounded-[40px] p-8 mb-10 overflow-hidden">
+        <BlurView intensity={isDark ? 20 : 80} tint={isDark ? "dark" : "light"} className={`border rounded-[40px] p-8 mb-10 overflow-hidden ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
           <View className="items-center mb-8">
             <View className="h-16 w-16 bg-primary/20 rounded-3xl items-center justify-center mb-6">
               <IconSymbol name="cpu.fill" size={32} color="#10b981" />
             </View>
-            <Text className="text-white font-black text-xl text-center">DeepSeek R1 Distill 1.5B</Text>
-            <Text className="text-white/40 text-xs text-center mt-2 px-6">
+            <Text className={`font-black text-xl text-center ${isDark ? 'text-white' : 'text-black'}`}>DeepSeek R1 Distill 1.5B</Text>
+            <Text className={`text-xs text-center mt-2 px-6 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               Advanced reasoning optimized for mobile. Runs 100% offline.
             </Text>
           </View>
 
           <View className="gap-y-4">
-             <View className="flex-row justify-between items-center py-4 border-b border-white/5">
-                <Text className="text-white/60 font-bold text-xs uppercase tracking-widest">Status</Text>
+             <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+                <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Status</Text>
                 {checking ? (
-                  <ActivityIndicator size="small" color="white" />
+                  <ActivityIndicator size="small" color={isDark ? "white" : "black"} />
                 ) : (
                   <View className="flex-row items-center gap-x-2">
                     <View className={`h-2 w-2 rounded-full ${hasModel ? 'bg-primary' : 'bg-destructive'}`} />
@@ -148,21 +150,21 @@ export default function ModelSettings() {
                 )}
              </View>
 
-             <View className="flex-row justify-between items-center py-4 border-b border-white/5">
-                <Text className="text-white/60 font-bold text-xs uppercase tracking-widest">File Size</Text>
-                <Text className="text-white font-black text-xs uppercase tracking-widest">{MODEL_SIZE_MB}MB</Text>
+             <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+                <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>File Size</Text>
+                <Text className={`font-black text-xs uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>{MODEL_SIZE_MB}MB</Text>
              </View>
           </View>
 
           {isDownloading && (
             <View className="mt-8">
-               <View className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+               <View className={`h-2 w-full rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
                   <View 
                     style={{ width: `${downloadProgress * 100}%` }}
                     className="h-full bg-primary" 
                   />
                </View>
-               <Text className="text-white/40 text-[10px] uppercase font-black tracking-widest mt-3 text-center">
+               <Text className={`text-[10px] uppercase font-black tracking-widest mt-3 text-center ${isDark ? 'text-white/40' : 'text-black/40'}`}>
                  Downloading Support Engine... {(downloadProgress * 100).toFixed(0)}%
                </Text>
             </View>
@@ -173,14 +175,14 @@ export default function ModelSettings() {
               onPress={handleDownload}
               className="mt-10 bg-primary p-5 rounded-2xl items-center shadow-lg shadow-primary/20"
             >
-              <Text className="text-white font-black uppercase tracking-widest text-xs">Download Model</Text>
+              <Text className={`font-black uppercase tracking-widest text-xs ${isDark ? 'text-white' : 'text-black'}`}>Download Model</Text>
             </TouchableOpacity>
           )}
 
           {hasModel && (
             <View className="mt-10 gap-y-3">
-              <View className="bg-white/5 p-5 rounded-2xl border border-white/5 items-center">
-                 <Text className="text-white text-xs font-bold text-center italic opacity-60">
+              <View className={`p-5 rounded-2xl border items-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                 <Text className={`text-xs font-bold text-center italic opacity-60 ${isDark ? 'text-white' : 'text-black'}`}>
                    Active Model: Ready for total privacy
                  </Text>
               </View>
@@ -196,14 +198,14 @@ export default function ModelSettings() {
 
         <View className="px-4 gap-y-4">
           <View className="flex-row gap-x-3 items-center opacity-60">
-            <IconSymbol name="lock.fill" size={14} color="#999" />
-            <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest flex-1">
+            <IconSymbol name="lock.fill" size={14} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+            <Text className={`text-[10px] font-bold uppercase tracking-widest flex-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               Data remains in your secure enclave. No telemetry or server calls.
             </Text>
           </View>
           <View className="flex-row gap-x-3 items-center opacity-60">
-            <IconSymbol name="battery.100" size={14} color="#999" />
-            <Text className="text-white/40 text-[10px] font-bold uppercase tracking-widest flex-1">
+            <IconSymbol name="battery.100" size={14} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+            <Text className={`text-[10px] font-bold uppercase tracking-widest flex-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               Local AI uses more battery but ensures total financial privacy.
             </Text>
           </View>

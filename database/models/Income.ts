@@ -5,7 +5,8 @@ export default class Income extends Model {
   static table = 'incomes';
 
   @field('amount') amount!: number;
-  @field('source') source!: string;
+  @field('category') category!: string;
+  @field('description') description?: string;
   @field('user_id') userId!: string;
   @field('currency') _currency?: string;
 

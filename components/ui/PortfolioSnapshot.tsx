@@ -3,6 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from './icon-symbol';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface PortfolioItem {
   id: string;
@@ -18,7 +19,9 @@ interface PortfolioSnapshotProps {
   isDark?: boolean;
 }
 
-export default function PortfolioSnapshot({ portfolio, isDark = true }: PortfolioSnapshotProps) {
+export default function PortfolioSnapshot({ portfolio, isDark: isDarkProp }: PortfolioSnapshotProps) {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { formatRaw, convertFrom, currency, symbolFor } = useCurrency();
   const totalValue = portfolio.reduce((sum, item) => sum + convertFrom(item.value || 0, item.currency || currency), 0);
   

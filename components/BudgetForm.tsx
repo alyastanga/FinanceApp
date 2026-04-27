@@ -5,6 +5,8 @@ import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
 import { generateUUID } from '../lib/id-utils';
 
+import { useTheme } from '../context/ThemeContext';
+
 const CATEGORY_PRESETS = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Savings', 'Misc'];
 
 interface BudgetFormProps {
@@ -15,6 +17,7 @@ interface BudgetFormProps {
 
 export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) => {
   const { currency, symbolFor } = useCurrency();
+  const { isDark } = useTheme();
   const currentSymbol = symbolFor(currency);
   const [category, setCategory] = useState('');
   const [amountLimit, setAmountLimit] = useState('');
@@ -72,11 +75,11 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
           onPress={(e) => e.stopPropagation()} 
           className="w-full"
         >
-          <BlurView intensity={30} className="rounded-t-[40px] overflow-hidden border-t border-white/10">
-            <View className="bg-card/90 p-8 pt-4 pb-12">
-              <View className="w-12 h-1.5 bg-white/10 rounded-full self-center mb-8" />
+          <BlurView intensity={isDark ? 30 : 80} tint={isDark ? "dark" : "light"} className={`rounded-t-[40px] overflow-hidden border-t ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+            <View className={`p-8 pt-4 pb-12 ${isDark ? 'bg-[#0A0A0A]/90' : 'bg-[#FAFAFA]/90'}`}>
+              <View className={`w-12 h-1.5 rounded-full self-center mb-8 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
               
-              <Text className="text-white font-black text-xl mb-2">
+              <Text className={`font-black text-xl mb-2 ${isDark ? 'text-white' : 'text-black'}`}>
                 {editBudget ? 'Edit Budget' : 'Create Budget'}
               </Text>
               <Text className="text-muted-foreground text-[10px] font-black uppercase tracking-widest mb-8">
@@ -95,12 +98,12 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
                     className={`px-4 py-2 rounded-2xl border ${
                       category === preset
                         ? 'bg-primary border-primary'
-                        : 'bg-white/5 border-white/5'
+                        : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')
                     }`}
                   >
                     <Text
                       className={`text-[10px] font-black uppercase tracking-widest ${
-                        category === preset ? 'text-[#050505]' : 'text-white/60'
+                        category === preset ? (isDark ? 'text-[#050505]' : 'text-white') : (isDark ? 'text-white/60' : 'text-black/60')
                       }`}
                     >
                       {preset}
@@ -114,8 +117,8 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
                 value={category}
                 onChangeText={setCategory}
                 placeholder="Or type a custom category..."
-                placeholderTextColor="rgba(255,255,255,0.2)"
-                className="text-white text-base font-bold bg-white/5 rounded-2xl px-5 py-4 mb-6 border border-white/5"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+                className={`text-base font-bold rounded-2xl px-5 py-4 mb-6 border ${isDark ? 'text-white bg-white/5 border-white/5' : 'text-black bg-black/5 border-black/5'}`}
               />
 
               {/* Amount Limit Input */}
@@ -126,18 +129,18 @@ export const BudgetForm = ({ visible, onClose, editBudget }: BudgetFormProps) =>
                 value={amountLimit}
                 onChangeText={setAmountLimit}
                 placeholder={`${currentSymbol}0`}
-                placeholderTextColor="rgba(255,255,255,0.2)"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
                 keyboardType="numeric"
-                className="text-white text-3xl font-black bg-white/5 rounded-2xl px-5 py-4 mb-8 border border-white/5"
+                className={`text-3xl font-black rounded-2xl px-5 py-4 mb-8 border ${isDark ? 'text-white bg-white/5 border-white/5' : 'text-black bg-black/5 border-black/5'}`}
               />
 
               {/* Actions */}
               <View className="flex-row gap-x-3">
                 <TouchableOpacity
                   onPress={onClose}
-                  className="flex-1 bg-white/5 py-4 rounded-2xl items-center border border-white/5"
+                  className={`flex-1 py-4 rounded-2xl items-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
                 >
-                  <Text className="text-white/60 font-black text-xs uppercase tracking-widest">Cancel</Text>
+                  <Text className={`font-black text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleSubmit}

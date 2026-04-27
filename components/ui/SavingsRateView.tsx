@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
 import { Canvas, Path, LinearGradient, vec, Skia } from '@shopify/react-native-skia';
+import { useTheme } from '../../context/ThemeContext';
 
 interface SavingsRateViewProps {
   incomes: any[];
@@ -12,7 +13,9 @@ interface SavingsRateViewProps {
  * SavingsRateView component featuring a dual-mode visualization.
  * Now handles internal calculation of the savings rate from raw records.
  */
-export const SavingsRateView = ({ incomes, expenses, isDark = true }: SavingsRateViewProps) => {
+export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: SavingsRateViewProps) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const [viewMode, setViewMode] = useState<'month' | 'trend'>('month');
   const size = Dimensions.get('window').width - 80;
   const chartHeight = 120;

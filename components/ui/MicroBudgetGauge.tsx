@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { View, Text } from 'react-native';
 import { Canvas, Path, Skia, Shadow } from '@shopify/react-native-skia';
 import { useSharedValue, useDerivedValue, withTiming, Easing } from 'react-native-reanimated';
+import { useTheme } from '../../context/ThemeContext';
 
 interface MicroBudgetGaugeProps {
   progress: number; // 0 to 1
@@ -9,7 +10,9 @@ interface MicroBudgetGaugeProps {
   isDark?: boolean;
 }
 
-export const MicroBudgetGauge = ({ progress, size = 110, isDark = true }: MicroBudgetGaugeProps) => {
+export const MicroBudgetGauge = ({ progress, size = 110, isDark: isDarkProp }: MicroBudgetGaugeProps) => {
+  const { isDark: themeIsDark } = useTheme();
+  const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const strokeWidth = 12;
   const radius = (size - strokeWidth) / 2;
   const canvasPadding = 16;
