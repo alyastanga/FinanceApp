@@ -17,7 +17,7 @@
  */
 
 import { entropyToMnemonic, mnemonicToEntropy, validateMnemonic } from '@scure/bip39';
-import { wordlist } from '@scure/bip39/wordlists/english';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
 import * as ExpoCrypto from 'expo-crypto';
 import { sha256 } from './crypto-service';
 
