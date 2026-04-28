@@ -128,7 +128,7 @@ function stripRepetitionLoops(text: string): string {
  */
 function sanitizeResponse(text: string, isFinancial: boolean): string {
   const MAX_CHARS = isFinancial ? 1000 : 250;
-  
+
   let cleaned = text
     .replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '')
     .replace(/<(thought|think)>[\s\S]*/gi, '')
@@ -177,21 +177,21 @@ export async function generateLocalResponse(
         const context = await getFinancialContext();
         systemContent = `You are a brief financial assistant. Use ONLY the data below.
 
-<DATA>
-${context}
-</DATA>
+          <DATA>
+          ${context}
+          </DATA>
 
-RULES:
-1. Answer in 1-2 sentences using exact numbers from <DATA>.
-2. If data is missing, say "I don't have that data in your local records."
-3. No jargon. No reasoning tags in final answer. Just the answer.
+          RULES:
+          1. Answer in 1-2 sentences using exact numbers from <DATA>.
+          2. If data is missing, say "I don't have that data in your local records."
+          3. No jargon. No reasoning tags in final answer. Just the answer.
 
-CHART RULES:
-If asked for a chart, end with: [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]`;
+          CHART RULES:
+          If asked for a chart, end with: [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]`;
       } else {
         systemContent = `You are a one-sentence personal assistant. 
-For greetings, say: "Hello! What would you like to know about your finances?"
-Otherwise, ask the user to inquire about their spending or goals.`;
+          For greetings, say: "Hello! What would you like to know about your finances?"
+          Otherwise, ask the user to inquire about their spending or goals.`;
       }
 
       const fullPrompt = [
@@ -199,18 +199,37 @@ Otherwise, ask the user to inquire about their spending or goals.`;
         ...messages,
       ];
 
+      let streamingOutput = '';
+      const encounteredSentences = new Set<string>();
+
       const result = await modelState.context.completion({
         messages: fullPrompt,
-        n_predict: 1024,      // Increased to handle reasoning tokens
-        temperature: 0.6,     // Optimized for DeepSeek reasoning
+        n_predict: 1024,
+        temperature: 0.6,
         top_p: 0.95,
-        top_k: 40,            // Focus selection pool
-        repeat_penalty: 1.15, // Discourage loops
-        repeat_last_n: 128,   // Penalty window
+        top_k: 40,
+        repeat_penalty: 1.15,
+        repeat_last_n: 128,
         stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>', '<|endoftext|>', '<|im_start|>', '\n\n\n'],
       }, (event: any) => {
         if (onToken && event.token) {
           onToken(event.token);
+          streamingOutput += event.token;
+
+          // Real-time loop protection:
+          // If we detect the same sentence twice during streaming, abort immediately.
+          if (event.token.match(/[.!?\n]/)) {
+            const parts = streamingOutput.split(/(?<=[.!?\n])\s+/);
+            const lastFinished = parts[parts.length - 2]?.trim().toLowerCase();
+            
+            if (lastFinished && lastFinished.length > 20) {
+              if (encounteredSentences.has(lastFinished)) {
+                console.warn('[Local LLM] Real-time loop detected. Aborting native inference.');
+                modelState.context?.stop();
+              }
+              encounteredSentences.add(lastFinished);
+            }
+          }
         }
       });
 
