@@ -245,17 +245,14 @@ const ChatBubble = ({ item }: { item: Message }) => {
         </View>
       ) : (
         <View className={`p-4 rounded-[32px] border rounded-tl-none shadow-xl ${isDark ? 'bg-[#121212] border-white/5' : 'bg-white border-black/5'}`}>
-          {thoughtProcess && (
+          {thoughtProcess && !item.text.includes('</think>') && (
             <View className={`mb-4 p-3 rounded-2xl border-l-2 ${isDark ? 'bg-white/5 border-primary/40' : 'bg-black/5 border-primary/60'}`}>
-              <View className="flex-row items-center mb-1.5">
-                <IconSymbol name="lightbulb.fill" size={10} color="#10b981" />
-                <Text className={`text-[9px] font-black uppercase tracking-widest ml-2 ${isDark ? 'text-primary/60' : 'text-primary/80'}`}>
-                  Thought Process
+              <View className="flex-row items-center">
+                <IconSymbol name="sparkles" size={12} color="#10b981" />
+                <Text className={`text-[10px] font-black uppercase tracking-widest ml-2 ${isDark ? 'text-primary/60' : 'text-primary/80'}`}>
+                  Intelligence in progress...
                 </Text>
               </View>
-              <Text className={`text-[12px] leading-5 italic font-medium ${isDark ? 'text-white/40' : 'text-black/60'}`}>
-                {thoughtProcess}
-              </Text>
             </View>
           )}
 

@@ -9,6 +9,17 @@
  *   the user's real data — no network required.
  *
  * Requirements addressed: FND-05 (local LLM runtime), CHAT-04 (offline AI).
+ *
+ * OPTIMIZATIONS (v2):
+ * - Raised repeat_penalty 1.1 → 1.4 to prevent repetition loops
+ * - Added repeat_last_n: 128 to widen the penalty window
+ * - Added top_k: 40 to constrain token sampling pool
+ * - Lowered temperature 0.5 → 0.3 for more deterministic output
+ * - Split n_predict by query type (financial: 200, greeting: 60)
+ * - Added stripRepetitionLoops() post-processor
+ * - Added hard character cap per response type
+ * - Tightened non-financial system prompt with few-shot examples
+ * - Added '\n\n\n' as stop sequence to catch runaway formatting
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -101,6 +112,97 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
   }
 }
 
+// ─── Post-Processing Utilities ───────────────────────────────────────────────
+
+/**
+ * Detects and removes repetition loops in model output.
+ * Small quantized models (0.5B) frequently get stuck repeating the same
+ * sentence. This strips duplicates and halts at the first repeated phrase.
+ */
+function stripRepetitionLoops(text: string): string {
+  // Split on sentence-ending punctuation
+  const sentences = text.split(/(?<=[.!?])\s+/);
+  const seen = new Set<string>();
+  const deduped: string[] = [];
+
+  for (let i = 0; i < sentences.length; i++) {
+    const normalized = sentences[i].trim().toLowerCase();
+    if (!normalized) continue;
+
+    if (seen.has(normalized)) {
+      // We've hit a repeated sentence — the model is looping. Stop here.
+      console.warn('[Local LLM] Repetition loop detected at sentence:', i);
+      break;
+    }
+
+    seen.add(normalized);
+    deduped.push(sentences[i].trim());
+  }
+
+  return deduped.join(' ').trim();
+}
+
+/**
+ * Detects repeated n-gram phrases (e.g. repeated clause fragments)
+ * as a secondary pass after sentence dedup.
+ */
+function stripRepeatedPhrases(text: string, ngram: number = 6): string {
+  const words = text.split(/\s+/);
+  if (words.length < ngram * 2) return text;
+
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const chunk = words.slice(i, i + ngram).join(' ').toLowerCase();
+    if (seen.has(chunk)) {
+      // Cut output here — repeated phrase window found
+      console.warn('[Local LLM] Repeated phrase window at word index:', i);
+      break;
+    }
+    seen.add(chunk);
+    result.push(words[i]);
+  }
+
+  return result.join(' ').trim();
+}
+
+/**
+ * Applies a hard character cap and all post-processing passes.
+ */
+function sanitizeResponse(text: string, isFinancial: boolean): string {
+  const MAX_CHARS = isFinancial ? 800 : 120;
+
+  let cleaned = text
+    // Strip DeepSeek-R1 reasoning tags
+    .replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '')
+    // Strip unclosed reasoning tags (streaming artifact)
+    .replace(/<(thought|think)>[\s\S]*/gi, '')
+    .trim();
+
+  // Pass 1: sentence-level dedup
+  cleaned = stripRepetitionLoops(cleaned);
+
+  // Pass 2: n-gram phrase dedup
+  cleaned = stripRepeatedPhrases(cleaned);
+
+  // Pass 3: hard character cap — 0.5B can't self-regulate length
+  if (cleaned.length > MAX_CHARS) {
+    // Truncate at a sentence boundary if possible
+    const truncated = cleaned.substring(0, MAX_CHARS);
+    const lastPeriod = Math.max(
+      truncated.lastIndexOf('.'),
+      truncated.lastIndexOf('!'),
+      truncated.lastIndexOf('?')
+    );
+    cleaned = lastPeriod > MAX_CHARS * 0.6
+      ? truncated.substring(0, lastPeriod + 1)
+      : truncated.trimEnd() + '…';
+  }
+
+  return cleaned;
+}
+
 // ─── Local Response Generation ──────────────────────────────────────────────
 
 /**
@@ -128,89 +230,122 @@ export async function generateLocalResponse(
 
       const userQuery = messages[messages.length - 1]?.content.toLowerCase() || '';
       const financialKeywords = [
-        'spend', 'budget', 'money', 'goal', 'income', 'expense', 'chart', 'graph', 
+        'spend', 'budget', 'money', 'goal', 'income', 'expense', 'chart', 'graph',
         'analysis', 'save', 'portfolio', 'asset', 'how much', 'what is', 'summary',
-        'report', 'transaction', 'balance', 'wealth', 'debt', 'loan'
+        'report', 'transaction', 'balance', 'wealth', 'debt', 'loan',
       ];
-      
+
       const isFinancial = financialKeywords.some(kw => userQuery.includes(kw));
-      
+
       let systemContent = '';
+
       if (isFinancial) {
+        // ── Financial system prompt ──────────────────────────────────────
+        // Deliberately short and directive — 0.5B models obey constraints
+        // better when the prompt is concise and example-driven.
         const context = await getFinancialContext();
-        systemContent = `You are a simple, friendly financial assistant. You have the user's REAL financial data below. 
+        systemContent = `You are a brief financial assistant. Use ONLY the data below.
 
 <DATA>
 ${context}
 </DATA>
 
-RULES:
-1. Answer in 1-2 VERY short sentences using the numbers from <DATA>.
-2. If the data doesn't contain the answer, say "I don't have that data in your local records yet."
-3. NEVER use financial jargon. Keep it simple.
-4. DO NOT show your reasoning or thinking process. Just the final answer.
-
-CHART RULES:
-When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
-[CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]
-- Do NOT include color hex codes.
-- Ensure labels are descriptive and values match the context data.
-Place the block AFTER your text.`;
+STRICT RULES:
+1. Answer in 1-2 sentences. Use exact numbers from <DATA>.
+2. If the answer is not in <DATA>, say: "I don't have that data yet."
+3. No jargon. No reasoning. No preamble. Just the answer.
+4. For chart/graph requests, append ONLY this after your answer:
+   [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]`;
       } else {
-        systemContent = `You are a simple, friendly personal assistant. 
+        // ── Non-financial system prompt ──────────────────────────────────
+        // Extremely prescriptive to prevent the model from hallucinating
+        // financial data or entering a repetition loop on simple greetings.
+        systemContent = `You are a one-sentence assistant. Follow these examples exactly.
 
-RULES:
-1. Be extremely brief (1 sentence).
-2. For greetings, just say "Hello! How can I help you today?"
-3. If they ask about money or their data, tell them to ask a specific question like "How much did I spend this month?"
-4. DO NOT show your reasoning or thinking process.`;
+User: hey → You: Hello! What would you like to know about your finances?
+User: hello → You: Hi there! Ask me about your spending, goals, or budget.
+User: how are you → You: Ready to help! Ask me about your finances.
+User: [anything else] → You: Ask me something like "How much did I spend this month?"
+
+OUTPUT: Exactly one sentence. No lists. No follow-up questions. Stop after the period.`;
       }
 
       const fullPrompt = [
-        {
-          role: 'system',
-          content: systemContent
-        },
+        { role: 'system', content: systemContent },
         ...messages,
       ];
 
-      // Debug: Log prompt approximate size
+      // Guard against context overflow
       const approxTokens = JSON.stringify(fullPrompt).length / 4;
-      console.log(`[Local LLM] Starting inference. Approx prompt tokens: ${approxTokens.toFixed(0)} / 4096 (Financial: ${isFinancial})`);
+      console.log(
+        `[Local LLM] Starting inference. ~${approxTokens.toFixed(0)} tokens (Financial: ${isFinancial})`
+      );
 
-      if (approxTokens > 3800) {
-        console.warn('[Local LLM] Prompt dangerously close to context limit. Truncating context...');
-        fullPrompt[0].content = fullPrompt[0].content.substring(0, 10000);
+      if (approxTokens > 3500) {
+        console.warn('[Local LLM] Prompt near context limit — truncating financial data...');
+        // Trim the system content data block, not the rules
+        fullPrompt[0].content = fullPrompt[0].content.substring(0, 8000);
       }
 
-      const result = await modelState.context.completion({
-        messages: fullPrompt,
-        n_predict: 256, // Reduced for faster, simpler responses
-        temperature: 0.5,
-        top_p: 0.9,
-        repeat_penalty: 1.1,
-        stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>', '<|endoftext|>', '<|im_start|>'],
-      }, (event: any) => {
-        if (onToken && event.token) {
-          onToken(event.token);
+      const result = await modelState.context.completion(
+        {
+          messages: fullPrompt,
+
+          // ── OPTIMIZED SAMPLING PARAMETERS ────────────────────────────
+          // n_predict: fewer tokens for greetings — stops loop before it starts
+          n_predict: isFinancial ? 200 : 60,
+
+          // temperature: lower = more deterministic, less likely to drift into loops
+          temperature: 0.3,
+
+          // top_p: nucleus sampling threshold
+          top_p: 0.85,
+
+          // top_k: constrain token selection pool — critical for small models
+          top_k: 40,
+
+          // repeat_penalty: was 1.1 (too weak). 1.4 aggressively discourages repeats
+          repeat_penalty: 1.4,
+
+          // repeat_last_n: number of past tokens considered for penalty
+          // Higher = wider penalty window = fewer loops
+          repeat_last_n: 128,
+
+          stop: [
+            '</s>',
+            '<|end|>',
+            '<|eot_id|>',
+            '<|im_end|>',
+            '<|endoftext|>',
+            '<|im_start|>',
+            '\n\n\n',     // Stop on triple newlines — signals runaway formatting
+            '[INST]',     // Mistral/LLaMA chat boundary
+            '###',        // Alpaca-style boundary
+          ],
+        },
+        (event: any) => {
+          if (onToken && event.token) {
+            onToken(event.token);
+          }
         }
-      });
+      );
 
-      let finalResponse = result.text || 'I could not generate a response.';
+      const rawResponse = result.text || 'I could not generate a response.';
 
-      // Strip reasoning tags that some models (like DeepSeek-R1) output
-      finalResponse = finalResponse.replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '').trim();
-      // Handle unclosed tags during streaming (if applicable to final response)
-      finalResponse = finalResponse.replace(/<(thought|think)>[\s\S]*/gi, '').trim();
+      // Apply all sanitization passes
+      const finalResponse = sanitizeResponse(rawResponse, isFinancial);
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return finalResponse;
+
     } catch (error: any) {
       const errorDetail = error instanceof Error ? error.message : JSON.stringify(error);
       console.error('[Local LLM] Native inference failed. Detail:', errorDetail);
+
       if (errorDetail.includes('context')) {
-        console.warn('[Local LLM] Possible context overflow. Try simplifying the query.');
+        console.warn('[Local LLM] Possible context overflow. Simplify the query.');
       }
+
       console.warn('[Local LLM] Falling back to rule-based engine.');
       // Fall through to fallback
     }
@@ -232,6 +367,12 @@ async function generateFallbackResponse(
 ): Promise<string> {
   const lastUserMessage = [...messages].reverse().find(m => m.role === 'user');
   const query = (lastUserMessage?.content || '').toLowerCase();
+
+  // Handle pure conversational inputs without touching the database
+  const greetings = ['hey', 'hello', 'hi', 'sup', 'yo', 'what\'s up', 'howdy'];
+  if (greetings.some(g => query.trim() === g || query.trim().startsWith(g + ' '))) {
+    return 'Hello! Ask me about your spending, goals, or budget.';
+  }
 
   try {
     const baseCurrency = (await AsyncStorage.getItem('user_currency')) || 'PHP';
@@ -265,7 +406,8 @@ async function generateFallbackResponse(
     const peakMonth = [...Object.entries(monthlyExpenses)].sort(([, a], [, b]) => b - a)[0];
 
     // Current category breakdown
-    const currentMonthKey = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const currentCategories = monthlyCategorical[currentMonthKey] || {};
     const topCategories = Object.entries(currentCategories)
       .sort(([, a], [, b]) => b - a)
@@ -282,29 +424,24 @@ async function generateFallbackResponse(
     // ── Intent Detection & Response ──
 
     if (query.includes('most') || query.includes('highest') || query.includes('peak')) {
-      if (!peakMonth) return "[Offline Mode] No expense data found to analyze peak spending.";
-
+      if (!peakMonth) return '[Offline Mode] No expense data found to analyze peak spending.';
       const [month, amt] = peakMonth;
       const cats = monthlyCategorical[month];
       const topCat = Object.entries(cats).sort(([, a], [, b]) => b - a)[0];
-
-      return `[Offline Mode] Your highest spending month was ${month} with a total of ${baseCurrency} ${amt.toLocaleString()}.\n\n` +
-        `The top category that month was ${topCat[0]} (${baseCurrency} ${topCat[1].toLocaleString()}).`;
+      return `[Offline Mode] Your highest spending month was ${month} with ${baseCurrency} ${amt.toLocaleString()}.\n` +
+        `Top category: ${topCat[0]} (${baseCurrency} ${topCat[1].toLocaleString()}).`;
     }
 
     if (query.includes('history') || query.includes('past') || query.includes('previous')) {
-      if (sortedMonths.length === 0) return "[Offline Mode] No historical data found.";
-
-      return `[Offline Mode] Your spending history for the last 6 months:\n\n` +
+      if (sortedMonths.length === 0) return '[Offline Mode] No historical data found.';
+      return `[Offline Mode] Spending history (last 6 months):\n\n` +
         sortedMonths.slice(0, 6).map(([m, a]) => `  - ${m}: ${baseCurrency} ${a.toLocaleString()}`).join('\n') +
-        `\n\nTotal Lifetime Spending: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
+        `\n\nLifetime total: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
     }
 
     if (query.includes('safe') || query.includes('spend') || query.includes('budget')) {
-      const now = new Date();
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const daysLeft = daysInMonth - now.getDate() || 1;
-      // Net flow of THIS month
+      const daysLeft = Math.max(1, daysInMonth - now.getDate());
       const currentMonthSpent = monthlyExpenses[currentMonthKey] || 0;
       const currentMonthIncome = incomes
         .filter(i => {
@@ -316,8 +453,8 @@ async function generateFallbackResponse(
       const currentNet = currentMonthIncome - currentMonthSpent;
       const safeToSpend = Math.max(0, currentNet / daysLeft).toFixed(2);
 
-      return `[Offline Mode] Current Monthly Snapshot (${currentMonthKey}):\n\n` +
-        `Safe-to-spend: ${baseCurrency} ${safeToSpend}/day for ${daysLeft} days.\n\n` +
+      return `[Offline Mode] ${currentMonthKey} snapshot:\n\n` +
+        `Safe to spend: ${baseCurrency} ${safeToSpend}/day (${daysLeft} days left)\n` +
         `Income: ${baseCurrency} ${currentMonthIncome.toLocaleString()}\n` +
         `Expenses: ${baseCurrency} ${currentMonthSpent.toLocaleString()}\n` +
         `Net: ${currentNet >= 0 ? '+' : ''}${baseCurrency} ${currentNet.toLocaleString()}`;
@@ -325,7 +462,7 @@ async function generateFallbackResponse(
 
     if (query.includes('goal') || query.includes('saving')) {
       if (goalSummaries.length === 0) return `[Offline Mode] No savings goals defined.`;
-      return `[Offline Mode] Your Savings Progress:\n\n` + goalSummaries.map(g => `  - ${g}`).join('\n');
+      return `[Offline Mode] Savings progress:\n\n` + goalSummaries.map(g => `  - ${g}`).join('\n');
     }
 
     if (query.includes('categor') || query.includes('where')) {
@@ -334,18 +471,18 @@ async function generateFallbackResponse(
         topCategories.map(([cat, amt], i) => `  ${i + 1}. ${cat}: ${baseCurrency} ${amt.toLocaleString()}`).join('\n');
     }
 
-    // Default summary
-    return `[Offline Mode] Financial Overview:\n\n` +
-      `Lifetime Income: ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
+    // Default overview
+    return `[Offline Mode] Financial overview:\n\n` +
+      `Lifetime Income:   ${baseCurrency} ${totalIncome.toLocaleString()}\n` +
       `Lifetime Expenses: ${baseCurrency} ${totalExpenses.toLocaleString()}\n` +
-      `Portfolio Value: ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n\n` +
-      `Tip: For complex queries like "create a graph", switch to Cloud Mode (Gemini).`;
+      `Portfolio Value:   ${baseCurrency} ${totalPortfolioValue.toLocaleString()}\n\n` +
+      `Tip: For charts or complex analysis, switch to Cloud Mode (Gemini).`;
+
   } catch (error: any) {
     console.error('[Local LLM] Fallback engine error:', error.message);
-    return `[Offline Mode] Error accessing historical data.`;
+    return `[Offline Mode] Error accessing local data. Please try again.`;
   }
 }
-
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 
