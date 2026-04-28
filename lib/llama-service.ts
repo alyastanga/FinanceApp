@@ -126,41 +126,60 @@ export async function generateLocalResponse(
     try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-      const context = await getFinancialContext();
+      const userQuery = messages[messages.length - 1]?.content.toLowerCase() || '';
+      const financialKeywords = [
+        'spend', 'budget', 'money', 'goal', 'income', 'expense', 'chart', 'graph', 
+        'analysis', 'save', 'portfolio', 'asset', 'how much', 'what is', 'summary',
+        'report', 'transaction', 'balance', 'wealth', 'debt', 'loan'
+      ];
+      
+      const isFinancial = financialKeywords.some(kw => userQuery.includes(kw));
+      
+      let systemContent = '';
+      if (isFinancial) {
+        const context = await getFinancialContext();
+        systemContent = `You are a simple, friendly financial assistant. You have the user's REAL financial data below. 
+
+<DATA>
+${context}
+</DATA>
+
+RULES:
+1. Answer in 1-2 VERY short sentences using the numbers from <DATA>.
+2. If the data doesn't contain the answer, say "I don't have that data in your local records yet."
+3. NEVER use financial jargon. Keep it simple.
+4. DO NOT show your reasoning or thinking process. Just the final answer.
+
+CHART RULES:
+When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
+[CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]
+- Do NOT include color hex codes.
+- Ensure labels are descriptive and values match the context data.
+Place the block AFTER your text.`;
+      } else {
+        systemContent = `You are a simple, friendly personal assistant. 
+
+RULES:
+1. Be extremely brief (1 sentence).
+2. For greetings, just say "Hello! How can I help you today?"
+3. If they ask about money or their data, tell them to ask a specific question like "How much did I spend this month?"
+4. DO NOT show your reasoning or thinking process.`;
+      }
 
       const fullPrompt = [
         {
           role: 'system',
-          content: `You are a simple, friendly assistant. Use the user's financial data ONLY if they ask a specific question about it.
-
-                <DATA>
-                ${context}
-                </DATA>
-
-                RULES:
-                1. For greetings (hey, hi, hello), JUST say "Hello! How can I help you today?" and STOP.
-                2. For financial questions, answer in 1-2 VERY short sentences using the numbers from <DATA>.
-                3. NEVER use financial jargon. Keep it simple enough for a child to understand.
-                4. DO NOT show your reasoning or thinking process. Just the answer.
-
-                CHART RULES:
-                When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
-                [CHART_DATA: { "data": [{ "label": "NAME", "value": NUMBER }] }]
-                - Do NOT include color hex codes.
-                - Ensure labels are descriptive and values match the context data.
-                Place the block AFTER your text. `
+          content: systemContent
         },
         ...messages,
       ];
 
       // Debug: Log prompt approximate size
       const approxTokens = JSON.stringify(fullPrompt).length / 4;
-      console.log(`[Local LLM] Starting inference.Approx prompt tokens: ${approxTokens.toFixed(0)
-        } / 4096`);
+      console.log(`[Local LLM] Starting inference. Approx prompt tokens: ${approxTokens.toFixed(0)} / 4096 (Financial: ${isFinancial})`);
 
       if (approxTokens > 3800) {
         console.warn('[Local LLM] Prompt dangerously close to context limit. Truncating context...');
-        // Simple truncation of the data block if too large
         fullPrompt[0].content = fullPrompt[0].content.substring(0, 10000);
       }
 
@@ -169,6 +188,7 @@ export async function generateLocalResponse(
         n_predict: 256, // Reduced for faster, simpler responses
         temperature: 0.5,
         top_p: 0.9,
+        repeat_penalty: 1.1,
         stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>', '<|endoftext|>', '<|im_start|>'],
       }, (event: any) => {
         if (onToken && event.token) {
