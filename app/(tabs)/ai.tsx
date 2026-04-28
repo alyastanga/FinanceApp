@@ -250,7 +250,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
               <View className="flex-row items-center">
                 <IconSymbol name="sparkles" size={12} color="#10b981" />
                 <Text className={`text-[10px] font-black uppercase tracking-widest ml-2 ${isDark ? 'text-primary/60' : 'text-primary/80'}`}>
-                  Intelligence in progress...
+                  Thinking...
                 </Text>
               </View>
             </View>
