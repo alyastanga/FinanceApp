@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import database from '../database';
 import { getFinancialContext } from './budget-engine';
 
-const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf';
+const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-0.5B-CoMa.Q4_K_M.gguf';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -51,6 +51,7 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
   if (!force && modelState.initialized && modelState.mode === 'native') return true;
 
   try {
+    console.log('[Local LLM] Attempting native initialization...');
     // Dynamically import llama.rn — this will throw in Expo Go or if no native module
     const { initLlama } = await import('llama.rn');
 
@@ -59,40 +60,42 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
 
     const info = await FileSystem.getInfoAsync(resolvedPath);
     if (!info.exists) {
-      console.log('[Local LLM] No native model found at path, using offline fallback engine.');
+      console.warn('[Local LLM] Model file NOT found at:', resolvedPath);
       modelState = { initialized: true, mode: 'fallback', context: null };
       return true;
     }
 
+    console.log('[Local LLM] Model file found. Size:', info.size);
+
     // Clean path for native llama.rn (handles file:// prefix issues on some RN versions)
-    const nativePath = resolvedPath.startsWith('file://') 
-      ? resolvedPath.replace('file://', '') 
+    const nativePath = resolvedPath.startsWith('file://')
+      ? resolvedPath.replace('file://', '')
       : resolvedPath;
 
-    console.log('[Local LLM] Initializing native context with model:', nativePath);
-    
+    console.log('[Local LLM] Calling initLlama with path:', nativePath);
+
     // Release existing context if we're forcing a reload
     if (modelState.context) {
       try {
         await modelState.context.release();
       } catch (e) {
-        console.warn('[Local LLM] Failed to release old context during re-init:', e);
+        console.warn('[Local LLM] Failed to release old context:', e);
       }
     }
 
     const context = await initLlama({
       model: nativePath,
-      n_ctx: 1024,        // Reduced context for low-RAM stability (iPhone 11)
-      n_threads: 4,      // Optimized for A13 performance cores
-      n_gpu_layers: 16,   // Moderated offload to leave head-room for OS
-      use_mlock: false,   // Disable memory locking for better swap handling on 4GB devices
+      n_ctx: 4096,
+      n_threads: 4,
+      n_gpu_layers: 0,
+      use_mlock: false,
     });
 
     modelState = { initialized: true, mode: 'native', context };
-    console.log('[Local LLM] Native model loaded successfully.');
+    console.log('[Local LLM] Native engine initialized successfully.');
     return true;
   } catch (error: any) {
-    console.log('[Local LLM] Native module unavailable or error, using fallback engine:', error.message);
+    console.error('[Local LLM] Native init failed:', error.message || error);
     modelState = { initialized: true, mode: 'fallback', context: null };
     return true;
   }
@@ -112,8 +115,11 @@ export async function generateLocalResponse(
 ): Promise<string> {
   // Ensure model is initialized
   if (!modelState.initialized) {
+    console.log('[Local LLM] Model not initialized, triggering init...');
     await initLocalModel();
   }
+
+  console.log('[Local LLM] Mode:', modelState.mode, 'Has Context:', !!modelState.context);
 
   // ── Native path: use llama.rn context ──
   if (modelState.mode === 'native' && modelState.context) {
@@ -122,39 +128,48 @@ export async function generateLocalResponse(
 
       const context = await getFinancialContext();
 
+      const fullPrompt = [
+        {
+          role: 'system',
+          content: `You are a simple, friendly assistant. Use the user's financial data ONLY if they ask a specific question about it.
+
+                <DATA>
+                ${context}
+                </DATA>
+
+                RULES:
+                1. For greetings (hey, hi, hello), JUST say "Hello! How can I help you today?" and STOP.
+                2. For financial questions, answer in 1-2 VERY short sentences using the numbers from <DATA>.
+                3. NEVER use financial jargon. Keep it simple enough for a child to understand.
+                4. DO NOT show your reasoning or thinking process. Just the answer.
+
+                CHART RULES:
+                When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
+                [CHART_DATA: { "data": [{ "label": "NAME", "value": NUMBER }] }]
+                - Do NOT include color hex codes.
+                - Ensure labels are descriptive and values match the context data.
+                Place the block AFTER your text. `
+        },
+        ...messages,
+      ];
+
+      // Debug: Log prompt approximate size
+      const approxTokens = JSON.stringify(fullPrompt).length / 4;
+      console.log(`[Local LLM] Starting inference.Approx prompt tokens: ${approxTokens.toFixed(0)
+        } / 4096`);
+
+      if (approxTokens > 3800) {
+        console.warn('[Local LLM] Prompt dangerously close to context limit. Truncating context...');
+        // Simple truncation of the data block if too large
+        fullPrompt[0].content = fullPrompt[0].content.substring(0, 10000);
+      }
+
       const result = await modelState.context.completion({
-        messages: [
-          {
-            role: 'system',
-            content: `You are FinanceGPT, an elite financial advisor. You have the user's REAL financial data below. You MUST use these numbers in every answer. Never say you lack data.
-
-                  <DATA>
-                  ${context}
-                  </DATA>
-
-                  RULES:
-                  1. ALWAYS reference specific numbers from <DATA> in your answer. Double-check your math before responding.
-                  2. For complex questions, use this reasoning framework:
-                    SITUATION: State the financial reality from the data.
-                    ANALYSIS: Calculate metrics (burn rate, savings rate, runway).
-                    RECOMMENDATION: Give 2-3 specific, actionable steps.
-                  3. Keep answers under 250 words. Be direct and authoritative.
-                  4. For budget questions: use the explicit limits provided in the [BUDGET PERFORMANCE] section.
-                  5. For goal questions: calculate needed savings based on the [ACTIVE GOAL DETAILS].
-
-                  CHART RULES:
-                  When the user asks for a chart, graph, or breakdown, you MUST end your response with this exact JSON format:
-                  [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]
-                  - Do NOT include color hex codes.
-                  - Ensure labels are descriptive and values match the context data.
-                  Place the block AFTER your text.`
-          },
-          ...messages,
-        ],
-        n_predict: 2048,
+        messages: fullPrompt,
+        n_predict: 256, // Reduced for faster, simpler responses
         temperature: 0.5,
         top_p: 0.9,
-        stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>'],
+        stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>', '<|endoftext|>', '<|im_start|>'],
       }, (event: any) => {
         if (onToken && event.token) {
           onToken(event.token);
@@ -162,11 +177,20 @@ export async function generateLocalResponse(
       });
 
       let finalResponse = result.text || 'I could not generate a response.';
-      
+
+      // Strip reasoning tags that some models (like DeepSeek-R1) output
+      finalResponse = finalResponse.replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '').trim();
+      // Handle unclosed tags during streaming (if applicable to final response)
+      finalResponse = finalResponse.replace(/<(thought|think)>[\s\S]*/gi, '').trim();
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       return finalResponse;
     } catch (error: any) {
-      console.error('[Local LLM] Native inference failed. Full Error:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      const errorDetail = error instanceof Error ? error.message : JSON.stringify(error);
+      console.error('[Local LLM] Native inference failed. Detail:', errorDetail);
+      if (errorDetail.includes('context')) {
+        console.warn('[Local LLM] Possible context overflow. Try simplifying the query.');
+      }
       console.warn('[Local LLM] Falling back to rule-based engine.');
       // Fall through to fallback
     }
@@ -206,12 +230,12 @@ async function generateFallbackResponse(
     // Monthly aggregation for historical queries
     const monthlyExpenses: Record<string, number> = {};
     const monthlyCategorical: Record<string, Record<string, number>> = {};
-    
+
     expenses.forEach((e: any) => {
       const d = new Date((e as any).createdAt);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       monthlyExpenses[key] = (monthlyExpenses[key] || 0) + (e as any).amount;
-      
+
       const cat = (e as any).category || 'Uncategorized';
       if (!monthlyCategorical[key]) monthlyCategorical[key] = {};
       monthlyCategorical[key][cat] = (monthlyCategorical[key][cat] || 0) + (e as any).amount;
@@ -239,21 +263,21 @@ async function generateFallbackResponse(
 
     if (query.includes('most') || query.includes('highest') || query.includes('peak')) {
       if (!peakMonth) return "[Offline Mode] No expense data found to analyze peak spending.";
-      
+
       const [month, amt] = peakMonth;
       const cats = monthlyCategorical[month];
       const topCat = Object.entries(cats).sort(([, a], [, b]) => b - a)[0];
-      
+
       return `[Offline Mode] Your highest spending month was ${month} with a total of ${baseCurrency} ${amt.toLocaleString()}.\n\n` +
-             `The top category that month was ${topCat[0]} (${baseCurrency} ${topCat[1].toLocaleString()}).`;
+        `The top category that month was ${topCat[0]} (${baseCurrency} ${topCat[1].toLocaleString()}).`;
     }
 
     if (query.includes('history') || query.includes('past') || query.includes('previous')) {
       if (sortedMonths.length === 0) return "[Offline Mode] No historical data found.";
-      
+
       return `[Offline Mode] Your spending history for the last 6 months:\n\n` +
-             sortedMonths.slice(0, 6).map(([m, a]) => `  - ${m}: ${baseCurrency} ${a.toLocaleString()}`).join('\n') +
-             `\n\nTotal Lifetime Spending: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
+        sortedMonths.slice(0, 6).map(([m, a]) => `  - ${m}: ${baseCurrency} ${a.toLocaleString()}`).join('\n') +
+        `\n\nTotal Lifetime Spending: ${baseCurrency} ${totalExpenses.toLocaleString()}`;
     }
 
     if (query.includes('safe') || query.includes('spend') || query.includes('budget')) {
@@ -264,11 +288,11 @@ async function generateFallbackResponse(
       const currentMonthSpent = monthlyExpenses[currentMonthKey] || 0;
       const currentMonthIncome = incomes
         .filter(i => {
-           const d = new Date((i as any).createdAt);
-           return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+          const d = new Date((i as any).createdAt);
+          return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
         })
         .reduce((sum, i) => sum + ((i as any).amount || 0), 0);
-      
+
       const currentNet = currentMonthIncome - currentMonthSpent;
       const safeToSpend = Math.max(0, currentNet / daysLeft).toFixed(2);
 

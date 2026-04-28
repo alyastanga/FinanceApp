@@ -19,14 +19,14 @@ interface TrendChartProps {
   simple?: boolean;
 }
 
-export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 180, isDark: isDarkProp, simple = false }) => {
+export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses = [], height = 220, isDark: isDarkProp, simple = false }) => {
   const { isDark: themeIsDark } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
   const [range, setRange] = React.useState(6);
-  const width = simple ? Dimensions.get('window').width / 2 : Dimensions.get('window').width - 120; // Adjusted for sparkline or full view
-  const paddingVertical = simple ? 5 : 20;
-  const paddingHorizontal = 0;
+  const width = simple ? Dimensions.get('window').width / 2 : Dimensions.get('window').width - 96; // Adjusted for sparkline or full view
+  const paddingVertical = simple ? 5 : 15;
+  const paddingHorizontal = simple ? 0 : 4;
 
   // Calculate trend data from raw records
   const data = useMemo(() => {
@@ -98,10 +98,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       const prevX = getX(i - 1);
       const prevY = getY(data[i - 1].income);
 
-      // Soften quadTo by adjusting control point toward current point
-      // Using a smoother organic midpoint approach
-      const cpX = (prevX + x) / 2;
-      path.quadTo(cpX, prevY, x, y);
+      const cpX1 = prevX + (x - prevX) / 3;
+      const cpX2 = x - (x - prevX) / 3;
+      path.cubicTo(cpX1, prevY, cpX2, y, x, y);
     }
     return path;
   }, [data, maxValue, width]);
@@ -116,8 +115,9 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       const prevX = getX(i - 1);
       const prevY = getY(data[i - 1].expense);
 
-      const cpX = (prevX + x) / 2;
-      path.quadTo(cpX, prevY, x, y);
+      const cpX1 = prevX + (x - prevX) / 3;
+      const cpX2 = x - (x - prevX) / 3;
+      path.cubicTo(cpX1, prevY, cpX2, y, x, y);
     }
     return path;
   }, [data, maxValue, width]);
@@ -158,14 +158,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
             </View>
           </View>
 
-          <View className="flex-row bg-white/5 rounded-xl p-1 border border-white/5">
+          <View className={`flex-row rounded-2xl p-1 border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
             {[3, 6, 12].map((m) => (
               <TouchableOpacity
                 key={m}
                 onPress={() => setRange(m)}
-                className={`px-3 py-1.5 rounded-lg ${range === m ? 'bg-primary' : ''}`}
+                className={`px-3 py-1.5 rounded-xl ${range === m ? 'bg-primary' : ''}`}
               >
-                <Text className={`text-[8px] font-black uppercase ${range === m ? 'text-primary-foreground' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
+                <Text className={`text-[9px] font-black uppercase tracking-tight ${range === m ? 'text-black' : (isDark ? 'text-white/30' : 'text-black/30')}`}>
                   {m === 12 ? '1Y' : `${m}M`}
                 </Text>
               </TouchableOpacity>
@@ -178,8 +178,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
         {/* Y-Axis Labels */}
         {!simple && (
           <View 
-            className="absolute right-0 top-0 bottom-0 justify-between z-10 items-end pr-1"
-            style={{ paddingVertical: paddingVertical }}
+            className="absolute right-0 top-0 bottom-0 justify-between z-10 items-end pr-0"
+            style={{ paddingVertical: paddingVertical - 10 }}
           >
             <View className="items-end">
               <Text className={`${isDark ? 'text-white/10' : 'text-black/10'} text-[7px] font-black uppercase tracking-widest`}>Peak</Text>
@@ -203,20 +203,20 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
           {!simple && (
             <>
               <Path
-                path={`M ${paddingHorizontal} ${getY(maxValue)} L ${width} ${getY(maxValue)}`}
-                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                path={`M ${paddingHorizontal} ${getY(maxValue)} L ${width - paddingHorizontal} ${getY(maxValue)}`}
+                color={isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"}
                 style="stroke"
                 strokeWidth={1}
               />
               <Path
-                path={`M ${paddingHorizontal} ${getY(maxValue / 2)} L ${width} ${getY(maxValue / 2)}`}
-                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                path={`M ${paddingHorizontal} ${getY(maxValue / 2)} L ${width - paddingHorizontal} ${getY(maxValue / 2)}`}
+                color={isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"}
                 style="stroke"
                 strokeWidth={1}
               />
               <Path
-                path={`M ${paddingHorizontal} ${getY(0)} L ${width} ${getY(0)}`}
-                color={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
+                path={`M ${paddingHorizontal} ${getY(0)} L ${width - paddingHorizontal} ${getY(0)}`}
+                color={isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"}
                 style="stroke"
                 strokeWidth={1}
               />
@@ -278,8 +278,8 @@ export const TrendChart: React.FC<TrendChartProps> = ({ incomes = [], expenses =
       {!simple && (
         <View className="flex-row justify-between mt-6 px-1" style={{ width }}>
           {data.map((point, i) => {
-            // Label Staggering: Hide labels on 12M view if they overlap
-            const isHidden = range === 12 && i % 2 !== 0;
+            // Label Staggering: Hide labels to prevent overlap
+            const isHidden = (range === 12 && i % 2 !== 0);
             if (isHidden) {
               return <View key={i} className="w-4" />;
             }

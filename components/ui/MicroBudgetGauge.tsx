@@ -13,9 +13,9 @@ interface MicroBudgetGaugeProps {
 export const MicroBudgetGauge = ({ progress, size = 110, isDark: isDarkProp }: MicroBudgetGaugeProps) => {
   const { isDark: themeIsDark } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
-  const strokeWidth = 12;
+  const strokeWidth = 14;
   const radius = (size - strokeWidth) / 2;
-  const canvasPadding = 16;
+  const canvasPadding = 20;
   
   // Cap at 1.0 (100%) for visual rendering, but we can change color if over 1
   const safeProgress = Math.min(1, Math.max(0, progress));
@@ -88,11 +88,11 @@ export const MicroBudgetGauge = ({ progress, size = 110, isDark: isDarkProp }: M
       </Canvas>
       
       {/* Center Label */}
-      <View className="absolute bottom-1 items-center">
-        <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black tracking-tighter`}>
+      <View className="absolute bottom-2 items-center">
+        <Text className={`${isDark ? 'text-white' : 'text-black'} text-2xl font-black tracking-tighter`}>
           {Math.round(progress * 100)}%
         </Text>
-        <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>
+        <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[9px] font-black uppercase tracking-[2px] mt-[-2px]`}>
           Allocated
         </Text>
       </View>

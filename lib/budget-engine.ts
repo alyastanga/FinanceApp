@@ -190,10 +190,11 @@ export async function getFinancialContext() {
 
   const historyLines = Object.entries(monthlyAggregates)
     .sort((a, b) => b[0].localeCompare(a[0])) // Most recent first
+    .slice(0, 6) // Limit to last 6 months to prevent context overflow
     .map(([month, data]) => {
       const breakdown = Object.entries(data.categories)
         .sort(([, a], [, b]) => b - a)
-        .slice(0, 8) // Include more categories for better detail
+        .slice(0, 5) // Limit categories per month
         .map(([cat, amt]) => `"${cat}": ${amt.toFixed(0)}`)
         .join(', ');
       
@@ -254,8 +255,8 @@ export async function getFinancialContext() {
     PORTFOLIO ASSET DETAILS:
     ${portfolioDetails || 'Empty portfolio.'}
     
-    LAST 10 TRANSACTIONS:
-    ${expenses.sort((a,b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime()).slice(0, 10).map(e => `- ${(e as any).category}: ${(e as any).amount} ${(e as any)._currency || baseCurrency}`).join('\n    ')}
+    LAST 5 TRANSACTIONS:
+    ${expenses.sort((a,b) => (b as any).createdAt.getTime() - (a as any).createdAt.getTime()).slice(0, 5).map(e => `- ${(e as any).category}: ${(e as any).amount} ${(e as any)._currency || baseCurrency}`).join('\n    ')}
   `;
 
   return contextString;

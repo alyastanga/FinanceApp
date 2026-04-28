@@ -23,7 +23,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
   const [txCurrency, setTxCurrency] = useState<CurrencyCode>(currency);
   const [isHydrated, setIsHydrated] = React.useState(false);
 
-  const INCOME_CATEGORIES = ['Salary', 'Business', 'Investment', 'Gift', 'Other'];
+  const INCOME_CATEGORIES = ['Salary', 'Business', 'Investment', 'Gift', 'Allowance', 'Other'];
   const EXPENSE_CATEGORIES = [
     'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'
   ];

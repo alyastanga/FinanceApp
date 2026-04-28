@@ -37,10 +37,11 @@ export function SleekButton({ title, variant = 'primary', style, ...props }: Sle
 
 const styles = StyleSheet.create({
   gradient: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 24,
-    borderRadius: 9999, // full rounded
+    borderRadius: 16, // modern rounded, not pill
     alignItems: 'center',
     justifyContent: 'center',
+    minHeight: 52,
   }
 });

@@ -11,6 +11,7 @@ interface GoalProgressCardProps {
   onPress?: () => void;
   children?: React.ReactNode;
   compact?: boolean;
+  noContainer?: boolean;
 }
 
 export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ 
@@ -18,7 +19,8 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
   isDark: isDarkProp, 
   onPress,
   children,
-  compact = false
+  compact = false,
+  noContainer = false
 }) => {
   const { isDark: themeIsDark } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
@@ -38,7 +40,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
   const progressSizeClass = compact ? 'text-xl' : 'text-2xl';
 
   return (
-    <View className={`${paddingClass} rounded-[40px] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.01] border-black/5'} mb-4`}>
+    <View className={noContainer ? '' : `${paddingClass} rounded-[40px] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.01] border-black/5'} mb-4`}>
       <View className={`flex-row justify-between items-start ${compact ? 'mb-4' : 'mb-6'}`}>
         <View className="flex-1 mr-4">
           <Text className={`${textClass} font-black ${titleSizeClass} tracking-tighter mb-1`} numberOfLines={1}>{goal.name}</Text>

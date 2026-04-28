@@ -1,26 +1,25 @@
 import * as SecureStore from 'expo-secure-store';
-import { supabase } from './supabase';
 import database from '../database';
+import { deriveKey, deriveKeyFromSeedPhrase, encryptPayload, generateSalt, sha256, zeroBuffer } from './crypto-service';
 import {
   generateDEK,
-  storeLocalDEK,
-  uploadCloudDEK,
   getActiveDEK,
-  setActiveDEK,
   getDeviceId,
-  clearActiveDEK,
-  SECURE_KEY_ROTATION_CHECKPOINT,
   RotationProgress,
-  RotationStatus
+  RotationStatus,
+  SECURE_KEY_ROTATION_CHECKPOINT,
+  setActiveDEK,
+  storeLocalDEK,
+  uploadCloudDEK
 } from './key-manager';
-import { encryptPayload, sha256, deriveKey, deriveKeyFromSeedPhrase, generateSalt, zeroBuffer } from './crypto-service';
-import { setRotationLock } from './sync';
+import { supabase } from './supabase';
+import { setSyncLock } from './sync';
 
 export async function startRotation(passphrase: string, seedPhrase: string): Promise<void> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('No active session for rotation');
 
-  setRotationLock(true);
+  setSyncLock(true);
 
   try {
     const newSalt = generateSalt();
@@ -43,7 +42,7 @@ export async function startRotation(passphrase: string, seedPhrase: string): Pro
     // Initialize checkpoint
     const tables = ['incomes', 'expenses', 'goals', 'budgets', 'portfolio'];
     let totalRecords = 0;
-    
+
     for (const table of tables) {
       const count = await database.get(table).query().fetchCount();
       totalRecords += count;
@@ -56,11 +55,11 @@ export async function startRotation(passphrase: string, seedPhrase: string): Pro
       completed: 0,
       status: 'in_progress' as RotationStatus,
     };
-    
+
     await SecureStore.setItemAsync(SECURE_KEY_ROTATION_CHECKPOINT, JSON.stringify(checkpoint));
 
   } catch (err) {
-    setRotationLock(false);
+    setSyncLock(false);
     throw err;
   }
 }
@@ -69,7 +68,7 @@ export async function resumeRotation(onProgress?: (p: RotationProgress) => void)
   const rawCheckpoint = await SecureStore.getItemAsync(SECURE_KEY_ROTATION_CHECKPOINT);
   if (!rawCheckpoint) return; // Nothing to resume
 
-  setRotationLock(true);
+  setSyncLock(true);
   const checkpoint = JSON.parse(rawCheckpoint);
   const dek = getActiveDEK();
   const deviceId = await getDeviceId();
@@ -79,24 +78,24 @@ export async function resumeRotation(onProgress?: (p: RotationProgress) => void)
     while (checkpoint.tablesPending.length > 0) {
       const table = checkpoint.tablesPending[0];
       const collection = database.get(table);
-      
+
       // Fetch in batches using WatermelonDB standard queries
       // Note: WatermelonDB doesn't have offset/limit directly in its fluent API easily without raw SQL,
       // but we can just fetch all and slice, or we can use raw queries. 
       // For simplicity on mobile with <10k records, we fetch all and process the slice.
       const allRecords = await collection.query().fetch();
-      
+
       while (checkpoint.currentTableOffset < allRecords.length) {
         const batch = allRecords.slice(checkpoint.currentTableOffset, checkpoint.currentTableOffset + BATCH_SIZE);
-        
+
         const encryptedChanges = [];
         for (const record of batch) {
           // Serialize to JSON (excluding internal Watermelon fields)
           const recordData = record._raw;
           const { id, _status, _changed, created_at, updated_at, ...sensitivePayload } = recordData as any;
-          
+
           const { blob, iv } = await encryptPayload(sensitivePayload, dek);
-          
+
           encryptedChanges.push({
             id,
             user_id: (recordData as any).user_id,
@@ -131,10 +130,10 @@ export async function resumeRotation(onProgress?: (p: RotationProgress) => void)
     if (onProgress) {
       onProgress({ total: checkpoint.total, completed: checkpoint.total, status: 'completed' });
     }
-    
+
     // Clear checkpoint and unlock sync
     await SecureStore.deleteItemAsync(SECURE_KEY_ROTATION_CHECKPOINT);
-    setRotationLock(false);
+    setSyncLock(false);
 
   } catch (err) {
     // Leave lock on if it failed so we don't accidentally sync partial rotations

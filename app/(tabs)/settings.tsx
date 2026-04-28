@@ -1,19 +1,26 @@
+import { DateRangeModal } from '@/components/DateRangeModal';
 import { AIToggle } from '@/components/ui/AIToggle';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
 import React from 'react';
-import { Alert, ScrollView, Switch, Text, TouchableOpacity, View, RefreshControl } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { seedDatabase } from '../../_tests_dev/seed';
 import { useAI } from '../../context/AIContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../../context/CurrencyContext';
 import { useSecurity } from '../../context/SecurityContext';
 import { useTheme } from '../../context/ThemeContext';
-import { clearAllUserData, clearLocalData, clearCloudData } from '../../lib/data-management';
-import { E2EEState, getE2EEState, unlockVault, clearActiveDEK } from '../../lib/key-manager';
+import database from '../../database';
+import Expense from '../../database/models/Expense';
+import Income from '../../database/models/Income';
+import { clearAllUserData, clearCloudData, clearLocalData } from '../../lib/data-management';
+import { ExportTransaction, exportTransactionsToCSV } from '../../lib/export-service';
+import { clearActiveDEK, E2EEState, getE2EEState, unlockVault } from '../../lib/key-manager';
 import { syncData } from '../../lib/sync';
-import { supabase } from '../../lib/supabase';
+import { EmailService } from '../../lib/email-service';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { VaultUnlockModal } from '../../components/VaultUnlockModal';
 
 export default function SettingsScreen() {
   const { isBiometricsEnabled, toggleBiometrics, canAuthenticate } = useSecurity();
@@ -22,14 +29,23 @@ export default function SettingsScreen() {
   const { currency, setCurrency } = useCurrency();
   const [notificationsEnabled, setNotificationsEnabled] = React.useState(true);
   const [isSyncing, setIsSyncing] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [showExportModal, setShowExportModal] = React.useState(false);
   const [e2eeState, setE2eeState] = React.useState<E2EEState | null>(null);
+  const [isGmailConnected, setIsGmailConnected] = React.useState(false);
+  const [isEmailSyncing, setIsEmailSyncing] = React.useState(false);
+  const [showVaultModal, setShowVaultModal] = React.useState(false);
 
   useFocusEffect(
     React.useCallback(() => {
       let isMounted = true;
       const fetchState = async () => {
         const state = await getE2EEState();
-        if (isMounted) setE2eeState(state);
+        const token = await AsyncStorage.getItem('gmail_oauth_token');
+        if (isMounted) {
+          setE2eeState(state);
+          setIsGmailConnected(!!token);
+        }
       };
       fetchState();
       return () => { isMounted = false; };
@@ -81,15 +97,106 @@ export default function SettingsScreen() {
     );
   };
 
-  const borderClass = isDark ? 'border-white/5' : 'border-black/5';
+  const handleExport = async (fromDate: Date, toDate: Date) => {
+    setIsExporting(true);
+    try {
+      const fromTime = new Date(fromDate).setHours(0, 0, 0, 0);
+      const toTime = new Date(toDate).setHours(23, 59, 59, 999);
+
+      const incomes = await database.get<Income>('incomes').query().fetch();
+      const expenses = await database.get<Expense>('expenses').query().fetch();
+
+      const filteredIncomes = incomes.filter(i => {
+        const time = i.createdAt.getTime();
+        return time >= fromTime && time <= toTime;
+      });
+      const filteredExpenses = expenses.filter(e => {
+        const time = e.createdAt.getTime();
+        return time >= fromTime && time <= toTime;
+      });
+
+      const allTransactions: ExportTransaction[] = [
+        ...filteredIncomes.map(i => ({
+          amount: i.amount,
+          category: i.category,
+          description: i.description || '',
+          createdAt: i.createdAt.getTime(),
+          type: 'Inflow' as const
+        })),
+        ...filteredExpenses.map(e => ({
+          amount: e.amount,
+          category: e.category,
+          description: e.description || '',
+          createdAt: e.createdAt.getTime(),
+          type: 'Outflow' as const
+        }))
+      ].sort((a, b) => b.createdAt - a.createdAt);
+
+      if (allTransactions.length === 0) {
+        Alert.alert('No Data', 'No transactions found for the selected period.');
+        return;
+      }
+
+      await exportTransactionsToCSV(allTransactions, fromDate, toDate);
+      setShowExportModal(false);
+    } catch (error: any) {
+      console.error('Export Error:', error);
+      Alert.alert("Export Failed", error.message || "An error occurred during export.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleConnectGmail = async () => {
+    if (isGmailConnected) {
+      Alert.alert("Disconnect", "Are you sure you want to disconnect your Gmail?", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Disconnect", style: "destructive", onPress: async () => {
+          await AsyncStorage.removeItem('gmail_oauth_token');
+          await AsyncStorage.removeItem('bank_email_last_sync_timestamp');
+          setIsGmailConnected(false);
+        }}
+      ]);
+    } else {
+      // In a real app, this would trigger the Google OAuth flow
+      // For now, we simulate the connection for the user to test the UI/Logic
+      Alert.alert("Connect Gmail", "This will redirect you to Google to grant read-only access to your emails.", [
+        { text: "Cancel", style: "cancel" },
+        { text: "Connect", onPress: async () => {
+          await AsyncStorage.setItem('gmail_oauth_token', 'mock_token');
+          await EmailService.initializeSync(); // Only upcoming emails
+          setIsGmailConnected(true);
+          Alert.alert("Connected", "Only new emails received from now on will be processed.");
+        }}
+      ]);
+    }
+  };
+
+  const handleSyncEmails = async () => {
+    setIsEmailSyncing(true);
+    try {
+      const result = await EmailService.syncIncomingTransactions();
+      if (result.status === 'no_new_emails') {
+        Alert.alert("No New Transactions", "No upcoming bank emails found since the last check.");
+      } else if (result.status === 'success') {
+        Alert.alert("Sync Success", `Successfully parsed and added ${result.processed} new transactions.`);
+      }
+    } catch (err: any) {
+      Alert.alert("Sync Error", err.message || "Could not fetch emails.");
+    } finally {
+      setIsEmailSyncing(false);
+    }
+  };
+
+  const borderClass = isDark ? 'border-white/5' : 'border-neutral-200';
   const cardBgClass = isDark ? 'bg-[#151515]' : 'bg-white';
-  const textClass = isDark ? 'text-white' : 'text-black';
-  const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
+  const textClass = isDark ? 'text-white' : 'text-neutral-900';
+  const subTextClass = isDark ? 'text-white/40' : 'text-neutral-500';
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`} edges={['top']}>
-      <ScrollView 
-        className="flex-1 px-4" 
+      <ScrollView
+        className="flex-1 px-4"
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
@@ -102,7 +209,7 @@ export default function SettingsScreen() {
       >
         <View className="pt-6 mb-8">
           <Text className={`text-3xl font-black ${textClass} mb-2`}>Settings</Text>
-          <Text className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
+          <Text className={`${subTextClass} text-sm uppercase tracking-widest font-bold`}>
             Preferences & Account
           </Text>
         </View>
@@ -131,7 +238,7 @@ export default function SettingsScreen() {
                 </View>
                 <AIToggle mode={aiMode} onToggle={setAiMode} />
               </View>
-              <Text className="text-[10px] text-muted-foreground leading-4 mb-4">
+              <Text className={`text-[10px] ${subTextClass} leading-4 mb-4`}>
                 {aiMode === 'cloud'
                   ? 'Cloud Mode uses high-performance models for complex budgeting analysis.'
                   : 'Local Mode uses on-device inference for maximum privacy and offline stability.'}
@@ -168,7 +275,7 @@ export default function SettingsScreen() {
               <IconSymbol name="dollarsign.circle.fill" size={20} color="#10b981" />
               <View>
                 <Text className={`${textClass} font-bold text-base`}>Primary Currency</Text>
-                <Text className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Live Exchange Rates</Text>
+                <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Live Exchange Rates</Text>
               </View>
             </View>
 
@@ -183,10 +290,10 @@ export default function SettingsScreen() {
                   <TouchableOpacity
                     key={c.code}
                     onPress={() => setCurrency(c.code)}
-                    className={`px-6 py-4 rounded-2xl border ${isSelected ? 'bg-primary border-primary' : 'bg-white/5 border-white/5'}`}
+                    className={`px-6 py-4 rounded-2xl border ${isSelected ? 'bg-primary border-primary' : (isDark ? 'bg-white/5 border-white/5' : 'bg-neutral-100 border-neutral-200')}`}
                   >
-                    <Text className={`text-base font-black ${isSelected ? 'text-[#050505]' : 'text-white'}`}>{c.symbol}</Text>
-                    <Text className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-[#050505]/60' : 'text-white/40'}`}>{c.code}</Text>
+                    <Text className={`text-base font-black ${isSelected ? 'text-[#050505]' : textClass}`}>{isSelected ? c.symbol : c.symbol}</Text>
+                    <Text className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-[#050505]/60' : subTextClass}`}>{c.code}</Text>
                   </TouchableOpacity>
                 );
               })}
@@ -198,12 +305,46 @@ export default function SettingsScreen() {
         <View className="mb-8">
           <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Integrations</Text>
           <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            {/* Gmail Transaction Parser */}
+            <View className={`p-5 border-b ${borderClass}`}>
+              <View className="flex-row items-center justify-between mb-4">
+                <View className="flex-row items-center gap-x-3">
+                  <IconSymbol name="envelope.fill" size={20} color="#10b981" />
+                  <View>
+                    <Text className={`${textClass} font-medium text-base`}>Bank Email Parser</Text>
+                    <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Automatic Sync</Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  onPress={handleConnectGmail}
+                  className={`px-4 py-2 rounded-xl ${isGmailConnected ? 'bg-red-500/10' : 'bg-primary/20'}`}
+                >
+                  <Text className={`text-[10px] font-black uppercase tracking-widest ${isGmailConnected ? 'text-red-400' : 'text-primary'}`}>
+                    {isGmailConnected ? 'Disconnect' : 'Connect Gmail'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {isGmailConnected && (
+                <TouchableOpacity 
+                  onPress={handleSyncEmails}
+                  disabled={isEmailSyncing}
+                  className={`flex-row items-center justify-center py-4 rounded-2xl bg-white/5 border border-white/5 gap-x-2`}
+                >
+                  {isEmailSyncing ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="arrow.triangle.2.circlepath" size={14} color="#10b981" />}
+                  <Text className="text-primary font-black text-[10px] uppercase tracking-widest">
+                    {isEmailSyncing ? 'Checking Inbox...' : 'Check for new Transactions'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
             <TouchableOpacity className={`flex-row items-center justify-between p-5`}>
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="calendar.badge.plus" size={20} color="#10b981" />
                 <View>
                   <Text className={`${textClass} font-medium text-base`}>Connect Google Calendar</Text>
-                  <Text className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Available in Pro</Text>
+                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Available in Pro</Text>
                 </View>
               </View>
               <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
@@ -211,157 +352,100 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Security & Encryption Section */}
+        {/* Cloud & Security Hub */}
         <View className="mb-8">
-          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Security & Encryption</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
-
-            {/* Encryption Status */}
-            <View className={`p-5 border-b ${borderClass}`}>
-              <View className="flex-row items-center justify-between mb-2">
-                <View className="flex-row items-center gap-x-3">
-                  <View className={`w-2 h-2 rounded-full ${e2eeState?.isEnabled ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-neutral-500'}`} />
-                  <Text className={`${textClass} font-medium text-base`}>Cloud Encryption</Text>
-                </View>
-                <Text className={`text-[10px] font-black uppercase tracking-widest ${e2eeState?.isEnabled ? 'text-emerald-500' : 'text-neutral-500'}`}>
-                  {e2eeState?.isEnabled ? 'Enabled' : 'Disabled'}
+          <View className="flex-row justify-between items-end mb-4 ml-2">
+            <Text className={`text-xs font-black ${textClass} uppercase tracking-widest`}>Cloud & Security Hub</Text>
+            {e2eeState?.isEnabled && (
+              <View className="flex-row items-center gap-x-1.5">
+                <View className={`w-1.5 h-1.5 rounded-full ${e2eeState.isVaultLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                <Text className={`text-[8px] font-black uppercase tracking-tighter ${e2eeState.isVaultLocked ? 'text-red-400' : 'text-emerald-500'}`}>
+                  Vault {e2eeState.isVaultLocked ? 'Locked' : 'Active'}
                 </Text>
               </View>
-              <Text className={`${subTextClass} text-xs leading-relaxed`}>
-                {e2eeState?.isEnabled
-                  ? "All your financial data is encrypted locally using Zero-Knowledge AES-256-GCM before syncing."
-                  : "Syncing data to the cloud without end-to-end encryption. Your data is protected by Supabase security but not client-side encrypted."}
-              </Text>
-            </View>
+            )}
+          </View>
 
-            {e2eeState?.isEnabled && (
-              <View className={`p-5 border-b ${borderClass}`}>
-                <View className="flex-row items-center justify-between mb-4">
-                  <View className="flex-row items-center gap-x-3">
-                    <IconSymbol name={e2eeState.isVaultLocked ? "lock.fill" : "lock.open.fill"} size={20} color={e2eeState.isVaultLocked ? "#f87171" : "#10b981"} />
-                    <Text className={`${textClass} font-medium text-base`}>Vault Status</Text>
-                  </View>
-                  <Text className={`text-[10px] font-black uppercase tracking-widest ${e2eeState.isVaultLocked ? 'text-red-400' : 'text-emerald-500'}`}>
-                    {e2eeState.isVaultLocked ? 'Locked' : 'Unlocked'}
+          <View className={`${cardBgClass} rounded-[40px] border ${borderClass} overflow-hidden shadow-2xl shadow-primary/5`}>
+            {/* Main Sync & Status Row */}
+            <View className="p-8">
+              <View className="flex-row justify-between items-start mb-6">
+                <View className="flex-1 mr-4">
+                  <Text className={`text-2xl font-black ${textClass} tracking-tight mb-1`}>
+                    {isSyncing ? 'Syncing...' : 'Cloud Intelligence'}
+                  </Text>
+                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-[2px]`}>
+                    {e2eeState?.isEnabled ? 'Zero-Knowledge AES-256' : 'Standard Supabase Protection'}
                   </Text>
                 </View>
-
-                {e2eeState.isVaultLocked ? (
-                  <View className="flex-row gap-x-2">
-                    <TouchableOpacity
-                      onPress={() => {
-                        Alert.prompt(
-                          "Unlock Vault",
-                          "Enter your daily passphrase to unlock your encryption key.",
-                          [
-                            { text: "Cancel", style: "cancel" },
-                            {
-                              text: "Unlock",
-                              onPress: async (pass?: string) => {
-                                try {
-                                  await unlockVault(pass || '');
-                                  const newState = await getE2EEState();
-                                  setE2eeState(newState);
-                                  Alert.alert("Success", "Vault unlocked. You can now sync your data.");
-                                } catch (err: any) {
-                                  Alert.alert("Error", "Invalid passphrase.");
-                                }
-                              }
-                            }
-                          ],
-                          "secure-text"
-                        );
-                      }}
-                      className="flex-1 bg-emerald-500 py-3 rounded-2xl items-center"
-                    >
-                      <Text className="text-[#050505] font-bold text-xs uppercase tracking-widest">Unlock Vault</Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={() => router.push('/onboarding/e2ee-recovery')}
-                      className="bg-neutral-900 px-4 py-3 rounded-2xl border border-white/5 items-center justify-center"
-                    >
-                      <IconSymbol name="lifepreserver.fill" size={16} color="#10b981" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View className="flex-row gap-x-2">
-                    <Link href="/settings/dek-rotation" asChild>
-                      <TouchableOpacity className="flex-1 bg-neutral-900 py-3 rounded-2xl border border-white/5 items-center">
-                        <Text className="text-white font-bold text-[10px] uppercase tracking-widest">Rotate Key</Text>
-                      </TouchableOpacity>
-                    </Link>
-                  </View>
-                )}
-              </View>
-            )}
-
-            {!e2eeState?.isEnabled && (
-              <Link href="/onboarding/e2ee-setup" asChild>
-                <TouchableOpacity className="flex-row items-center justify-between p-5">
-                  <View className="flex-row items-center gap-x-3">
-                    <IconSymbol name="shield.fill" size={20} color="#10b981" />
-                    <Text className="text-emerald-500 font-bold text-base">Enable Zero-Knowledge E2EE</Text>
-                  </View>
-                  <IconSymbol name="chevron.right" size={16} color="#10b981" />
+                <TouchableOpacity
+                  onPress={handleManualSync}
+                  disabled={isSyncing}
+                  className={`h-12 w-12 rounded-2xl items-center justify-center ${isDark ? 'bg-primary/10 border border-primary/20' : 'bg-primary/20 border border-primary/30'}`}
+                >
+                  {isSyncing ? (
+                    <ActivityIndicator size="small" color="#10b981" />
+                  ) : (
+                    <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#10b981" />
+                  )}
                 </TouchableOpacity>
-              </Link>
-            )}
-
-            <Link href="/onboarding/e2ee-recovery" asChild>
-              <TouchableOpacity className={`flex-row items-center justify-between p-5`}>
-                <View className="flex-row items-center gap-x-3">
-                  <IconSymbol name="lifepreserver.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                  <Text className={`${textClass} font-medium text-base`}>Recover Encrypted Vault</Text>
-                </View>
-                <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-
-        {/* Synchronization Section */}
-        <View className="mb-8">
-          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Synchronization</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
-            <TouchableOpacity
-              onPress={handleManualSync}
-              disabled={isSyncing}
-              className={`flex-row items-center justify-between p-5`}
-            >
-              <View className="flex-row items-center gap-x-3">
-                <IconSymbol name="cloud.fill" size={20} color="#3b82f6" />
-                <View>
-                  <Text className={`${textClass} font-medium text-base`}>
-                    {isSyncing ? 'Syncing with Supabase...' : 'Sync with Cloud'}
-                  </Text>
-                  <Text className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">
-                    Manual Data Refresh
-                  </Text>
-                </View>
               </View>
-              {isSyncing ? (
-                <View className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+
+              {/* Action Area */}
+              {e2eeState?.isEnabled ? (
+                <View className="gap-y-3">
+                  {e2eeState.isVaultLocked ? (
+                    <TouchableOpacity
+                      onPress={() => setShowVaultModal(true)}
+                      className="bg-emerald-500 py-4 rounded-2xl items-center shadow-lg shadow-emerald-500/20"
+                    >
+                      <Text className="text-[#050505] font-black text-xs uppercase tracking-widest">Unlock Encryption Vault</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View className="flex-row gap-x-3">
+                      <Link href="/settings/dek-rotation" asChild>
+                        <TouchableOpacity className={`flex-1 py-3 rounded-2xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/10'} items-center`}>
+                          <Text className={`${textClass} font-bold text-[10px] uppercase tracking-widest`}>Rotate Keys</Text>
+                        </TouchableOpacity>
+                      </Link>
+                      <TouchableOpacity
+                        onPress={async () => {
+                          await clearActiveDEK();
+                          const newState = await getE2EEState();
+                          setE2eeState(newState);
+                        }}
+                        className={`flex-1 py-3 rounded-2xl border border-red-500/20 bg-red-500/5 items-center`}
+                      >
+                        <Text className="text-red-400 font-bold text-[10px] uppercase tracking-widest">Lock Vault</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    onPress={() => router.push('/onboarding/e2ee-recovery')}
+                    className="py-2 items-center"
+                  >
+                    <Text className={`${subTextClass} font-bold text-[9px] uppercase tracking-widest`}>Forgot passphrase? Recover Vault</Text>
+                  </TouchableOpacity>
+                </View>
               ) : (
-                <IconSymbol name="arrow.triangle.2.circlepath" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
+                <Link href="/onboarding/e2ee-setup" asChild>
+                  <TouchableOpacity className="bg-emerald-500/10 border border-emerald-500/20 py-4 rounded-2xl items-center">
+                    <Text className="text-emerald-500 font-black text-xs uppercase tracking-widest">Enable End-to-End Encryption</Text>
+                  </TouchableOpacity>
+                </Link>
               )}
-            </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {/* Account Section */}
+        {/* Account & Privacy Section */}
         <View className="mb-8">
-          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Account</Text>
+          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Account & Privacy</Text>
           <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
             <View className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}>
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="lock.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                <View>
-                  <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
-                  {!canAuthenticate && (
-                    <Text className="text-destructive text-[8px] font-black uppercase tracking-widest">Unsupported/Not Enrolled</Text>
-                  )}
-                </View>
+                <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
               </View>
               <Switch
                 value={isBiometricsEnabled}
@@ -372,9 +456,7 @@ export default function SettingsScreen() {
             </View>
 
             <Link href="/settings/profile" asChild>
-              <TouchableOpacity
-                className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}
-              >
+              <TouchableOpacity className="flex-row items-center justify-between p-5">
                 <View className="flex-row items-center gap-x-3">
                   <IconSymbol name="person.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
                   <Text className={`${textClass} font-medium text-base`}>Profile Settings</Text>
@@ -382,24 +464,25 @@ export default function SettingsScreen() {
                 <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
               </TouchableOpacity>
             </Link>
+          </View>
+        </View>
 
-            <Link href="/csv-import" asChild>
+        {/* Data Management Section */}
+        <View className="mb-8">
+          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Data Management</Text>
+          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            <Link href="/data-hub" asChild>
               <TouchableOpacity className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}>
                 <View className="flex-row items-center gap-x-3">
-                  <IconSymbol name="tray.and.arrow.down.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                  <Text className={`${textClass} font-medium text-base`}>Import Data (CSV)</Text>
+                  <IconSymbol name="square.stack.3d.up.fill" size={20} color="#10b981" />
+                  <View>
+                    <Text className={`${textClass} font-medium text-base`}>Data Hub</Text>
+                    <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Import & Export </Text>
+                  </View>
                 </View>
                 <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
               </TouchableOpacity>
             </Link>
-
-            <TouchableOpacity className={`flex-row items-center justify-between p-5 border-b ${borderClass}`}>
-              <View className="flex-row items-center gap-x-3">
-                <IconSymbol name="arrow.down.doc.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                <Text className={`${textClass} font-medium text-base`}>Export Data</Text>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
-            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={async () => {
@@ -455,13 +538,29 @@ export default function SettingsScreen() {
                 <IconSymbol name="hammer.fill" size={20} color="#10b981" />
                 <View>
                   <Text className="text-[#10b981] font-bold text-base">Seed Database</Text>
-                  <Text className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Generate Mock Data</Text>
+                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Generate Mock Data</Text>
                 </View>
               </View>
             </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
+
+      <DateRangeModal
+        isVisible={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+      />
+
+      <VaultUnlockModal
+        isVisible={showVaultModal}
+        onClose={() => setShowVaultModal(false)}
+        onSubmit={async (pass) => {
+          await unlockVault(pass);
+          const newState = await getE2EEState();
+          setE2eeState(newState);
+        }}
+      />
     </SafeAreaView>
   );
 }

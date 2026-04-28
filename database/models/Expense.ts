@@ -9,6 +9,7 @@ export default class Expense extends Model {
   @field('description') description?: string;
   @field('user_id') userId!: string;
   @field('currency') _currency?: string;
+  @field('external_id') externalId?: string;
 
   get currency(): string {
     return this._currency || 'PHP';

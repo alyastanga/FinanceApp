@@ -1,14 +1,15 @@
-import 'react-native-get-random-values';
-import { Stack, useRouter, useSegments } from 'expo-router';
 import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
-import { AuthProvider, useAuth } from '../context/AuthContext';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StatusBar } from 'expo-status-bar';
+import 'react-native-get-random-values';
 import { AIProvider } from '../context/AIContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { CurrencyProvider } from '../context/CurrencyContext';
 import database from '../database';
 import '../global.css';
-import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Polyfills
 if (typeof (global as any).setImmediate === 'undefined') {
@@ -34,12 +35,11 @@ global.fetch = async (...args) => {
   }
 };
 
-import { ThemeProvider, useTheme } from '../context/ThemeContext';
-import { SecurityProvider, useSecurity } from '../context/SecurityContext';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { TouchableOpacity, Text } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Text, TouchableOpacity } from 'react-native';
+import { SecurityProvider, useSecurity } from '../context/SecurityContext';
+import { ThemeProvider, useTheme } from '../context/ThemeContext';
 
 export default function RootLayout() {
   return (
@@ -69,12 +69,12 @@ function GlassLockScreen() {
         colors={isDark ? ['#050505', '#10b98110', '#050505'] : ['#F5F5F5', '#10b98105', '#F5F5F5']}
         className="absolute inset-0"
       />
-      
+
       <View className="items-center">
         <View className="h-24 w-24 rounded-[40px] bg-primary/10 items-center justify-center border border-primary/20 mb-8">
-           <IconSymbol name="lock.fill" size={40} color="#10b981" />
+          <IconSymbol name="lock.fill" size={40} color="#10b981" />
         </View>
-        
+
         <Text className={`text-3xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter mb-2`}>
           Secure Entry
         </Text>
@@ -82,7 +82,7 @@ function GlassLockScreen() {
           Finance Intelligence is locked to protect your data.
         </Text>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => authenticate()}
           className="bg-primary px-10 py-4 rounded-[24px] shadow-lg shadow-primary/20"
         >
@@ -107,7 +107,7 @@ function RootLayoutNav() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    
+
     console.log(`[RootLayoutNav] State - Session: ${!!session}, Loading: ${loading}, Segments: ${segments.join('/')}`);
 
     if (!session && !inAuthGroup) {
@@ -135,6 +135,7 @@ function RootLayoutNav() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       <Stack
         screenOptions={{
           headerShown: false,

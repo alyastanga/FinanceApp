@@ -1,20 +1,20 @@
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View, Modal } from 'react-native';
-import database from '../database';
 import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import database from '../database';
 
 // UI Components
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import PortfolioSnapshot from '@/components/ui/PortfolioSnapshot';
 import SafeToSpendView from '@/components/ui/SafeToSpendView';
 import ScenarioSimulator from '@/components/ui/ScenarioSimulator';
+import { BudgetChart } from './ui/BudgetChart';
 import { SavingsRateView } from './ui/SavingsRateView';
 import { TrendChart } from './ui/TrendChart';
-import { BudgetChart } from './ui/BudgetChart';
 
 // Context
 import { useAI } from '../context/AIContext';
@@ -22,9 +22,9 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 
 // Services
+import { useCurrency } from '@/context/CurrencyContext';
 import { explainFinancialGraph } from '@/lib/ai-service';
 import { calculateBudgetInsights, calculateRunway } from '@/lib/budget-engine';
-import { useCurrency } from '@/context/CurrencyContext';
 import { normalizeDate } from '@/lib/date-utils';
 
 interface InsightsDashboardProps {
@@ -247,7 +247,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="pt-20 px-8 pb-12 overflow-hidden">
+        <View className="pt-6 px-8 pb-12 overflow-hidden">
           <LinearGradient
             colors={[isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.05)', 'transparent']}
             className="absolute top-0 left-0 right-0 h-96"
@@ -336,7 +336,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
               onPress={() => setShowTrendDetail(true)}
               activeOpacity={0.8}
             >
-              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden p-8`}>
+              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden p-5`}>
                 <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
               </BlurView>
             </TouchableOpacity>
@@ -381,9 +381,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
             {/* Month Browser (History Mode) */}
             {spendingMode === 'history' && (
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false} 
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
                 className="mb-2"
                 contentContainerStyle={{ paddingHorizontal: 12, columnGap: 8 }}
               >
@@ -391,7 +391,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                   const [y, m] = mString.split('-');
                   const date = new Date(Number(y), Number(m) - 1);
                   const isSelected = selectedHistoryMonth === mString;
-                  
+
                   return (
                     <TouchableOpacity
                       key={mString}
@@ -409,10 +409,10 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
             <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
               <View className="p-8">
-                <BudgetChart 
-                  data={categorySpending} 
-                  isDark={isDark} 
-                  size={260} 
+                <BudgetChart
+                  data={categorySpending}
+                  isDark={isDark}
+                  size={260}
                   title={spendingMode === 'current' ? "MONTHLY" : spendingMode === 'overall' ? "LIFETIME" : (selectedHistoryMonth ? selectedHistoryMonth.replace('-', ' ') : 'ARCHIVE')}
                 />
               </View>
@@ -484,7 +484,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
       >
         <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
           <SafeAreaView className="flex-1">
-            <View className="px-6 pt-10 pb-6 flex-row justify-between items-center">
+            <View className="px-6 pt-14 pb-6 flex-row justify-between items-center">
               <View>
                 <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Performance Analysis</Text>
                 <Text className={`text-xs font-black uppercase tracking-[3px] mt-1 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Full-Scale Context</Text>
@@ -505,32 +505,32 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
                 {/* Detailed Analysis Card */}
                 <View className="mt-10 p-8 rounded-[40px] bg-primary/5 border border-primary/20">
-                   <View className="flex-row items-center gap-x-2 mb-4">
-                      <IconSymbol name="chart.bar.xaxis" size={16} color="#10b981" />
-                      <Text className="text-[10px] font-black uppercase text-primary tracking-widest">Monthly Breakdown</Text>
-                   </View>
-                   <Text className={`text-xs leading-5 ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-                      This expanded view allows you to see the critical intersection of your income and expenses over the last 12 months. 
-                      Notice the peak variances—these represent your highest opportunities for savings or investment reallocation.
-                   </Text>
+                  <View className="flex-row items-center gap-x-2 mb-4">
+                    <IconSymbol name="chart.bar.xaxis" size={16} color="#10b981" />
+                    <Text className="text-[10px] font-black uppercase text-primary tracking-widest">Monthly Breakdown</Text>
+                  </View>
+                  <Text className={`text-xs leading-5 ${isDark ? 'text-white/60' : 'text-black/60'}`}>
+                    This expanded view allows you to see the critical intersection of your income and expenses over the last 12 months.
+                    Notice the peak variances—these represent your highest opportunities for savings or investment reallocation.
+                  </Text>
                 </View>
 
                 <View className={`mt-6 p-8 rounded-[40px] border ${isDark ? 'bg-[#111] border-white/5' : 'bg-white border-black/5'}`}>
-                   <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Historical Extremes</Text>
-                   <View className="flex-row justify-between">
-                      <View>
-                        <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Income</Text>
-                        <Text className="text-primary font-black text-xl tracking-tight">
-                           +{format(Math.max(...trendData.map(d => d.income)))}
-                        </Text>
-                      </View>
-                      <View className="items-end">
-                        <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Expense</Text>
-                        <Text className="text-destructive font-black text-xl tracking-tight">
-                           -{format(Math.max(...trendData.map(d => d.expense)))}
-                        </Text>
-                      </View>
-                   </View>
+                  <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Historical Extremes</Text>
+                  <View className="flex-row justify-between">
+                    <View>
+                      <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Income</Text>
+                      <Text className="text-primary font-black text-xl tracking-tight">
+                        +{format(Math.max(...trendData.map(d => d.income)))}
+                      </Text>
+                    </View>
+                    <View className="items-end">
+                      <Text className={`text-[9px] font-black uppercase tracking-[1px] mb-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Max Monthly Expense</Text>
+                      <Text className="text-destructive font-black text-xl tracking-tight">
+                        -{format(Math.max(...trendData.map(d => d.expense)))}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               </View>
             </ScrollView>

@@ -52,5 +52,18 @@ export default schemaMigrations({
         }),
       ],
     },
+    {
+      toVersion: 12,
+      steps: [
+        addColumns({
+          table: 'incomes',
+          columns: [{ name: 'external_id', type: 'string', isOptional: true, isIndexed: true }],
+        }),
+        addColumns({
+          table: 'expenses',
+          columns: [{ name: 'external_id', type: 'string', isOptional: true, isIndexed: true }],
+        }),
+      ],
+    },
   ],
 });

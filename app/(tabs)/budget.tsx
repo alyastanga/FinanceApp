@@ -206,6 +206,33 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                  <Text className={`${textClass} text-xl font-black`}>{format(totalSpent)}</Text>
                </View>
              </View>
+
+             {/* Tactical Insights List */}
+             <View className="gap-y-4 mt-10">
+                <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
+                   <View className="h-10 w-10 bg-primary/20 rounded-2xl items-center justify-center">
+                      <IconSymbol name="bolt.fill" size={20} color="#10b981" />
+                   </View>
+                   <View className="flex-1">
+                      <Text className={`${textClass} font-bold text-sm mb-0.5`}>Budget Velocity</Text>
+                      <Text className="text-muted-foreground text-[11px]">
+                        You are spending {format(Math.abs(velocityData.dailyLimit - velocityData.currentVelocity))} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
+                      </Text>
+                   </View>
+                </View>
+
+                <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
+                   <View className="h-10 w-10 bg-accent/20 rounded-2xl items-center justify-center">
+                      <IconSymbol name="target" size={20} color="#3b82f6" />
+                   </View>
+                   <View className="flex-1">
+                      <Text className={`${textClass} font-bold text-sm mb-0.5`}>Category Alignment</Text>
+                      <Text className="text-muted-foreground text-[11px]">
+                        {categoryData.filter(c => c.spent <= c.limit).length} of {categoryData.length} categories are within budget.
+                      </Text>
+                   </View>
+                </View>
+             </View>
           </View>
         )}
 
@@ -264,48 +291,54 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
             <View className="gap-y-6">
               <Text className={`${textClass} text-xs font-black uppercase tracking-[3px] opacity-50 px-2`}>AI Allocation Engine</Text>
               <LinearGradient
-                colors={isDark ? ['#10b98120', 'transparent'] : ['#10b98110', 'transparent']}
-                className={`p-8 rounded-[44px] border ${isDark ? 'border-primary/20' : 'border-primary/10'} overflow-hidden items-center`}
+                colors={isDark ? ['#10b98125', '#050505'] : ['#10b98115', '#F5F5F5']}
+                className={`p-10 rounded-[64px] border ${isDark ? 'border-primary/30' : 'border-primary/10'} overflow-hidden items-center`}
               >
                 {!aiSuggestions ? (
-                  <>
-                    <View className="h-16 w-16 bg-primary/20 rounded-full items-center justify-center mb-4">
-                      <IconSymbol name="sparkles" size={32} color="#10b981" />
+                  <View className="items-center w-full">
+                    <View className="h-20 w-20 bg-primary/20 rounded-full items-center justify-center mb-6">
+                      <IconSymbol name="sparkles" size={40} color="#10b981" />
                     </View>
-                    <Text className={`${textClass} text-lg font-black mb-2 text-center`}>Generate AI Budget</Text>
-                    <Text className="text-muted-foreground text-xs text-center mb-6 px-4">
+                    <Text className={`${textClass} text-2xl font-black mb-3 text-center tracking-tight`}>Generate AI Budget</Text>
+                    <Text className="text-muted-foreground text-[13px] text-center mb-10 px-6 leading-5">
                       Let AI analyze your active goals and monthly income to suggest a balanced allocation.
                     </Text>
                     <TouchableOpacity 
                       onPress={handleGenerateAI}
-                      className="bg-primary px-10 py-4 rounded-[20px] shadow-lg shadow-primary/20"
+                      className="bg-primary w-full py-5 rounded-[32px] items-center shadow-xl shadow-primary/30"
                     >
-                      {isGenerating ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-sm uppercase tracking-widest">Generate Plan</Text>}
+                      {isGenerating ? <ActivityIndicator color="white" /> : <Text className="text-white font-black text-xs uppercase tracking-[2px]">Generate Plan</Text>}
                     </TouchableOpacity>
-                  </>
+                  </View>
                 ) : (
                   <View className="w-full">
-                    <View className="flex-row justify-between items-center mb-6">
-                      <Text className={`${textClass} font-black text-lg`}>AI Suggestion</Text>
-                      <TouchableOpacity onPress={() => setAiSuggestions(null)}>
-                        <Text className="text-destructive text-xs font-black uppercase">Cancel</Text>
+                    <View className="flex-row justify-between items-center mb-8">
+                      <View>
+                        <Text className={`${textClass} font-black text-2xl tracking-tight`}>AI Suggestion</Text>
+                        <Text className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Optimized Allocation</Text>
+                      </View>
+                      <TouchableOpacity 
+                        onPress={() => setAiSuggestions(null)}
+                        className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}
+                      >
+                        <IconSymbol name="xmark" size={16} color={isDark ? "#fff" : "#000"} />
                       </TouchableOpacity>
                     </View>
                     
-                    <View className="gap-y-3 mb-8">
+                    <View className="gap-y-3 mb-10">
                       {aiSuggestions.map((s, idx) => (
-                        <View key={idx} className={`flex-row justify-between p-4 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                        <Text className={`${textClass} font-bold`}>{s.category}</Text>
-                        <Text className="text-primary font-black">{format(s.amount_limit)}</Text>
-                      </View>
+                        <View key={idx} className={`flex-row justify-between p-5 rounded-[28px] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+                          <Text className={`${textClass} font-bold text-sm`}>{s.category}</Text>
+                          <Text className="text-primary font-black text-sm">{format(s.amount_limit)}</Text>
+                        </View>
                       ))}
                     </View>
 
                     <TouchableOpacity 
                       onPress={handleApplyAI}
-                      className="bg-primary w-full py-4 rounded-[20px] items-center"
+                      className="bg-primary w-full py-5 rounded-[32px] items-center shadow-xl shadow-primary/30"
                     >
-                      <Text className="text-white font-black text-sm uppercase tracking-widest">Apply All Allocation</Text>
+                      <Text className="text-white font-black text-xs uppercase tracking-[2px]">Apply All Allocation</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -381,32 +414,6 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
           </View>
         )}
 
-        {/* Tactical Insights List */}
-        <View className="gap-y-4 mb-4">
-           <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
-              <View className="h-10 w-10 bg-primary/20 rounded-2xl items-center justify-center">
-                 <IconSymbol name="bolt.fill" size={20} color="#10b981" />
-              </View>
-              <View className="flex-1">
-                 <Text className={`${textClass} font-bold text-sm mb-0.5`}>Budget Velocity</Text>
-                 <Text className="text-muted-foreground text-[11px]">
-                   You are spending {format(Math.abs(velocityData.dailyLimit - velocityData.currentVelocity))} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
-                 </Text>
-              </View>
-           </View>
-
-           <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
-              <View className="h-10 w-10 bg-accent/20 rounded-2xl items-center justify-center">
-                 <IconSymbol name="target" size={20} color="#3b82f6" />
-              </View>
-              <View className="flex-1">
-                 <Text className={`${textClass} font-bold text-sm mb-0.5`}>Category Alignment</Text>
-                 <Text className="text-muted-foreground text-[11px]">
-                   {categoryData.filter(c => c.spent <= c.limit).length} of {categoryData.length} categories are within budget.
-                 </Text>
-              </View>
-           </View>
-        </View>
 
       </ScrollView>
     </SafeAreaView>

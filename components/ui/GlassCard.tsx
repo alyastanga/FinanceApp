@@ -30,7 +30,7 @@ export function GlassCard({ children, style, intensity = 80, ...props }: GlassCa
       style={[styles.container, style]}
       {...props}
     >
-      <View className="bg-[#121212]/50 p-5 flex-1">
+      <View className="bg-[#121212]/50 p-5">
         {children}
       </View>
     </BlurView>
