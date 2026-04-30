@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as FileSystem from 'expo-file-system/legacy';
 import { IconSymbol } from '@/components/ui/icon-symbol';
-import { BlurView } from 'expo-blur';
-import { releaseLocalModel, initLocalModel } from '@/lib/llama-service';
 import { useTheme } from '@/context/ThemeContext';
+import { initLocalModel, releaseLocalModel } from '@/lib/llama-service';
+import { BlurView } from 'expo-blur';
+import * as FileSystem from 'expo-file-system/legacy';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
-const MODEL_URL = 'https://huggingface.co/mradermacher/DeepSeek-R1-Distill-Qwen-0.5B-CoMa-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-0.5B-CoMa.Q4_K_M.gguf?download=true';
-const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-0.5B-CoMa.Q4_K_M.gguf';
-const MODEL_SIZE_MB = 345;
+const MODEL_URL = 'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf';
+const MODEL_NAME = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
+const MODEL_SIZE_MB = 1120;
 
 export default function ModelSettings() {
   const router = useRouter();
@@ -61,15 +61,15 @@ export default function ModelSettings() {
 
     try {
       const result = await downloadResumable.downloadAsync();
-      
+
       if (result && result.status === 200) {
         console.log('[Model Settings] Download completed. URI:', result.uri);
         setHasModel(true);
-        
+
         // CRITICAL: Re-initialize the AI engine to use the newly downloaded file
         console.log('[Model Settings] Re-initializing local AI engine...');
         const success = await initLocalModel(modelPath, true);
-        
+
         if (success) {
           Alert.alert('Success', 'Model downloaded and engine initialized for offline use.');
         } else {
@@ -94,17 +94,17 @@ export default function ModelSettings() {
       'Are you sure you want to remove the local LLM model from your device?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-             try {
-                await releaseLocalModel();
-                await FileSystem.deleteAsync(modelPath);
-                setHasModel(false);
-             } catch (err) {
-                Alert.alert('Error', 'Failed to delete model file.');
-             }
+            try {
+              await releaseLocalModel();
+              await FileSystem.deleteAsync(modelPath);
+              setHasModel(false);
+            } catch (err) {
+              Alert.alert('Error', 'Failed to delete model file.');
+            }
           }
         }
       ]
@@ -129,49 +129,49 @@ export default function ModelSettings() {
             <View className="h-16 w-16 bg-primary/20 rounded-3xl items-center justify-center mb-6">
               <IconSymbol name="cpu.fill" size={32} color="#10b981" />
             </View>
-            <Text className={`font-black text-xl text-center ${isDark ? 'text-white' : 'text-black'}`}>DeepSeek R1 Distill 0.5B</Text>
+            <Text className={`font-black text-xl text-center ${isDark ? 'text-white' : 'text-black'}`}>Qwen 2.5 1.5B</Text>
             <Text className={`text-xs text-center mt-2 px-6 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
               Advanced reasoning optimized for mobile. Runs 100% offline.
             </Text>
           </View>
 
           <View className="gap-y-4">
-             <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-                <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Status</Text>
-                {checking ? (
-                  <ActivityIndicator size="small" color={isDark ? "white" : "black"} />
-                ) : (
-                  <View className="flex-row items-center gap-x-2">
-                    <View className={`h-2 w-2 rounded-full ${hasModel ? 'bg-primary' : 'bg-destructive'}`} />
-                    <Text className={`font-black text-xs uppercase tracking-widest ${hasModel ? 'text-primary' : 'text-destructive'}`}>
-                      {hasModel ? 'Ready' : 'Missing'}
-                    </Text>
-                  </View>
-                )}
-             </View>
+            <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+              <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Status</Text>
+              {checking ? (
+                <ActivityIndicator size="small" color={isDark ? "white" : "black"} />
+              ) : (
+                <View className="flex-row items-center gap-x-2">
+                  <View className={`h-2 w-2 rounded-full ${hasModel ? 'bg-primary' : 'bg-destructive'}`} />
+                  <Text className={`font-black text-xs uppercase tracking-widest ${hasModel ? 'text-primary' : 'text-destructive'}`}>
+                    {hasModel ? 'Ready' : 'Missing'}
+                  </Text>
+                </View>
+              )}
+            </View>
 
-             <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-                <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>File Size</Text>
-                <Text className={`font-black text-xs uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>{MODEL_SIZE_MB}MB</Text>
-             </View>
+            <View className={`flex-row justify-between items-center py-4 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+              <Text className={`font-bold text-xs uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>File Size</Text>
+              <Text className={`font-black text-xs uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>{MODEL_SIZE_MB}MB</Text>
+            </View>
           </View>
 
           {isDownloading && (
             <View className="mt-8">
-               <View className={`h-2 w-full rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                  <View 
-                    style={{ width: `${downloadProgress * 100}%` }}
-                    className="h-full bg-primary" 
-                  />
-               </View>
-               <Text className={`text-[10px] uppercase font-black tracking-widest mt-3 text-center ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-                 Downloading Support Engine... {(downloadProgress * 100).toFixed(0)}%
-               </Text>
+              <View className={`h-2 w-full rounded-full overflow-hidden ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                <View
+                  style={{ width: `${downloadProgress * 100}%` }}
+                  className="h-full bg-primary"
+                />
+              </View>
+              <Text className={`text-[10px] uppercase font-black tracking-widest mt-3 text-center ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                Downloading Support Engine... {(downloadProgress * 100).toFixed(0)}%
+              </Text>
             </View>
           )}
 
           {!hasModel && !isDownloading && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={handleDownload}
               className="mt-10 bg-primary p-5 rounded-2xl items-center shadow-lg shadow-primary/20"
             >
@@ -182,11 +182,11 @@ export default function ModelSettings() {
           {hasModel && (
             <View className="mt-10 gap-y-3">
               <View className={`p-5 rounded-2xl border items-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-                 <Text className={`text-xs font-bold text-center italic opacity-60 ${isDark ? 'text-white' : 'text-black'}`}>
-                   Active Model: Ready for total privacy
-                 </Text>
+                <Text className={`text-xs font-bold text-center italic opacity-60 ${isDark ? 'text-white' : 'text-black'}`}>
+                  Active Model: Ready for total privacy
+                </Text>
               </View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleDelete}
                 className="p-5 rounded-2xl items-center border border-destructive/20"
               >

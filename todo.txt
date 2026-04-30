@@ -1,61 +1,7 @@
-these are the bugs inside the app:
+the csv file parser only accepts 3 inputs, but it should accept 5:
+1. Date and time
+2. Transaction type (expense or income)
+3. Category (for expenses: e.g. Food, Transport, Rent, Utilities, Shopping, for income: e.g. Salary, Business, Bonus)
+4. description (optional, more details about the transaction)
+5. Amount
 
-1. the use of ai is limited to 2  tries only. this is my experience:
-- I tried to use the ai assesement button inside the budget tab, and it gives me the assessment.
-I tried to use it again to create a custom budget by clicking the "Generate ai budget", it directs me
-to the AI chat page and the cloud ai doesnt respond because of the limit. i tried it again to generate the
-budget plan, directs me to the AI chat page, and it doesnt send any message so i didnt get any response. which is 
-wrong becuase once you click the ai button it should send a message to the ai chat and the ai should response.
-
-2. the creation of data graphs inside the AI chat page doesnt working correctly. i tried to instruct it to create a customn
-graph for my monthly expenses and it returns a blank long balck bubble chat. which is wrong, it should return the 
-correct graph. please fix it, because it cause the user to waste their ai tries. 
-
-3. the ai assesment button inside the monitoring tab. when clicked it should give a short assesment 
-below that specific panel. for example if i clicked the ai button inside the "spending habits" panel,
-the ai should give me a short assesment below but inside that specific panel  based on the data or graph that is being currently displayed.
-and in that response it should have a option to continue with chat(for more questions and detailed assesment) or remove the response.
-
-4. the theme mode doesnt work correctly. the default mode is dark mode, which is good. but
-when the user try to switch to light mode, some page is still in the dark mode, which is not correct.
-It should display all the pages in the light mode, and the buttons and panel and font and the colors should have adjust
-and ensure readabilty based on the theme mode the user select. 
-
-
-5. In chat, the ai should be able to know when to use graphs or tables to present a cleaner the data.
-let the user decide how they want to present the data. for example, the user ask a comparison data,
-the default is to present it in a table because it is a comparison, but the user can ask it to present
-in a graph too. and it should have an option to switch between graph and table. 
-if the user ask for a trend data, the default is to present it in a graph, but the user can ask to present
-in a table too. and it should have an option to switch between graph and table. overall, the AI should think
-which one is the best way to present the data based on the user request. 
-
-6. The UI for the light mode is not consistent, one page the text is white, another page the text is black.
-and also the button styling is not consistent. please fix it. Ensure all the pages fonts, text, button style, 
-and panel, and everything is consistent based on the theme mode the user select.
-
-
-7. I want the income and expense form has a categorical selection for sources and expenses, and have additional 
-    text field to enter the specific type. for example the user add income, then there is already choices for the category, 
-    and the user has on option to add more information, like for the category of salary, the user can add
-    more information about the specific type of salary, if it is from the main job, second job. the user has the freedom what to put in that
-    text field. and the user should be able to save this information in the database for future use. 
-    The same goes in the expense form, for example the category of expense is Food, the user can add
-    more information about the specific type of food. it is more like a description.
-    Now, in our database, add a column for the description and it can be null.
-
-
-8. Add a functionality of parsing transaction information sent via email by the banks to the user's email. 
-    The user should be able to connect to the user's email and parse the transaction sent via email.
-    for example, the user's email is [EMAIL_ADDRESS] and the bank is UOB, then the user should be able to
-    connect to their email and parse the transaction sent via email by UOB. another example is when the user
-    receives an email for a bills, it can be a electricity bill, water bill, phone bill, credit card bill, 
-    and the user should be able to parse the transaction information sent via email by the bank to the database automatically.
-    The goal is to have a automatic transaction tracking system through email parsing.  
-
-9. [COMPLETED] add a functionality for exporting transaction to a csv file, we already have a button for exporting a transaction inside the settings page 
-but it doesnt have a functionality, just a button. What i want for exporting a transaction is to have a option for from which date to which date 
-the user want to export but the default is from the first date of the month to last date of the month, then create a csv file based on the data range selected, and export it to the user. The csv file should be well-organized and 
-easy to read, and it should have a column for the date and time, Transaction Type ['Inflow', 'Outflow'], Category, Description ['text'], and Amount ['Signed number'].
-
-    

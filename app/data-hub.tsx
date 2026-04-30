@@ -34,8 +34,10 @@ export default function DataHubScreen() {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<CSVMapping>({
     dateHeader: '',
-    sourceHeader: '',
     amountHeader: '',
+    typeHeader: '',
+    categoryHeader: '',
+    descriptionHeader: '',
     type: 'auto'
   });
 
@@ -97,8 +99,8 @@ export default function DataHubScreen() {
 
   const executeImport = async () => {
     if (!csvText) return;
-    if (!mapping.dateHeader || !mapping.sourceHeader || !mapping.amountHeader) {
-      Alert.alert('Mapping Required', 'Please map all three required columns first.');
+    if (!mapping.dateHeader || !mapping.amountHeader) {
+      Alert.alert('Mapping Required', 'Please map at least Date and Amount columns.');
       return;
     }
 
@@ -116,7 +118,8 @@ export default function DataHubScreen() {
         const isDuplicate = (t: any, existing: any[]) => {
           return existing.some(e => 
             Math.abs(e.amount - t.amount) < 0.01 && 
-            (e.source === t.source || e.category === t.source) &&
+            e.category === t.category &&
+            (e.description || '') === (t.description || '') &&
             new Date(e.createdAt).getTime() === t.createdAt.getTime()
           );
         };
@@ -129,12 +132,10 @@ export default function DataHubScreen() {
           const store = t.type === 'income' ? incomesStore : expensesStore;
           await store.create((record: any) => {
             record.amount = t.amount;
-            if (t.type === 'income') {
-               (record as any).source = t.source;
-            } else {
-               (record as any).category = t.source;
-            }
+            record.category = t.category;
+            record.description = t.description;
             record.createdAt = t.createdAt;
+            record.userId = 'default_user'; // Required by schema
           });
           importedCount++;
         }
@@ -196,25 +197,6 @@ export default function DataHubScreen() {
     }
   };
 
-  const renderMappingRow = (label: string, field: keyof CSVMapping, icon: string) => (
-    <View className="mb-6">
-      <View className="flex-row items-center gap-x-2 mb-3">
-        <IconSymbol name={icon as any} size={14} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
-        <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>{label}</Text>
-      </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row gap-x-2">
-        {headers.map((h) => (
-          <TouchableOpacity
-            key={h}
-            onPress={() => setMapping(prev => ({ ...prev, [field]: h }))}
-            className={`px-4 py-2.5 rounded-xl border ${mapping[field] === h ? 'bg-primary/20 border-primary' : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')}`}
-          >
-            <Text className={`text-xs font-bold ${mapping[field] === h ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>{h}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
-  );
 
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
@@ -272,9 +254,45 @@ export default function DataHubScreen() {
                   </TouchableOpacity>
                 </View>
                 
-                {renderMappingRow('Transaction Date', 'dateHeader', 'calendar')}
-                {renderMappingRow('Source / Description', 'sourceHeader', 'text.alignleft')}
-                {renderMappingRow(`Amount (${currentSymbol})`, 'amountHeader', 'dollarsign.circle')}
+                <View className="mb-6">
+                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Map Columns to Database</Text>
+                  {headers.map((h, index) => (
+                    <View key={h} className={`mb-4 p-4 rounded-2xl ${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.03]'}`}>
+                      <View className="flex-row items-center gap-x-2 mb-3">
+                        <View className="h-5 w-5 rounded-full bg-primary/20 items-center justify-center">
+                          <Text className="text-[10px] font-bold text-primary">{index + 1}</Text>
+                        </View>
+                        <Text className={`text-xs font-bold flex-1 ${isDark ? 'text-white/80' : 'text-black/80'}`} numberOfLines={1}>{h}</Text>
+                      </View>
+                      <View className="flex-row gap-x-2">
+                        {[
+                          { label: 'Date', field: 'dateHeader', icon: 'calendar' },
+                          { label: 'Type', field: 'typeHeader', icon: 'arrow.up.arrow.down' },
+                          { label: 'Category', field: 'categoryHeader', icon: 'tag' },
+                          { label: 'Desc', field: 'descriptionHeader', icon: 'text.alignleft' },
+                          { label: 'Amount', field: 'amountHeader', icon: 'dollarsign.circle' },
+                        ].map((target) => (
+                          <TouchableOpacity
+                            key={target.field}
+                            onPress={() => {
+                              // If this header is already assigned to this field, unassign it
+                              if (mapping[target.field as keyof CSVMapping] === h) {
+                                setMapping(prev => ({ ...prev, [target.field]: '' }));
+                              } else {
+                                // Assign this header to the field
+                                setMapping(prev => ({ ...prev, [target.field]: h }));
+                              }
+                            }}
+                            className={`flex-1 flex-row items-center justify-center gap-x-1.5 py-2.5 rounded-xl border ${mapping[target.field as keyof CSVMapping] === h ? 'bg-primary/20 border-primary' : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')}`}
+                          >
+                            <IconSymbol name={target.icon as any} size={10} color={mapping[target.field as keyof CSVMapping] === h ? "#10b981" : (isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)")} />
+                            <Text className={`text-[10px] font-black uppercase ${mapping[target.field as keyof CSVMapping] === h ? 'text-primary' : (isDark ? 'text-white/40' : 'text-black/40')}`}>{target.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </View>
+                  ))}
+                </View>
 
                 <TouchableOpacity 
                   onPress={executeImport}

@@ -37,7 +37,7 @@ export const PARSER_TEMPLATES: ParserTemplate[] = [
       {
         // Statement Line Pattern (from screenshot)
         // 1 Mar 2026 09:11:14 PM Purchased using card GADC... 605911221108 -PHP 268.00
-        regex: /(\d{1,2}\s\w{3}\s\d{4})\s(?:[\d:]+\s[APM]{2})\s(.*?)\s(.*?)\s([A-Z0-9]{10,})\s(-?PHP|PHP)\s?([\d,]+\.\d{2})/i,
+        regex: /(\d{1,2}\s+\w{3}\s+\d{4})\s+(?:[\d:]+\s+[APM]{2})\s+(.*?)\s+(.*?)\s+([A-Z0-9]{10,})\s+(-?PHP|PHP)\s*([\d,]+\.\d{2})/i,
         handler: (match) => {
           const date = new Date(match[1]).getTime();
           const isExpense = match[5].includes('-');

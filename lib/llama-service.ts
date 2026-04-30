@@ -17,7 +17,7 @@ import * as Haptics from 'expo-haptics';
 import database from '../database';
 import { getFinancialContext } from './budget-engine';
 
-const MODEL_NAME = 'DeepSeek-R1-Distill-Qwen-0.5B-CoMa.Q4_K_M.gguf';
+const MODEL_NAME = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -85,7 +85,7 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
 
     const context = await initLlama({
       model: nativePath,
-      n_ctx: 4096,
+      n_ctx: 2048, // Reduced context for iPhone 11 memory stability
       n_threads: 4,
       n_gpu_layers: 0,
       use_mlock: false,
@@ -105,7 +105,7 @@ export async function initLocalModel(modelPath?: string, force: boolean = false)
 
 /**
  * Detects and removes repetition loops in model output.
- * Small quantized models (0.5B) frequently get stuck repeating the same
+ * Small quantized models frequently get stuck repeating the same
  * sentence. This strips duplicates and halts at the first repeated phrase.
  */
 function stripRepetitionLoops(text: string): string {
@@ -129,6 +129,7 @@ function stripRepetitionLoops(text: string): string {
 function sanitizeResponse(text: string, isFinancial: boolean): string {
   const MAX_CHARS = isFinancial ? 1000 : 250;
 
+  // Clean reasoning tags (just in case) and excessive whitespace
   let cleaned = text
     .replace(/<(thought|think)>[\s\S]*?<\/\1>/gi, '')
     .replace(/<(thought|think)>[\s\S]*/gi, '')
@@ -175,23 +176,25 @@ export async function generateLocalResponse(
       let systemContent = '';
       if (isFinancial) {
         const context = await getFinancialContext();
-        systemContent = `You are a brief financial assistant. Use ONLY the data below.
+        systemContent = `You are an expert financial assistant. You have access to the user's local data. 
+          Use ONLY the provided data to answer. Be precise, factual, and extremely concise.
 
           <DATA>
           ${context}
           </DATA>
 
-          RULES:
-          1. Answer in 1-2 sentences using exact numbers from <DATA>.
-          2. If data is missing, say "I don't have that data in your local records."
-          3. No jargon. No reasoning tags in final answer. Just the answer.
+          INSTRUCTIONS:
+          1. Answer in 1-2 short sentences.
+          2. Use exact numbers and descriptions from <DATA>.
+          3. If the answer is not in <DATA>, say: "I don't have that information in your local records."
+          4. Do not speculate. Do not use conversational filler.
 
-          CHART RULES:
-          If asked for a chart, end with: [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]`;
+          CHART DATA:
+          If asked for a chart, append: [CHART_DATA: {"data": [{"label": "NAME", "value": NUMBER}]}]`;
       } else {
-        systemContent = `You are a one-sentence personal assistant. 
+        systemContent = `You are a helpful personal assistant. Answer in one short sentence. 
           For greetings, say: "Hello! What would you like to know about your finances?"
-          Otherwise, ask the user to inquire about their spending or goals.`;
+          For other queries, guide the user to ask about their spending, budgets, or goals.`;
       }
 
       const fullPrompt = [
@@ -204,28 +207,26 @@ export async function generateLocalResponse(
 
       const result = await modelState.context.completion({
         messages: fullPrompt,
-        n_predict: 1024,
-        temperature: 0.6,
-        top_p: 0.95,
-        top_k: 40,
-        repeat_penalty: 1.15,
-        repeat_last_n: 128,
-        stop: ['</s>', '<|end|>', '<|eot_id|>', '<|im_end|>', '<|endoftext|>', '<|im_start|>', '\n\n\n'],
+        n_predict: 512, // Reduced for faster response on mobile
+        temperature: 0.1, // Keep it deterministic for financial data
+        top_p: 0.8,
+        top_k: 20,
+        repeat_penalty: 1.1,
+        stop: ['<|im_end|>', '<|endoftext|>', '<|im_start|>', '\n\n\n'],
       }, (event: any) => {
         if (onToken && event.token) {
           onToken(event.token);
           streamingOutput += event.token;
 
-          // Real-time loop protection:
-          // If we detect the same sentence twice during streaming, abort immediately.
+          // Real-time loop protection
           if (event.token.match(/[.!?\n]/)) {
             const parts = streamingOutput.split(/(?<=[.!?\n])\s+/);
             const lastFinished = parts[parts.length - 2]?.trim().toLowerCase();
-            
+
             if (lastFinished && lastFinished.length > 20) {
               if (encounteredSentences.has(lastFinished)) {
-                console.warn('[Local LLM] Real-time loop detected. Aborting native inference.');
-                modelState.context?.stop();
+                console.warn('[Local LLM] Real-time loop detected. Aborting.');
+                modelState.context?.stopCompletion();
               }
               encounteredSentences.add(lastFinished);
             }
@@ -307,6 +308,28 @@ async function generateFallbackResponse(
     });
 
     // ── Intent Detection & Response ──
+
+    if (query.includes('recent') || query.includes('last') || query.includes('latest')) {
+      const allTransactions = [
+        ...incomes.map(i => ({ ...i, type: 'Income' })),
+        ...expenses.map(e => ({ ...e, type: 'Expense' }))
+      ].sort((a, b) => {
+        const dateA = new Date((a as any).createdAt).getTime();
+        const dateB = new Date((b as any).createdAt).getTime();
+        return dateB - dateA;
+      });
+
+      if (allTransactions.length === 0) return "[Offline Mode] No transactions found.";
+
+      return `[Offline Mode] Your 3 most recent transactions:\n\n` +
+        allTransactions.slice(0, 3).map(t => {
+          const type = (t as any).type;
+          const amt = (t as any).amount;
+          const cat = (t as any).category;
+          const desc = (t as any).description ? ` (${(t as any).description})` : '';
+          return `  - ${type}: ${baseCurrency} ${amt.toLocaleString()} for ${cat}${desc}`;
+        }).join('\n');
+    }
 
     if (query.includes('most') || query.includes('highest') || query.includes('peak')) {
       if (!peakMonth) return "[Offline Mode] No expense data found to analyze peak spending.";

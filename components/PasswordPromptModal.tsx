@@ -13,6 +13,7 @@ interface PasswordPromptModalProps {
 
 export function PasswordPromptModal({ isVisible, onClose, onSubmit, isProcessing, fileName }: PasswordPromptModalProps) {
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = () => {
     if (!password) return;
@@ -42,16 +43,26 @@ export function PasswordPromptModal({ isVisible, onClose, onSubmit, isProcessing
               </Text>
             </View>
 
-            <View className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 mb-6">
+            <View className="bg-white/5 border border-white/10 rounded-2xl px-4 py-4 mb-6 flex-row items-center">
               <TextInput
-                secureTextEntry
+                secureTextEntry={!showPassword}
                 placeholder="Enter Statement Password"
                 placeholderTextColor="rgba(255,255,255,0.2)"
-                className="text-white font-bold text-base"
+                className="text-white font-bold text-base flex-1"
                 value={password}
                 onChangeText={setPassword}
                 autoFocus
               />
+              <TouchableOpacity 
+                onPress={() => setShowPassword(!showPassword)}
+                className="ml-2"
+              >
+                <IconSymbol 
+                  name={showPassword ? "eye.slash.fill" : "eye.fill"} 
+                  size={18} 
+                  color="rgba(255,255,255,0.4)" 
+                />
+              </TouchableOpacity>
             </View>
 
             <View className="flex-row gap-x-3">

@@ -2,14 +2,17 @@ import Papa from 'papaparse';
 
 export interface CSVMapping {
   dateHeader: string;
-  sourceHeader: string;
   amountHeader: string;
-  type?: 'auto' | 'income' | 'expense'; // Force a type or detect by sign
+  typeHeader?: string;
+  categoryHeader?: string;
+  descriptionHeader?: string;
+  type?: 'auto' | 'income' | 'expense'; // Fallback if typeHeader is not used
 }
 
 export interface ParsedTransaction {
   amount: number;
-  source: string;
+  category: string;
+  description: string;
   createdAt: Date;
   type: 'income' | 'expense';
 }
@@ -31,12 +34,12 @@ export const guessMappings = (headers: string[]): Partial<CSVMapping> => {
   headers.forEach(h => {
     const low = h.toLowerCase();
     if (low.includes('date')) mapping.dateHeader = h;
-    if (low.includes('desc') || low.includes('source') || low.includes('name') || low.includes('memo')) {
-      mapping.sourceHeader = h;
-    }
     if (low.includes('amount') || low.includes('value') || low.includes('price') || low.includes('total')) {
       mapping.amountHeader = h;
     }
+    if (low.includes('type')) mapping.typeHeader = h;
+    if (low.includes('category') || low.includes('source') || low.includes('tag')) mapping.categoryHeader = h;
+    if (low.includes('desc') || low.includes('memo') || low.includes('note')) mapping.descriptionHeader = h;
   });
 
   return mapping;
@@ -53,23 +56,29 @@ export const transformRows = (
   const data = result.data as any[];
 
   return data.map(row => {
-    const rawAmount = parseFloat(row[mapping.amountHeader].replace(/[^\d.-]/g, ''));
+    const rawAmount = parseFloat(row[mapping.amountHeader]?.toString().replace(/[^\d.-]/g, '') || '0');
     const rawDate = row[mapping.dateHeader];
     
     // Determine type
     let type: 'income' | 'expense' = 'expense';
-    if (mapping.type === 'income') type = 'income';
-    else if (mapping.type === 'expense') type = 'expense';
-    else {
-      // Auto-detect: positive is usually income in bank exports if 'negative' is spend
-      // But some banks use positive for everything and separate 'Credit/Debit' columns.
-      // For v1, we assume negative = expense, positive = income.
+    const typeVal = mapping.typeHeader ? row[mapping.typeHeader]?.toString().toLowerCase() : '';
+    
+    if (typeVal.includes('income') || typeVal.includes('inflow') || typeVal.includes('credit')) {
+      type = 'income';
+    } else if (typeVal.includes('expense') || typeVal.includes('outflow') || typeVal.includes('debit')) {
+      type = 'expense';
+    } else if (mapping.type === 'income') {
+      type = 'income';
+    } else if (mapping.type === 'expense') {
+      type = 'expense';
+    } else {
       type = rawAmount < 0 ? 'expense' : 'income';
     }
 
     return {
       amount: Math.abs(rawAmount),
-      source: row[mapping.sourceHeader] || 'Uncategorized',
+      category: (mapping.categoryHeader ? row[mapping.categoryHeader] : null) || 'Uncategorized',
+      description: (mapping.descriptionHeader ? row[mapping.descriptionHeader] : null) || '',
       createdAt: new Date(rawDate),
       type
     };
