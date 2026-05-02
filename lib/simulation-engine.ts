@@ -16,10 +16,11 @@ export const simulatePurchaseImpact = (
   incomes: any[],
   expenses: any[],
   goals: any[],
+  budgets: any[] = [],
   convertFn: (val: number, fromCurrency: string) => number,
   baseCurrency: string
 ): SimulationResult[] => {
-  const insights = calculateBudgetInsights(incomes, expenses, goals, convertFn, baseCurrency);
+  const insights = calculateBudgetInsights(incomes, expenses, goals, budgets, convertFn, baseCurrency);
   const results: SimulationResult[] = [];
 
   goals.forEach(goal => {

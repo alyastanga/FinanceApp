@@ -2,7 +2,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TransactionForm from '../../components/TransactionForm';
@@ -82,9 +82,25 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const monthlyIncome = currentMonthIncomes.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
   const monthlyExpenses = currentMonthExpenses.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
 
-  const allTimeIncome = (incomes || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
-  const allTimeExpenses = (expenses || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
-  const totalLiquidity = allTimeIncome - allTimeExpenses;
+  const totalLiquidity = useMemo(() => {
+    const allTimeIncome = (incomes || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+    const allTimeExpenses = (expenses || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+    const transactionBalance = allTimeIncome - allTimeExpenses;
+
+    const portfolioCash = (portfolio || []).reduce((sum, p) => {
+      const type = (p.assetType || p.asset_type || '').toLowerCase();
+      const symbol = (p.symbol || '').toUpperCase();
+      const isCash = type === 'cash';
+      const isStable = type === 'crypto' && (symbol.includes('USDT') || symbol.includes('USDC') || symbol.includes('DAI'));
+      
+      if (isCash || isStable) {
+        return sum + convertFrom(p.value || 0, p.currency || p._currency || currency);
+      }
+      return sum;
+    }, 0);
+
+    return transactionBalance + portfolioCash;
+  }, [incomes, expenses, portfolio, currency, convertFrom]);
 
   // Budget calculations
   const totalBudgetLimit = budgets.reduce((acc, b) => acc + convertFrom((b.amountLimit || 0), b.currency || b._currency || currency), 0);
@@ -176,8 +192,11 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                     {format(totalLiquidity)}
                   </Text>
                 </View>
-                <View className={`px-gsd-md py-gsd-xs rounded-gsd-sm border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'}`}>
-                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Active Pulse</Text>
+                <View className="items-end">
+                  <View className={`px-gsd-md py-gsd-xs rounded-gsd-sm border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'} mb-1`}>
+                    <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Active Pulse</Text>
+                  </View>
+                  <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[6px] font-black uppercase tracking-widest`}>Includes Cash + Stables</Text>
                 </View>
               </View>
 

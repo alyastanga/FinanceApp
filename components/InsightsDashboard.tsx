@@ -32,6 +32,7 @@ interface InsightsDashboardProps {
   expenses: any[];
   goals: any[];
   portfolio: any[];
+  budgets: any[];
   useLocal?: boolean;
 }
 
@@ -43,7 +44,7 @@ const GoalAnalyticsItem = ({ goal, isDark }: { goal: any, isDark: boolean }) => 
   return <GoalProgressCard goal={goal} isDark={isDark} />;
 };
 
-const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal = false }: InsightsDashboardProps) => {
+const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, useLocal = false }: InsightsDashboardProps) => {
   const { session, loading } = useAuth();
   const { isDark } = useTheme();
   const router = useRouter();
@@ -234,7 +235,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
   };
 
 
-  const insights = calculateBudgetInsights(incomes, expenses, goals, convertFrom, currency);
+  const insights = calculateBudgetInsights(incomes, expenses, goals, budgets, convertFrom, currency);
   const runway = calculateRunway({
     portfolio,
     expenses,
@@ -242,8 +243,19 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
     convertFn: convertFrom,
     baseCurrency: currency
   });
-  const totalPortfolioValue = portfolio.reduce((sum, p) => sum + convertFrom(p.value || 0, p.currency || p._currency || currency), 0);
-  const netWorthValue = totalPortfolioValue + insights.allTimeBalance;
+  const totalOtherAssetsValue = portfolio.reduce((sum, p) => {
+    const type = (p.assetType || p.asset_type || '').toLowerCase();
+    const symbol = (p.symbol || '').toUpperCase();
+    const isCash = type === 'cash';
+    const isStable = type === 'crypto' && (symbol.includes('USDT') || symbol.includes('USDC') || symbol.includes('DAI'));
+
+    if (!isCash && !isStable) {
+      return sum + convertFrom(p.value || 0, p.currency || p._currency || currency);
+    }
+    return sum;
+  }, 0);
+
+  const netWorthValue = runway.totalLiquidCash + totalOtherAssetsValue;
 
   return (
     <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
@@ -275,28 +287,23 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
               </View>
             </View>
             <View className={`pt-gsd-md border-t ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center justify-between`}>
-              <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black uppercase tracking-[1.5px]`}>
-                Survival at {format(runway.dailyBurnRate)}/day
-              </Text>
+              <View className="flex-row items-center gap-x-gsd-md">
+                <View>
+                  <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Income</Text>
+                  <Text className={`${isDark ? 'text-white/70' : 'text-black/70'} text-[12px] font-bold`}>{format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}</Text>
+                </View>
+                <View className={`w-[1px] h-3 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
+                <View>
+                  <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
+                  <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
+                </View>
+              </View>
               <View className="flex-row items-center gap-x-1">
                 <View className="h-1 w-1 rounded-full bg-primary" />
                 <Text className="text-primary text-[7px] font-black uppercase tracking-widest">Active Pulse</Text>
               </View>
             </View>
           </BlurView>
-
-          <View className="flex-row gap-x-gsd-sm">
-            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-gsd-md border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-gsd-md`}>
-              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Income</Text>
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-base font-black`}>
-                {format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}
-              </Text>
-            </BlurView>
-            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-gsd-md border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-gsd-md`}>
-              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Fixed</Text>
-              <Text className="text-destructive text-base font-black">-{format(insights.monthlyFixedExpenses)}</Text>
-            </BlurView>
-          </View>
         </View>
 
         <View className="px-gsd-lg gap-y-gsd-lg">
@@ -555,6 +562,7 @@ const enhance = withObservables([], () => ({
   expenses: database.get('expenses').query().observe(),
   goals: database.get('goals').query().observe(),
   portfolio: database.get('portfolio').query().observe(),
+  budgets: database.get('budgets').query().observe(),
 }));
 
 export default enhance(InsightsDashboardBase);

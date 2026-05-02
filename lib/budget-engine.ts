@@ -92,6 +92,7 @@ export const calculateBudgetInsights = (
   incomes: any[],
   expenses: any[],
   goals: any[],
+  budgets: any[] = [],
   convertFn: (val: number, fromCurrency: string) => number = (v) => v,
   baseCurrency: string = 'PHP'
 ): BudgetInsights => {
@@ -140,12 +141,21 @@ export const calculateBudgetInsights = (
     'Bills', 'Education', 'Health'
   ].map(c => c.toLowerCase());
 
-  const monthlyFixed = monthExpenses
+  // Proactive Fixed Expenses: Use Budget limits for fixed categories if they exist, 
+  // otherwise fallback to actual current month logs.
+  const fixedBudgetTotal = budgets
+    .filter(b => fixedCategories.includes((b.category || b._category || '').toLowerCase()))
+    .reduce((sum, b) => sum + convertFn(b.amountLimit || b.amount_limit || 0, b.currency || b._currency || baseCurrency), 0);
+
+  const actualFixedSpent = monthExpenses
     .filter(e => {
       const cat = (e.category || e._category || '').toLowerCase();
       return fixedCategories.includes(cat);
     })
     .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
+
+  // We reserve the Budget amount if it's set, or the Actual if it's already over budget
+  const monthlyFixed = Math.max(fixedBudgetTotal, actualFixedSpent);
 
   // 3. Calculate Monthly Goal Contributions
   let totalGoalContributionRequired = 0;
@@ -198,7 +208,7 @@ export async function getFinancialContext(query: string = '') {
   const portfolio = await database.get('portfolio').query().fetch();
   const rawBudgets = await database.get('budgets').query().fetch();
 
-  const insights = calculateBudgetInsights(incomes, expenses, goals, (v) => v, baseCurrency);
+  const insights = calculateBudgetInsights(incomes, expenses, goals, rawBudgets, (v) => v, baseCurrency);
   const runway = calculateRunway({
     portfolio,
     expenses,

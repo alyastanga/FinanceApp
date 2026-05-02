@@ -24,7 +24,7 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark: is
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) return;
     
-    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals, convertFrom, currency);
+    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals, [], convertFrom, currency);
     setResults(impacts);
   };
 

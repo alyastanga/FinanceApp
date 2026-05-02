@@ -78,7 +78,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
     const totalAlloc = budgets.reduce((acc, b) => acc + convertFrom(b.amountLimit, b.currency || currency), 0);
     const totalSpt = (Object.values(expenseMap) as number[]).reduce((acc, amt) => acc + amt, 0);
 
-    const insights = calculateBudgetInsights(incomes, expenses, [], convertFrom, currency); // temp goals check later
+    const insights = calculateBudgetInsights(incomes, expenses, [], budgets, convertFrom, currency); // temp goals check later
     const mIncome = insights.monthlyIncome;
 
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
