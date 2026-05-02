@@ -142,18 +142,18 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       <ScrollView className="flex-1 px-5" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Header */}
-        <View className="pt-6 mb-8 flex-row justify-between items-end">
+        <View className="pt-gsd-sm mb-gsd-lg flex-row justify-between items-end">
           <View>
-            <Text className={`text-3xl font-black ${textClass} mb-1`}>Intelligence</Text>
-            <Text className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
+            <Text className={`text-2xl font-black ${textClass} tracking-tighter`}>Intelligence</Text>
+            <Text className={`${subTextClass} text-[9px] uppercase tracking-widest font-black`}>
               Budget Analysis
             </Text>
           </View>
           <TouchableOpacity
             onPress={handleExplain}
-            className="h-12 w-12 rounded-2xl bg-primary/20 items-center justify-center border border-primary/20"
+            className="h-gsd-huge w-gsd-huge rounded-gsd-md bg-primary/20 items-center justify-center border border-primary/20"
           >
-            {isExplaining ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={20} color="#10b981" />}
+            {isExplaining ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
           </TouchableOpacity>
         </View>
 
@@ -168,7 +168,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
         )}
 
         {/* Tab Switcher */}
-        <View className={`${isDark ? 'bg-white/5' : 'bg-black/5'} p-1.5 rounded-[24px] flex-row mb-10`}>
+        <View className={`${isDark ? 'bg-white/5' : 'bg-black/5'} p-gsd-xs rounded-gsd-md flex-row mb-gsd-lg`}>
           {(['overview', 'categories', 'velocity', 'allocation'] as const).map((tab) => (
             <TouchableOpacity
               key={tab}
@@ -176,9 +176,9 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                 setExplanation(null);
                 setActiveTab(tab);
               }}
-              className={`flex-1 py-3 rounded-[18px] items-center ${activeTab === tab ? (isDark ? 'bg-white/10' : 'bg-white shadow-sm') : ''}`}
+              className={`flex-1 py-2 rounded-gsd-sm items-center ${activeTab === tab ? (isDark ? 'bg-white/10' : 'bg-white shadow-sm') : ''}`}
             >
-              <Text className={`text-[10px] font-black uppercase tracking-widest ${activeTab === tab ? textClass : 'text-muted-foreground'}`}>
+              <Text className={`text-[8px] font-black uppercase tracking-widest ${activeTab === tab ? textClass : 'text-muted-foreground'}`}>
                 {tab}
               </Text>
             </TouchableOpacity>
@@ -202,14 +202,14 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
               />
             )}
 
-            <View className={`flex-row gap-x-4 ${categoryData.length > 0 ? 'mt-8' : ''}`}>
-              <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Budget</Text>
-                <Text className={`${textClass} text-xl font-black`}>{format(totalAllocated)}</Text>
+            <View className={`flex-row gap-x-gsd-sm ${categoryData.length > 0 ? 'mt-gsd-md' : ''}`}>
+              <View className={`flex-1 p-gsd-md rounded-gsd-lg border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                <Text className={`${subTextClass} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Budget</Text>
+                <Text className={`${textClass} text-lg font-black`}>{format(totalAllocated)}</Text>
               </View>
-              <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Spent</Text>
-                <Text className={`${textClass} text-xl font-black`}>{format(totalSpent)}</Text>
+              <View className={`flex-1 p-gsd-md rounded-gsd-lg border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                <Text className={`${subTextClass} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Spent</Text>
+                <Text className={`${textClass} text-lg font-black`}>{format(totalSpent)}</Text>
               </View>
             </View>
 

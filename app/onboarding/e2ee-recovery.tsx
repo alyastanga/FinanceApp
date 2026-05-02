@@ -72,16 +72,22 @@ export default function E2EERecoveryScreen() {
       />
 
       <SafeAreaView className="flex-1" edges={['top']}>
-        <View className="px-6 py-4 flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()} className={`p-2 rounded-full ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-            <IconSymbol name="chevron.left" size={24} color={isDark ? "white" : "black"} />
+        {/* Navigation Bar */}
+        <View className="px-gsd-lg py-gsd-lg flex-row items-center justify-between">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className={`h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+          >
+            <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
           </TouchableOpacity>
-          <Text className={`text-xl font-bold ${textClass}`}>Recovery</Text>
-          <View className="w-10" />
+          <View>
+            <Text className={`text-2xl font-black ${textClass} tracking-tighter`}>Recovery</Text>
+            <Text className={`${subTextClass} text-[9px] font-bold uppercase tracking-widest`}>Unlock Encrypted Data</Text>
+          </View>
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
-          <View className="pt-2 mb-6 items-center">
+          <View className="pt-gsd-xs mb-gsd-lg items-center">
             <Text className={`${subTextClass} text-xs leading-5 font-medium text-center px-4`}>
               Enter your 24-word phrase to restore cloud access and decrypt your local vault.
             </Text>

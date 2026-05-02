@@ -39,7 +39,7 @@ interface InsightsDashboardProps {
 import { GoalProgressCard } from './ui/GoalProgressCard';
 
 // Sub-component for Goal Progress
-const GoalMonitoringItem = ({ goal, isDark }: { goal: any, isDark: boolean }) => {
+const GoalAnalyticsItem = ({ goal, isDark }: { goal: any, isDark: boolean }) => {
   return <GoalProgressCard goal={goal} isDark={isDark} />;
 };
 
@@ -252,57 +252,54 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="pt-6 px-8 pb-12 overflow-hidden">
+        <View className="pt-gsd-sm px-gsd-lg pb-gsd-sm overflow-hidden">
           <LinearGradient
-            colors={[isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.05)', 'transparent']}
-            className="absolute top-0 left-0 right-0 h-96"
+            colors={[isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.04)', 'transparent']}
+            className="absolute top-0 left-0 right-0 h-64"
           />
-          <Text className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-black'}`}>Monitoring</Text>
-          <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[10px] font-black uppercase tracking-[4px] mb-4`}>
-            Real-time financial analytics
-          </Text>
-
-          <View className="mb-8">
-            <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-xs font-bold uppercase tracking-widest mb-1`}>Total Net Worth</Text>
-            <View className="flex-row items-baseline gap-x-3 flex-wrap">
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-black tracking-tighter`}>
-                {format(netWorthValue)}
-              </Text>
-              <View className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'bg-red-500/20 border-red-500/30' : 'bg-primary/10 border-primary/20'} px-3 py-1 rounded-full border`}>
-                <Text className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'text-red-500' : 'text-primary'} font-black text-[10px] uppercase tracking-widest`}>
+          <View className="flex-row items-center justify-between mb-gsd-lg">
+            <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter`}>Analytics</Text>
+          </View>
+          <BlurView intensity={isDark ? 15 : 40} tint={isDark ? "dark" : "light"} className={`rounded-gsd-lg border p-gsd-lg mb-gsd-lg overflow-hidden ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+            <View className="flex-row justify-between items-start mb-gsd-md">
+              <View>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[8px] font-black uppercase tracking-[3px] mb-1`}>Net Worth</Text>
+                <Text className={`${isDark ? 'text-white' : 'text-black'} text-4xl font-black tracking-tighter`}>
+                  {format(netWorthValue)}
+                </Text>
+              </View>
+              <View className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'bg-red-500/10 border-red-500/20' : 'bg-primary/10 border-primary/20'} px-gsd-md py-gsd-xs rounded-gsd-sm border`}>
+                <Text className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'text-red-500' : 'text-primary'} font-black text-[7px] uppercase tracking-widest`}>
                   {runway.runwayDays === -1 ? 'Infinite' : runway.runwayDays > 365 ? `${(runway.runwayDays / 365).toFixed(1)}YR` : `${runway.runwayDays} Days`} Freedom
                 </Text>
               </View>
             </View>
-            <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[9px] font-black uppercase tracking-[2px] mt-2`}>
-              Survival Capacity at {format(runway.dailyBurnRate)}/day burn
-            </Text>
-          </View>
-
-          <View className="flex-row gap-x-4">
-            <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
-              <View className="flex-row justify-between items-center mb-1">
-                <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest`}>
-                  {insights.actualIncome > 0 ? 'Actual Income' : 'Income Goal'}
-                </Text>
-                {insights.monthlyIncome > insights.actualIncome && (
-                  <View className="bg-primary/20 px-1.5 py-0.5 rounded-full">
-                    <Text className="text-primary text-[6px] font-black uppercase">Strategy</Text>
-                  </View>
-                )}
+            <View className={`pt-gsd-md border-t ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center justify-between`}>
+              <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[8px] font-black uppercase tracking-[1.5px]`}>
+                Survival at {format(runway.dailyBurnRate)}/day
+              </Text>
+              <View className="flex-row items-center gap-x-1">
+                <View className="h-1 w-1 rounded-full bg-primary" />
+                <Text className="text-primary text-[7px] font-black uppercase tracking-widest">Active Pulse</Text>
               </View>
-              <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black`}>
+            </View>
+          </BlurView>
+
+          <View className="flex-row gap-x-gsd-sm">
+            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-gsd-md border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-gsd-md`}>
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Income</Text>
+              <Text className={`${isDark ? 'text-white' : 'text-black'} text-base font-black`}>
                 {format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}
               </Text>
             </BlurView>
-            <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-5`}>
-              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[8px] font-black uppercase tracking-widest mb-1`}>Fixed Expenses</Text>
-              <Text className="text-destructive text-xl font-black">-{format(insights.monthlyFixedExpenses)}</Text>
+            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`flex-1 rounded-gsd-md border ${isDark ? 'border-white/5' : 'border-black/5'} overflow-hidden p-gsd-md`}>
+              <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[7px] font-black uppercase tracking-widest mb-0.5`}>Fixed</Text>
+              <Text className="text-destructive text-base font-black">-{format(insights.monthlyFixedExpenses)}</Text>
             </BlurView>
           </View>
         </View>
 
-        <View className="px-6 gap-y-10">
+        <View className="px-gsd-lg gap-y-gsd-lg">
           {/* Main Financial Gauges */}
           {(incomes.length > 0 || expenses.length > 0) && (
             <View className="gap-y-6">
@@ -310,9 +307,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Budget Intelligence</Text>
                 <TouchableOpacity
                   onPress={() => handleExplain('budget', 'Daily Budget Health & Safe-to-Spend', { dailySafeToSpend: insights.dailySafeToSpend, monthlyIncome: insights.monthlyIncome, fixedExpenses: insights.monthlyFixedExpenses })}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center"
                 >
-                  {loadingExplains['budget'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['budget'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
               <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden`}>
@@ -335,9 +332,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Performance</Text>
                 <TouchableOpacity
                   onPress={() => handleExplain('performance', '6-Month Performance Trends', trendData)}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center"
                 >
-                  {loadingExplains['performance'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['performance'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
               <TouchableOpacity
@@ -364,9 +361,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 </View>
                 <TouchableOpacity
                   onPress={() => handleExplain('spending', 'Categorical Spending Habits', categorySpending)}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
                 >
-                  {loadingExplains['spending'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['spending'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
 
@@ -438,9 +435,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Wealth Management</Text>
                 <TouchableOpacity
                   onPress={() => handleExplain('wealth', 'Asset Allocation & Wealth Management', portfolio)}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center"
                 >
-                  {loadingExplains['wealth'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['wealth'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
               <PortfolioSnapshot portfolio={portfolio} isDark={isDark} />
@@ -455,9 +452,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
                 <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Strategy</Text>
                 <TouchableOpacity
                   onPress={() => handleExplain('strategy', 'Financial Strategy & Projections', { incomes: incomes.length, expenses: expenses.length, goals: goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })) })}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center"
                 >
-                  {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
               <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} isDark={isDark} />
@@ -465,21 +462,21 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
             </View>
           )}
 
-          {/* Goal Progress Monitoring */}
+          {/* Goal Progress Analytics */}
           {goals.length > 0 && (
             <View className="gap-y-6">
               <View className="flex-row justify-between items-center px-2">
-                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Goal Monitoring</Text>
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Goal Analytics</Text>
                 <TouchableOpacity
                   onPress={() => handleExplain('goals', 'Goal Progress & Milestones', goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })))}
-                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                  className="h-gsd-huge w-gsd-huge rounded-full bg-primary/20 items-center justify-center"
                 >
-                  {loadingExplains['goals'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                  {loadingExplains['goals'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
               <View className="gap-y-4">
                 {goals.map((goal: any) => (
-                  <GoalMonitoringItem key={goal.id} goal={goal} isDark={isDark} />
+                  <GoalAnalyticsItem key={goal.id} goal={goal} isDark={isDark} />
                 ))}
               </View>
               {renderAIInsight('goals', 'Summarize my progress across all financial goals and milestones in more detail.')}

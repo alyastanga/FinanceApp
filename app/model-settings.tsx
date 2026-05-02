@@ -118,7 +118,7 @@ export default function ModelSettings() {
           <IconSymbol name="chevron.left" size={20} color={isDark ? "white" : "black"} />
         </TouchableOpacity>
         <View>
-          <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'}`}>AI Engine</Text>
+          <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter`}>AI Engine</Text>
           <Text className={`text-xs uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>Model Management</Text>
         </View>
       </View>

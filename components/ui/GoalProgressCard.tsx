@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
-import { View, Text } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { IconSymbol } from './icon-symbol';
+import React, { useMemo } from 'react';
+import { Text, View } from 'react-native';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useTheme } from '../../context/ThemeContext';
+import { IconSymbol } from './icon-symbol';
 
 interface GoalProgressCardProps {
   goal: any;
@@ -14,9 +14,9 @@ interface GoalProgressCardProps {
   noContainer?: boolean;
 }
 
-export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({ 
-  goal, 
-  isDark: isDarkProp, 
+export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
+  goal,
+  isDark: isDarkProp,
   onPress,
   children,
   compact = false,
@@ -52,44 +52,44 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
           </View>
         </View>
         <View className="items-end">
-            <Text className={`text-primary font-black ${progressSizeClass} tracking-tighter`}>{Math.round(progress)}%</Text>
-            <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest`}>completion</Text>
+          <Text className={`text-primary font-black ${progressSizeClass} tracking-tighter`}>{Math.round(progress)}%</Text>
+          <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest`}>completion</Text>
         </View>
       </View>
 
       <View className={compact ? 'mb-4' : 'mb-6'}>
         <View className={`h-2.5 w-full ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-full overflow-hidden`}>
-            <LinearGradient
-                colors={['#10b981', '#059669']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={{ width: `${progress}%`, height: '100%' }}
-                className="rounded-full shadow-lg shadow-emerald-500/50"
-            />
+          <LinearGradient
+            colors={['#10b981', '#059669']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={{ width: `${progress}%`, height: '100%' }}
+            className="rounded-full shadow-lg shadow-emerald-500/50"
+          />
         </View>
         {!compact && (
-           <View 
-               className="h-[2px] bg-emerald-500/20 blur-md rounded-full mt-[-2px]" 
-               style={{ width: `${progress}%`, marginLeft: '0.5%' }} 
-           />
+          <View
+            className="h-[2px] bg-emerald-500/20 blur-md rounded-full mt-[-2px]"
+            style={{ width: `${progress}%`, marginLeft: '0.5%' }}
+          />
         )}
       </View>
 
       {!compact && (
         <View className="flex-row justify-between items-center mb-6">
-            <View>
-                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-[2px] mb-1`}>Financial Target</Text>
-                <Text className={`${textClass} font-black text-sm`}>
-                    {format(goal.currentAmount)} <Text className={isDark ? "text-white/20" : "text-black/20"}>/ {format(goal.targetAmount)}</Text>
-                </Text>
+          <View>
+            <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-[2px] mb-1`}>Financial Target</Text>
+            <Text className={`${textClass} font-black text-sm`}>
+              {format(goal.currentAmount)} <Text className={isDark ? "text-white/20" : "text-black/20"}>/ {format(goal.targetAmount)}</Text>
+            </Text>
+          </View>
+          <View className="items-end">
+            <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-[2px] mb-1 text-right`}>Target Date</Text>
+            <View className="flex-row items-center">
+              <Text className={`${textClass} font-bold text-xs mr-2`}>{targetDateStr}</Text>
+              <IconSymbol name="target" size={12} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
-            <View className="items-end">
-                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-[2px] mb-1 text-right`}>Target Date</Text>
-                <View className="flex-row items-center">
-                    <Text className={`${textClass} font-bold text-xs mr-2`}>{targetDateStr}</Text>
-                    <IconSymbol name="target" size={12} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
-                </View>
-            </View>
+          </View>
         </View>
       )}
 

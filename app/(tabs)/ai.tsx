@@ -1,23 +1,20 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  FlatList, 
-  KeyboardAvoidingView, 
-  Platform, 
-  Keyboard,
-  Animated,
-  Easing
-} from 'react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { generateAIResponse } from '@/lib/ai-service';
+import { BlurView } from 'expo-blur';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from 'react-native';
 import { useAI } from '../../context/AIContext';
-import { AI_AGENTS, getAgentFromMention, cleanMention, AIAgent } from '../../lib/ai-agents';
 import { useTheme } from '../../context/ThemeContext';
+import { AI_AGENTS, AIAgent, getAgentFromMention } from '../../lib/ai-agents';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
 
@@ -34,13 +31,13 @@ const ChatBubble = ({ item }: { item: Message }) => {
   // ── Robust Chart Extraction ──
   let chartData: any[] | null = null;
   let cleanText = item.text;
-  
+
   // Helper to reliably extract nested JSON from a string by counting braces
   const extractNestedJson = (str: string) => {
     // Look for the first structural character [ or {
     const startIdx = str.search(/[\{\[]/);
     if (startIdx === -1) return null;
-    
+
     let braceCount = 0;
     let bracketCount = 0;
     let inString = false;
@@ -48,22 +45,22 @@ const ChatBubble = ({ item }: { item: Message }) => {
     let endIdx = -1;
 
     for (let i = startIdx; i < str.length; i++) {
-        const char = str[i];
-        if (escape) { escape = false; continue; }
-        if (char === '\\') { escape = true; continue; }
-        if (char === '"') { inString = !inString; continue; }
-        
-        if (!inString) {
-            if (char === '{') braceCount++;
-            else if (char === '}') braceCount--;
-            else if (char === '[') bracketCount++;
-            else if (char === ']') bracketCount--;
-            
-            if (braceCount === 0 && bracketCount === 0) {
-                endIdx = i;
-                break;
-            }
+      const char = str[i];
+      if (escape) { escape = false; continue; }
+      if (char === '\\') { escape = true; continue; }
+      if (char === '"') { inString = !inString; continue; }
+
+      if (!inString) {
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+        else if (char === '[') bracketCount++;
+        else if (char === ']') bracketCount--;
+
+        if (braceCount === 0 && bracketCount === 0) {
+          endIdx = i;
+          break;
         }
+      }
     }
 
     // ── AGGRESSIVE JSON HEALING ──
@@ -72,22 +69,22 @@ const ChatBubble = ({ item }: { item: Message }) => {
     let finalEndIdx = endIdx;
 
     if (endIdx === -1 && (braceCount > 0 || bracketCount > 0)) {
-        jsonStr = str.substring(startIdx);
-        // Append missing closers
-        if (inString) jsonStr += '"';
-        jsonStr += '}'.repeat(Math.max(0, braceCount));
-        jsonStr += ']'.repeat(Math.max(0, bracketCount));
-        finalEndIdx = str.length - 1;
+      jsonStr = str.substring(startIdx);
+      // Append missing closers
+      if (inString) jsonStr += '"';
+      jsonStr += '}'.repeat(Math.max(0, braceCount));
+      jsonStr += ']'.repeat(Math.max(0, bracketCount));
+      finalEndIdx = str.length - 1;
     } else if (endIdx !== -1) {
-        jsonStr = str.substring(startIdx, endIdx + 1);
+      jsonStr = str.substring(startIdx, endIdx + 1);
     }
 
     if (jsonStr) {
-        return {
-            jsonStr,
-            start: startIdx,
-            end: finalEndIdx
-        };
+      return {
+        jsonStr,
+        start: startIdx,
+        end: finalEndIdx
+      };
     }
     return null;
   };
@@ -98,19 +95,19 @@ const ChatBubble = ({ item }: { item: Message }) => {
     try {
       let cleanJson = jsonStr.trim();
       cleanJson = cleanJson.replace(/,\s*([\}\]])/g, '$1'); // Fix trailing commas
-      
+
       const parsed = JSON.parse(cleanJson);
       const dataArr = Array.isArray(parsed) ? parsed : (parsed.data && Array.isArray(parsed.data) ? parsed.data : (parsed.items && Array.isArray(parsed.items) ? parsed.items : null));
-      
+
       if (dataArr && Array.isArray(dataArr)) {
         chartData = dataArr.map((d: any, index: number) => {
-            const label = d.label || d.name || d.category || d.item || d.asset || d.description || d.month || d.date || d.type || 'Item';
-            const value = Math.abs(Number(
-              d.value || d.amount || d.total || d.price || d.balance || 
-              d.Total_Expenses || d.spending || d.cost || d.sum || d.limit || 0
-            ));
-            const color = d.color || HIGH_CONTRAST_PALETTE[index % HIGH_CONTRAST_PALETTE.length];
-            return { label, value, color };
+          const label = d.label || d.name || d.category || d.item || d.asset || d.description || d.month || d.date || d.type || 'Item';
+          const value = Math.abs(Number(
+            d.value || d.amount || d.total || d.price || d.balance ||
+            d.Total_Expenses || d.spending || d.cost || d.sum || d.limit || 0
+          ));
+          const color = d.color || HIGH_CONTRAST_PALETTE[index % HIGH_CONTRAST_PALETTE.length];
+          return { label, value, color };
         }).filter(d => d.value > 0);
 
         // Safeguard: if all items have the same color (AI ignored distinct color rule),
@@ -128,7 +125,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
         }
       }
     } catch (e) {
-        // Parsing failed (common during streaming)
+      // Parsing failed (common during streaming)
     }
     return false;
   };
@@ -148,32 +145,32 @@ const ChatBubble = ({ item }: { item: Message }) => {
   // ── 1. Primary: Extract [CHART_DATA: ...] tag ──
   const chartTagIdx = workingText.toUpperCase().indexOf('CHART_DATA');
   if (chartTagIdx !== -1) {
-     const afterTag = workingText.substring(chartTagIdx);
-     const extraction = extractNestedJson(afterTag);
-     
-     if (extraction) {
-         // Find the outermost enclosure: from the `[` before CHART_DATA to the closing `]`
-         const startOfBlock = Math.max(0, workingText.lastIndexOf('[', chartTagIdx));
-         let endOfBlock = chartTagIdx + extraction.end + 1;
-         // Capture a trailing ] if the outer block is [CHART_DATA: {...}]
-         if (endOfBlock < workingText.length && workingText[endOfBlock] === ']') endOfBlock++;
-         
-         const fullMatch = workingText.substring(startOfBlock, endOfBlock);
-         processExtractedJson(extraction.jsonStr, fullMatch);
-     }
+    const afterTag = workingText.substring(chartTagIdx);
+    const extraction = extractNestedJson(afterTag);
+
+    if (extraction) {
+      // Find the outermost enclosure: from the `[` before CHART_DATA to the closing `]`
+      const startOfBlock = Math.max(0, workingText.lastIndexOf('[', chartTagIdx));
+      let endOfBlock = chartTagIdx + extraction.end + 1;
+      // Capture a trailing ] if the outer block is [CHART_DATA: {...}]
+      if (endOfBlock < workingText.length && workingText[endOfBlock] === ']') endOfBlock++;
+
+      const fullMatch = workingText.substring(startOfBlock, endOfBlock);
+      processExtractedJson(extraction.jsonStr, fullMatch);
+    }
   }
 
   // ── 2. Fallback: Any remaining JSON block that looks like chart data ──
   if (!chartData) {
-      // Try to find a standalone JSON array or object in the text
-      const extraction = extractNestedJson(workingText);
-      if (extraction) {
-          // Only process if it looks like structured data (has label/value-like keys)
-          const looksLikeChartData = /("label"|"name"|"category"|"value"|"amount"|"total")/i.test(extraction.jsonStr);
-          if (looksLikeChartData) {
-              processExtractedJson(extraction.jsonStr, extraction.jsonStr);
-          }
+    // Try to find a standalone JSON array or object in the text
+    const extraction = extractNestedJson(workingText);
+    if (extraction) {
+      // Only process if it looks like structured data (has label/value-like keys)
+      const looksLikeChartData = /("label"|"name"|"category"|"value"|"amount"|"total")/i.test(extraction.jsonStr);
+      if (looksLikeChartData) {
+        processExtractedJson(extraction.jsonStr, extraction.jsonStr);
       }
+    }
   }
 
   // Cleanup residual CHART_DATA tags and empty bracket remnants
@@ -210,7 +207,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
   const isUser = item.role === 'user';
 
   return (
-    <View 
+    <View
       style={{
         alignSelf: isUser ? 'flex-end' : 'flex-start',
         maxWidth: '85%',
@@ -220,12 +217,12 @@ const ChatBubble = ({ item }: { item: Message }) => {
       {/* Agent Badge */}
       {!isUser && item.agent && (
         <View className="flex-row items-center mb-2 ml-1">
-          <View 
+          <View
             className={`px-2 py-0.5 rounded-full flex-row items-center border ${isDark ? 'border-white/10' : 'border-black/10'}`}
             style={{ backgroundColor: `${item.agent.color}${isDark ? '20' : '10'}` }}
           >
             <Text className="text-[10px] mr-1.5">{item.agent.icon}</Text>
-            <Text 
+            <Text
               className="text-[8px] font-black uppercase tracking-widest"
               style={{ color: item.agent.color }}
             >
@@ -236,7 +233,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
       )}
 
       {isUser ? (
-        <View 
+        <View
           className={`p-4 rounded-[32px] rounded-tr-none border shadow-2xl ${isDark ? 'bg-[#1A1A1A] border-emerald-500/30' : 'bg-white border-emerald-500/20'}`}
         >
           <Text className={`text-[15px] leading-6 font-bold ${isDark ? 'text-white/90' : 'text-black/90'}`}>
@@ -268,7 +265,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
                 </Text>
               </View>
               {/* Plain View wrapper — Skia Canvas cannot render inside BlurView (GlassCard) on iOS */}
-              <View 
+              <View
                 className={`rounded-2xl border overflow-hidden ${isDark ? 'border-[#2A2A2A]' : 'border-[#EAEAEA]'}`}
                 style={{ backgroundColor: isDark ? '#121212' : '#FAFAFA', padding: 12 }}
               >
@@ -279,9 +276,9 @@ const ChatBubble = ({ item }: { item: Message }) => {
                 {(chartData as any[]).map((d: any, i: number) => (
                   <View key={i} className="flex-row items-center justify-between">
                     <View className="flex-row items-center flex-1">
-                      <View 
-                        className="h-2 w-2 rounded-full mr-2" 
-                        style={{ backgroundColor: d.color }} 
+                      <View
+                        className="h-2 w-2 rounded-full mr-2"
+                        style={{ backgroundColor: d.color }}
                       />
                       <Text className={`text-[11px] font-bold ${isDark ? 'text-white/70' : 'text-black/70'}`}>{d.label}</Text>
                     </View>
@@ -293,7 +290,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
           )}
         </View>
       )}
-      
+
       <Text className={`text-[9px] uppercase font-black mt-1.5 ml-2 tracking-widest ${isDark ? 'text-white/15' : 'text-black/20'}`}>
         {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </Text>
@@ -349,7 +346,7 @@ const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void
 
       <View className="flex-row flex-wrap justify-center gap-3">
         {Object.values(AI_AGENTS).map(agent => (
-          <TouchableOpacity 
+          <TouchableOpacity
             key={agent.id}
             onPress={() => onFastQuery(`@${agent.slug} `)}
             className={`border rounded-2xl px-4 py-3 flex-row items-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
@@ -390,16 +387,16 @@ export default function AIChatScreen() {
 
   const handleInputChange = (text: string) => {
     setInput(text);
-    
+
     // Detect '@' trigger
     const lastWord = text.split(/\s/).pop() || '';
     if (lastWord.startsWith('@')) {
       const query = lastWord.slice(1).toLowerCase();
-      const matches = Object.values(AI_AGENTS).filter(agent => 
-        agent.slug.toLowerCase().includes(query) || 
+      const matches = Object.values(AI_AGENTS).filter(agent =>
+        agent.slug.toLowerCase().includes(query) ||
         agent.name.toLowerCase().includes(query)
       );
-      
+
       setFilteredAgents(matches);
       setShowSuggestions(matches.length > 0);
     } else {
@@ -467,17 +464,10 @@ export default function AIChatScreen() {
     const targetedAgent = getAgentFromMention(text);
     const aiMsgId = (Date.now() + 1).toString();
 
-    // Add empty assistant message for streaming
-    const initialAiMsg: Message = {
-      id: aiMsgId,
-      text: '',
-      role: 'assistant',
-      timestamp: new Date(),
-      agent: targetedAgent
-    };
-    // Add BOTH the user message and the AI placeholder to the chat
-    setMessages(prev => [...prev, userMsg, initialAiMsg]);
+    // Add ONLY the user message to start. AI bubble stays hidden.
+    setMessages(prev => [...prev, userMsg]);
 
+    let fullText = '';
     try {
       const apiMessages = [...messages, userMsg].map(m => ({
         role: m.role,
@@ -485,31 +475,37 @@ export default function AIChatScreen() {
       }));
 
       const response = await generateAIResponse(
-        apiMessages, 
-        aiMode === 'local', 
+        apiMessages,
+        aiMode === 'local',
         targetedAgent.id,
         (token) => {
-          if (mounted.current) {
-            setMessages(prev => prev.map(m => 
-              m.id === aiMsgId ? { ...m, text: m.text + token } : m
-            ));
-          }
+          // Collect tokens but don't update state to keep bubble hidden
+          fullText += token;
         }
       );
 
       if (!mounted.current) return;
 
-      // Final update in case the stream was missing anything or we want to normalize it
-      setMessages(prev => prev.map(m => 
-        m.id === aiMsgId ? { ...m, text: response || m.text } : m
-      ));
+      // Final response is ready, add the AI message to the list
+      const finalAiMsg: Message = {
+        id: aiMsgId,
+        text: response || fullText,
+        role: 'assistant',
+        timestamp: new Date(),
+        agent: targetedAgent
+      };
+
+      setMessages(prev => [...prev, finalAiMsg]);
     } catch (error) {
       console.error('Chat error:', error);
-      setMessages(prev => prev.map(m => 
-        m.id === aiMsgId && m.text === '' 
-          ? { ...m, text: "I'm sorry, I couldn't process that request." } 
-          : m
-      ));
+      const errorMsg: Message = {
+        id: aiMsgId,
+        text: "I'm sorry, I couldn't process that request. Please try again.",
+        role: 'assistant',
+        timestamp: new Date(),
+        agent: targetedAgent
+      };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       if (mounted.current) {
         setIsTyping(false);
@@ -532,25 +528,25 @@ export default function AIChatScreen() {
       {/* Floating Header */}
       <BlurView intensity={isDark ? 30 : 80} tint={isDark ? "dark" : "light"} className={`absolute top-0 left-0 right-0 z-50 pt-16 pb-6 px-6 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}>
         <View className="flex-row items-center justify-between">
-           <View>
-             <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>AI Assistant</Text>
-             <View className="flex-row items-center mt-1">
-               <View className={`h-1.5 w-1.5 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
-               <Text className={`text-[10px] font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'} ml-2`}>
-                 {aiMode === 'cloud' ? 'Cloud Matrix' : 'Local Core'}
-               </Text>
-             </View>
-           </View>
-           <TouchableOpacity 
-             onPress={() => setMessages([])} 
-             className={`h-10 w-10 rounded-2xl items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
-           >
-              <IconSymbol name="trash" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
-           </TouchableOpacity>
+          <View>
+            <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Penance AI</Text>
+            <View className="flex-row items-center mt-1">
+              <View className={`h-1.5 w-1.5 rounded-full ${aiMode === 'cloud' ? 'bg-[#10b981]' : 'bg-[#8b5cf6]'}`} />
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] opacity-80 ${aiMode === 'cloud' ? 'text-[#10b981]' : 'text-[#8b5cf6]'} ml-2`}>
+                {aiMode === 'cloud' ? 'Cloud' : 'Local'}
+              </Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            onPress={() => setMessages([])}
+            className={`h-10 w-10 rounded-2xl items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+          >
+            <IconSymbol name="trash" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+          </TouchableOpacity>
         </View>
       </BlurView>
 
-      <KeyboardAvoidingView 
+      <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         className="flex-1"
         keyboardVerticalOffset={Platform.OS === 'ios' ? 5 : 0}
@@ -559,66 +555,71 @@ export default function AIChatScreen() {
           ref={flatListRef}
           data={messages}
           keyExtractor={item => item.id}
-          contentContainerStyle={{ padding: 20, paddingTop: 140, paddingBottom: 20 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 140, paddingBottom: 140 }}
           renderItem={({ item }) => <ChatBubble item={item} />}
           ListEmptyComponent={<IntelligenceHero onFastQuery={setInput} />}
           ListFooterComponent={isTyping ? <ThinkingAnimation /> : null}
         />
 
         {/* Input Area */}
-        <BlurView intensity={isDark ? 80 : 100} tint={isDark ? "dark" : "light"} className={`px-5 pb-8 pt-4 border-t ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-          {/* Stacked Agent Suggestions */}
-          {showSuggestions && (
-            <View className={`mb-2 rounded-3xl border overflow-hidden shadow-2xl ${isDark ? 'bg-[#121212]/90 border-white/10' : 'bg-white/90 border-black/10'}`}>
-              {filteredAgents.map((agent, index) => (
-                <TouchableOpacity 
-                  key={agent.id}
-                  onPress={() => selectAgent(agent)}
-                  className={`flex-row items-center p-4 ${index !== filteredAgents.length - 1 ? (isDark ? 'border-b border-white/5' : 'border-b border-black/5') : ''}`}
-                >
-                  <View 
-                    className="h-10 w-10 rounded-2xl items-center justify-center mr-4"
-                    style={{ backgroundColor: `${agent.color}${isDark ? '20' : '10'}` }}
+        <View className="px-5 pb-8 pt-4">
+          <BlurView
+            intensity={isDark ? 40 : 90}
+            tint={isDark ? "dark" : "light"}
+            className={`rounded-[32px] border overflow-hidden shadow-2xl ${isDark ? 'bg-black/20 border-white/10' : 'bg-white/40 border-black/5'}`}
+          >
+            {/* Stacked Agent Suggestions */}
+            {showSuggestions && (
+              <View className={`border-b overflow-hidden ${isDark ? 'border-white/5' : 'border-black/5'}`}>
+                {filteredAgents.map((agent, index) => (
+                  <TouchableOpacity
+                    key={agent.id}
+                    onPress={() => selectAgent(agent)}
+                    className={`flex-row items-center p-4 ${index !== filteredAgents.length - 1 ? (isDark ? 'border-b border-white/5' : 'border-b border-black/5') : ''}`}
                   >
-                    <Text className="text-xl">{agent.icon}</Text>
-                  </View>
-                  <View className="flex-1">
-                    <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{agent.name}</Text>
-                    <Text className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-                      Expert Intelligence
-                    </Text>
-                  </View>
-                  <IconSymbol name="plus.circle.fill" size={20} color={agent.color} />
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          <View className={`flex-row items-center rounded-[32px] p-2 pr-2 border shadow-2xl ${isDark ? 'bg-[#181818] border-white/10' : 'bg-white border-black/10'}`} style={{ marginTop: showSuggestions ? 0 : 0 }}>
-            {(!input || input.length === 0) && (
-              <View className="pl-4 pr-1">
-                 <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+                    <View
+                      className="h-10 w-10 rounded-2xl items-center justify-center mr-4"
+                      style={{ backgroundColor: `${agent.color}${isDark ? '20' : '10'}` }}
+                    >
+                      <Text className="text-xl">{agent.icon}</Text>
+                    </View>
+                    <View className="flex-1">
+                      <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{agent.name}</Text>
+                      <Text className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
+                        Expert Intelligence
+                      </Text>
+                    </View>
+                    <IconSymbol name="plus.circle.fill" size={20} color={agent.color} />
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
-            <TextInput
-              value={input}
-              onChangeText={handleInputChange}
-              placeholder="Summon an expert..."
-              placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
-              className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
-              multiline
-            />
-            <TouchableOpacity 
-              onPress={sendMessage}
-              disabled={!input.trim()}
-              className={`h-12 w-12 rounded-full items-center justify-center ${
-                input.trim() ? 'bg-primary' : (isDark ? 'bg-white/5' : 'bg-black/5')
-              }`}
-            >
-              <IconSymbol name="arrow.up" size={24} color={input.trim() ? (isDark ? '#000' : '#FFF') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')} />
-            </TouchableOpacity>
-          </View>
-        </BlurView>
+
+            <View className={`flex-row items-center p-2 pr-2`}>
+              {(!input || input.length === 0) && (
+                <View className="pl-4 pr-1">
+                  <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+                </View>
+              )}
+              <TextInput
+                value={input}
+                onChangeText={handleInputChange}
+                placeholder="Summon an expert..."
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+                className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
+                multiline
+              />
+              <TouchableOpacity
+                onPress={sendMessage}
+                disabled={!input.trim()}
+                className={`h-12 w-12 rounded-full items-center justify-center ${input.trim() ? 'bg-primary' : (isDark ? 'bg-white/5' : 'bg-black/5')
+                  }`}
+              >
+                <IconSymbol name="arrow.up" size={24} color={input.trim() ? (isDark ? '#000' : '#FFF') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')} />
+              </TouchableOpacity>
+            </View>
+          </BlurView>
+        </View>
       </KeyboardAvoidingView>
     </View>
   );

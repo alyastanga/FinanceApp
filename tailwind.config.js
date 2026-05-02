@@ -36,6 +36,21 @@ module.exports = {
       borderRadius: {
         '3xl': '24px',
         '4xl': '32px',
+        // GSD Minimalism
+        'gsd-xs': '6px',
+        'gsd-sm': '10px',
+        'gsd-md': '16px',
+        'gsd-lg': '24px',
+        'gsd-xl': '32px',
+      },
+      spacing: {
+        'gsd-xs': '4px',
+        'gsd-sm': '8px',
+        'gsd-md': '12px',
+        'gsd-lg': '16px',
+        'gsd-xl': '20px',
+        'gsd-xxl': '24px',
+        'gsd-huge': '32px',
       }
     },
   },

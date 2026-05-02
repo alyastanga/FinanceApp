@@ -18,9 +18,9 @@ const GoalList = ({ goals, onEdit, onAdd }: GoalListProps) => {
     <View className="flex-1">
       <View className="flex-row justify-between items-end mb-8 pt-4">
         <View className="flex-1 mr-4">
-          <Text className={`text-3xl font-black mb-1 ${isDark ? 'text-white' : 'text-black'}`}>Goal Setting</Text>
+          <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Goal Setting</Text>
           <Text className="text-sm font-medium text-muted-foreground leading-5">
-            Monitor and adjust your savings targets.
+            Track and adjust your savings targets.
           </Text>
         </View>
         <TouchableOpacity 
@@ -43,7 +43,7 @@ const GoalList = ({ goals, onEdit, onAdd }: GoalListProps) => {
           >
              <Text className="text-primary font-black text-[12px] uppercase tracking-[1px] mb-3 pl-0.5">No Goals Locked In</Text>
              <Text className="text-muted-foreground text-xs text-center px-8 leading-5">
-               Set your first goal to start monitoring your wealth transformation.
+               Set your first goal to start tracking your wealth transformation.
              </Text>
           </TouchableOpacity>
         )}

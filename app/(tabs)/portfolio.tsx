@@ -174,7 +174,7 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
           <View className="flex-row justify-between items-center mb-10">
             <View>
               <Text className="text-[10px] font-black text-primary uppercase tracking-[4px] mb-1">Asset Management</Text>
-              <Text className={`text-4xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Net Worth</Text>
+              <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Net Worth</Text>
             </View>
             <View className="flex-row gap-x-3">
               <TouchableOpacity 

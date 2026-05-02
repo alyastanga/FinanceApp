@@ -3,7 +3,7 @@ import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TransactionForm from '../../components/TransactionForm';
 import { MicroBudgetGauge } from '../../components/ui/MicroBudgetGauge';
@@ -90,7 +90,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const totalBudgetLimit = budgets.reduce((acc, b) => acc + convertFrom((b.amountLimit || 0), b.currency || b._currency || currency), 0);
   const budgetProgress = totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) * 100 : 0;
 
-  // Group expenses by category for monitoring mini-chart
+  // Group expenses by category for analytics mini-chart
   const categoryMap = currentMonthExpenses.reduce((acc, curr) => {
     if (curr.category) {
       const amt = convertFrom((curr.amount || 0), curr.currency || curr._currency || currency);
@@ -148,41 +148,48 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
           />
         }
       >
-        <View className="mb-6">
-          <Text className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`}>Dashboard</Text>
+        <View className="flex-row items-center gap-x-3 mb-gsd-md">
+          <View className={`h-11 w-11 rounded-gsd-md items-center justify-center ${isDark ? 'bg-[#10b98110]' : 'bg-[#10b98105]'} border ${isDark ? 'border-[#10b98120]' : 'border-[#10b98110]'}`}>
+            <Image 
+              source={require('../../assets/images/logo.png')} 
+              className="w-8 h-8"
+              style={{ resizeMode: 'contain' }}
+            />
+          </View>
+          <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Penance</Text>
         </View>
 
         {/* 1. Monthly Pulse Card */}
-        <View className={`overflow-hidden rounded-[32px] border mb-6 shadow-sm ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-neutral-100'}`}>
+        <View className={`overflow-hidden rounded-gsd-lg border mb-gsd-lg shadow-sm ${isDark ? 'bg-[#0A0A0A] border-white/5' : 'bg-white border-neutral-100'}`}>
           <LinearGradient
             colors={[isDark ? '#10b98110' : '#10b98105', 'transparent']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
-            <View className="p-6">
-              <View className="flex-row justify-between items-start mb-4">
+            <View className="p-gsd-lg">
+              <View className="flex-row justify-between items-start mb-gsd-md">
                 <View>
-                  <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-1 ${isDark ? 'text-white/30' : 'text-black/40'}`}>
-                    Available Liquidity
+                  <Text className={`text-[9px] font-black uppercase tracking-[2px] mb-1 ${isDark ? 'text-white/30' : 'text-black/40'}`}>
+                    Liquidity
                   </Text>
-                  <Text className={`text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
+                  <Text className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
                     {format(totalLiquidity)}
                   </Text>
                 </View>
-                <View className={`px-3 py-1 rounded-full border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'}`}>
-                  <Text className="text-primary font-black text-[9px] uppercase tracking-widest">Active Pulse</Text>
+                <View className={`px-gsd-md py-gsd-xs rounded-gsd-sm border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'}`}>
+                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Active Pulse</Text>
                 </View>
               </View>
 
-              <View className="flex-row items-center gap-x-3 pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
+              <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
                 <View className="flex-1">
-                  <Text className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
-                  <Text className="text-sm font-bold text-primary" numberOfLines={1}>+{format(monthlyIncome)}</Text>
+                  <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
+                  <Text className="text-xs font-bold text-primary" numberOfLines={1}>+{format(monthlyIncome)}</Text>
                 </View>
-                <View className={`w-[1px] h-6 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
+                <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
                 <View className="flex-1">
-                  <Text className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
-                  <Text className="text-sm font-bold text-destructive" numberOfLines={1}>-{format(monthlyExpenses)}</Text>
+                  <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
+                  <Text className="text-xs font-bold text-destructive" numberOfLines={1}>-{format(monthlyExpenses)}</Text>
                 </View>
               </View>
             </View>
@@ -190,60 +197,57 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
         </View>
 
         {/* Quick Actions Panel */}
-        <View className="flex-row gap-x-3 mb-6">
+        <View className="flex-row gap-x-gsd-sm mb-gsd-lg">
           <TouchableOpacity
             onPress={() => setActiveType('income')}
-            className={`flex-1 rounded-[24px] border p-4 flex-row items-center justify-center gap-x-2.5 ${isDark ? 'bg-[#10b98110] border-[#10b98120]' : 'bg-[#10b98108] border-primary/10'}`}
+            className={`flex-1 rounded-gsd-md border p-gsd-md flex-row items-center justify-center gap-x-gsd-sm ${isDark ? 'bg-[#10b98110] border-[#10b98120]' : 'bg-[#10b98108] border-primary/10'}`}
           >
-            <View className="h-8 w-8 rounded-xl bg-primary items-center justify-center">
-              <IconSymbol name="plus" size={16} color="#ffffffff" />
+            <View className="h-gsd-huge w-gsd-huge rounded-gsd-sm bg-primary items-center justify-center">
+              <IconSymbol name="plus" size={14} color="#ffffffff" />
             </View>
-            <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Income</Text>
+            <Text className="text-primary font-black text-[9px] uppercase tracking-widest">Income</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setActiveType('expense')}
-            className={`flex-1 rounded-[24px] border p-4 flex-row items-center justify-center gap-x-2.5 ${isDark ? 'bg-[#ef444410] border-[#ef444420]' : 'bg-[#ef444408] border-destructive/10'}`}
+            className={`flex-1 rounded-gsd-md border p-gsd-md flex-row items-center justify-center gap-x-gsd-sm ${isDark ? 'bg-[#ef444410] border-[#ef444420]' : 'bg-[#ef444408] border-destructive/10'}`}
           >
-            <View className="h-8 w-8 rounded-xl bg-destructive items-center justify-center">
-              <IconSymbol name="minus" size={16} color="#fff" />
+            <View className="h-gsd-huge w-gsd-huge rounded-gsd-sm bg-destructive items-center justify-center">
+              <IconSymbol name="minus" size={14} color="#fff" />
             </View>
-            <Text className="text-destructive font-black text-[10px] uppercase tracking-widest">Expense</Text>
+            <Text className="text-destructive font-black text-[9px] uppercase tracking-widest">Expense</Text>
           </TouchableOpacity>
         </View>
 
         {/* Navigation Panels Grid */}
-        <View className="gap-y-6">
+        <View className="gap-y-gsd-md">
           {/* Portfolio Panel */}
           <TouchableOpacity
             onPress={() => router.push('/portfolio')}
-            className={`rounded-[32px] border p-6 shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
+            className={`rounded-gsd-lg border p-gsd-lg shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
           >
-            <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center gap-x-3">
-                <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
-                  <IconSymbol name="chart.pie.fill" size={16} color="#10b77fff" />
+            <View className="flex-row justify-between items-center mb-gsd-md">
+              <View className="flex-row items-center gap-x-gsd-md">
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
+                  <IconSymbol name="chart.pie.fill" size={14} color="#10b77fff" />
                 </View>
-                <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Full Portfolio</Text>
+                <Text className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Full Portfolio</Text>
               </View>
-              <IconSymbol name="chevron.right" size={14} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+              <IconSymbol name="chevron.right" size={12} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
 
             {portfolio.length === 0 ? (
-              <View className="items-center py-2">
-                <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Add Your First Asset</Text>
+              <View className="items-center py-1">
+                <Text className="text-primary font-black text-[9px] uppercase tracking-widest">Add Asset</Text>
               </View>
             ) : (
               <View className="flex-row items-end justify-between">
                 <View>
-                  <Text className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1}>
+                  <Text className={`text-2xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1}>
                     {format(totalPortfolioValue)}
                   </Text>
-                  <Text className={`text-[9px] font-bold uppercase tracking-widest mt-0.5 ${portfolioIsPositive ? 'text-primary' : 'text-destructive'}`}>
+                  <Text className={`text-[8px] font-bold uppercase tracking-widest mt-0.5 ${portfolioIsPositive ? 'text-primary' : 'text-destructive'}`}>
                     {portfolioIsPositive ? '+' : '-'} {format(Math.abs(portfolioTotalGain))} Gain
                   </Text>
-                </View>
-                <View className={`px-2.5 py-1 rounded-lg border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'}`}>
-                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Manage</Text>
                 </View>
               </View>
             )}
@@ -252,22 +256,22 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
           <View className="flex-row gap-x-4">
             {/* Performance Panel */}
             <TouchableOpacity
-              onPress={() => router.push('/monitoring')}
-              className={`flex-1 rounded-[32px] border p-5 h-40 justify-between overflow-hidden shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5 shadow-black' : 'bg-white border-neutral-50 shadow-neutral-300'}`}
+              onPress={() => router.push('/analytics')}
+              className={`flex-1 rounded-gsd-lg border p-gsd-md h-36 justify-between overflow-hidden shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5 shadow-black' : 'bg-white border-neutral-50 shadow-neutral-300'}`}
             >
               <View className="flex-row justify-between items-start">
-                <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                  <IconSymbol name="chart.line.uptrend.xyaxis.circle.fill" size={16} color="#10b77fff" />
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                  <IconSymbol name="chart.line.uptrend.xyaxis.circle.fill" size={14} color="#10b77fff" />
                 </View>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Monitor</Text>
+                <Text className={`text-[7px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Analytics</Text>
               </View>
 
               {currentMonthExpenses.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className={`font-black text-[8px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>No Data</Text>
+                  <Text className={`font-black text-[7px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>No Data</Text>
                 </View>
               ) : (
-                <View className="flex-1 items-center justify-center pt-2">
+                <View className="flex-1 items-center justify-center pt-1">
                   <MicroExpenseBars data={topExpensesData} isDark={isDark} />
                 </View>
               )}
@@ -276,22 +280,22 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
             {/* Budget Panel */}
             <TouchableOpacity
               onPress={() => router.push('/budget')}
-              className={`flex-1 rounded-[32px] border p-5 h-40 justify-between overflow-hidden shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5 shadow-black' : 'bg-white border-neutral-50 shadow-neutral-200'}`}
+              className={`flex-1 rounded-gsd-lg border p-gsd-md h-36 justify-between overflow-hidden shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5 shadow-black' : 'bg-white border-neutral-50 shadow-neutral-200'}`}
             >
               <View className="flex-row justify-between items-start">
-                <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
-                  <IconSymbol name="dollarsign.circle.fill" size={16} color="#10b981" />
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
+                  <IconSymbol name="dollarsign.circle.fill" size={14} color="#10b981" />
                 </View>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Budget</Text>
+                <Text className={`text-[7px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Budget</Text>
               </View>
 
               {budgets.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Set Budget</Text>
+                  <Text className="text-primary font-black text-[7px] uppercase tracking-widest">Set</Text>
                 </View>
               ) : (
-                <View className="flex-1 items-center justify-center pt-2">
-                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) : 0} size={150} isDark={isDark} />
+                <View className="flex-1 items-center justify-center pt-1">
+                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) : 0} size={120} isDark={isDark} />
                 </View>
               )}
             </TouchableOpacity>
@@ -300,25 +304,25 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
           {/* Activity Panel */}
           <TouchableOpacity
             onPress={() => router.push('/activity')}
-            className={`rounded-[32px] border p-6 shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
+            className={`rounded-gsd-lg border p-gsd-lg shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
           >
-            <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center gap-x-3">
-                <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-                  <IconSymbol name="list.bullet" size={16} color="#999" />
+            <View className="flex-row justify-between items-center mb-gsd-md">
+              <View className="flex-row items-center gap-x-gsd-md">
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                  <IconSymbol name="list.bullet" size={14} color="#999" />
                 </View>
-                <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Recent Activity</Text>
+                <Text className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Activity</Text>
               </View>
-              <IconSymbol name="chevron.right" size={14} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+              <IconSymbol name="chevron.right" size={12} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
-            <View className="gap-y-2">
+            <View className="gap-y-gsd-xs">
               {recentTransactions.map((tx, idx) => (
-                <View key={idx} className={`flex-row justify-between items-center p-3.5 rounded-2xl border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-neutral-50'}`}>
+                <View key={idx} className={`flex-row justify-between items-center p-gsd-md rounded-gsd-md border ${isDark ? 'bg-white/[0.02] border-white/5' : 'bg-black/[0.02] border-neutral-50'}`}>
                   <View>
-                    <Text className={`font-bold text-xs ${isDark ? 'text-white' : 'text-black'}`}>{tx.category}</Text>
-                    <Text className={`text-[9px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/20' : 'text-black/30'}`}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
+                    <Text className={`font-bold text-[10px] ${isDark ? 'text-white' : 'text-black'}`}>{tx.category}</Text>
+                    <Text className={`text-[8px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-white/20' : 'text-black/30'}`}>{new Date(tx.createdAt).toLocaleDateString()}</Text>
                   </View>
-                  <Text className={`text-xs ${tx.isIncome ? "text-primary font-black" : "text-destructive font-black"}`}>
+                  <Text className={`text-[10px] ${tx.isIncome ? "text-primary font-black" : "text-destructive font-black"}`}>
                     {tx.isIncome ? '+' : '-'} {format(tx.amount)}
                   </Text>
                 </View>
@@ -329,22 +333,22 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
           {/* Goals Panel */}
           <TouchableOpacity
             onPress={() => router.push('/goals')}
-            className={`rounded-[32px] border p-6 mb-4 shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
+            className={`rounded-gsd-lg border p-gsd-lg mb-gsd-sm shadow-sm ${isDark ? 'bg-[#0C0C0C] border-white/5' : 'bg-white border-neutral-100'}`}
           >
-            <View className="flex-row justify-between items-center mb-4">
-              <View className="flex-row items-center gap-x-3">
-                <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-purple-500/10' : 'bg-purple-500/10'}`}>
-                  <IconSymbol name="target" size={16} color="#8b5cf6" />
+            <View className="flex-row justify-between items-center mb-gsd-md">
+              <View className="flex-row items-center gap-x-gsd-md">
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-purple-500/10' : 'bg-purple-500/10'}`}>
+                  <IconSymbol name="target" size={14} color="#8b5cf6" />
                 </View>
-                <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Goal Progress</Text>
+                <Text className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Goals</Text>
               </View>
-              <IconSymbol name="chevron.right" size={14} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+              <IconSymbol name="chevron.right" size={12} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
             {goals[0] ? (
               <GoalProgressGlimpse goal={goals[0]} />
             ) : (
-              <View className="flex-row items-center justify-center py-2">
-                <Text className="text-[#8b5cf6] font-black text-[9px] uppercase tracking-widest">Set a Goal</Text>
+              <View className="flex-row items-center justify-center py-1">
+                <Text className="text-[#8b5cf6] font-black text-[8px] uppercase tracking-widest">Set Goal</Text>
               </View>
             )}
           </TouchableOpacity>

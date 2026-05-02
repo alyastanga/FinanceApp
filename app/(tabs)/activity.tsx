@@ -15,7 +15,7 @@ export default function ActivityScreen() {
   const Header = () => (
     <View className="pt-6 px-4 flex-row justify-between items-end mb-6">
       <View>
-        <Text className={`text-3xl font-black ${isDark ? 'text-white' : 'text-black'} mb-2`}>History</Text>
+        <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter`}>History</Text>
         <Text className="text-muted-foreground text-sm uppercase tracking-widest font-bold">
           All Transactions
         </Text>
