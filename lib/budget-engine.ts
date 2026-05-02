@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import database from '../database';
+import { normalizeDate } from './date-utils';
 
 export interface BudgetInsights {
   dailySafeToSpend: number;
@@ -9,6 +10,7 @@ export interface BudgetInsights {
   monthlyGoalTarget: number;
   remainingDays: number;
   variableSpent: number; // Exposing variableSpent for calculations later if needed
+  allTimeBalance: number;
 }
 
 /**
@@ -25,12 +27,19 @@ export interface RunwayInsights {
  * Calculates Financial Runway (Days of Freedom)
  * Liquid Cash / Avg Daily Burn
  */
-export const calculateRunway = (
+export const calculateRunway = ({
+  portfolio,
+  expenses,
+  allTimeBalance = 0,
+  convertFn = (v) => v,
+  baseCurrency = 'PHP'
+}: {
   portfolio: any[],
   expenses: any[],
-  convertFn: (val: number, fromCurrency: string) => number = (v) => v,
-  baseCurrency: string = 'PHP'
-): RunwayInsights => {
+  allTimeBalance?: number,
+  convertFn?: (val: number, fromCurrency: string) => number,
+  baseCurrency?: string
+}): RunwayInsights => {
   const now = new Date();
 
   // 1. Calculate Total Liquid Cash (Cash Assets + Stablecoins)
@@ -46,14 +55,14 @@ export const calculateRunway = (
       return sum + convertFn(p.value || 0, p.currency || p._currency || baseCurrency);
     }
     return sum;
-  }, 0);
+  }, allTimeBalance);
 
-  // 2. Calculate Avg Daily Burn (90 Day Average)
+  // 2. Calculate Avg Daily Burn (90 Day Average or Actual Span)
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(now.getDate() - 90);
 
   const relevantExpenses = (expenses || []).filter(e => {
-    const t = e.createdAt instanceof Date ? e.createdAt.getTime() : Number(e.createdAt);
+    const t = normalizeDate(e);
     return t >= ninetyDaysAgo.getTime();
   });
 
@@ -61,7 +70,16 @@ export const calculateRunway = (
     sum + convertFn(Math.abs(e.amount || 0), e.currency || e._currency || baseCurrency), 0
   );
 
-  const dailyBurn = totalSpent90 / 90;
+  // Determine the actual span of days the data covers to avoid diluting the average
+  const firstExpenseDate = relevantExpenses.length > 0 
+    ? Math.min(...relevantExpenses.map(e => normalizeDate(e)))
+    : now.getTime();
+  
+  const daysDiff = Math.max(1, Math.ceil((now.getTime() - firstExpenseDate) / (1000 * 60 * 60 * 24)));
+  // We use the smaller of the actual span or 90 days to get a realistic daily rate
+  const denominator = Math.min(90, daysDiff);
+  
+  const dailyBurn = totalSpent90 / denominator;
 
   return {
     runwayDays: dailyBurn > 0 ? Math.floor(totalLiquid / dailyBurn) : (totalLiquid > 0 ? -1 : 0), // -1 represents 'Stable' (no burn)
@@ -85,7 +103,7 @@ export const calculateBudgetInsights = (
 
   // 1. Calculate Monthly Income 
   const currentMonthIncomes = incomes.filter(i => {
-    const t = i.createdAt instanceof Date ? i.createdAt.getTime() : Number(i.createdAt);
+    const t = normalizeDate(i);
     return t >= new Date(currentYear, currentMonth, 1).getTime();
   });
   const actualCurrentMonthIncome = currentMonthIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
@@ -95,7 +113,7 @@ export const calculateBudgetInsights = (
   ninetyDaysAgo.setDate(now.getDate() - 90);
 
   const historicalIncomes = incomes.filter(i => {
-    const t = i.createdAt instanceof Date ? i.createdAt.getTime() : Number(i.createdAt);
+    const t = normalizeDate(i);
     return t >= ninetyDaysAgo.getTime();
   });
 
@@ -110,13 +128,23 @@ export const calculateBudgetInsights = (
 
   // 2. Calculate Fixed Monthly Expenses 
   const monthExpenses = expenses.filter(e => {
-    const d = new Date(e.createdAt || e.created_at || (e._raw && e._raw.created_at) || e);
+    const t = normalizeDate(e);
+    if (t === 0) return false;
+    const d = new Date(t);
     return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
-  const fixedCategories = ['Rent', 'Housing', 'Mortgage', 'Subscription', 'Utilities'];
+  const fixedCategories = [
+    'Rent', 'Housing', 'Mortgage', 'Subscription', 'Utilities', 
+    'Insurance', 'Loan', 'Debt', 'Internet', 'Telecommunications',
+    'Bills', 'Education', 'Health'
+  ].map(c => c.toLowerCase());
+
   const monthlyFixed = monthExpenses
-    .filter(e => fixedCategories.includes(e.category || e._category))
+    .filter(e => {
+      const cat = (e.category || e._category || '').toLowerCase();
+      return fixedCategories.includes(cat);
+    })
     .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
   // 3. Calculate Monthly Goal Contributions
@@ -137,11 +165,17 @@ export const calculateBudgetInsights = (
   // 4. Calculate Safe to Spend
   // Formula: (Projected Income - Fixed - Goals) / Remaining Days
   const variableSpent = monthExpenses
-    .filter(e => !fixedCategories.includes(e.category || e._category))
+    .filter(e => {
+      const cat = (e.category || e._category || '').toLowerCase();
+      return !fixedCategories.includes(cat);
+    })
     .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
   const netAvailable = projectedIncome - monthlyFixed - totalGoalContributionRequired - variableSpent;
   const dailySafeToSpend = netAvailable / remainingDays;
+
+  const allTimeIncome = incomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
+  const allTimeExpense = expenses.reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
   return {
     dailySafeToSpend: Math.max(0, dailySafeToSpend),
@@ -150,7 +184,8 @@ export const calculateBudgetInsights = (
     monthlyFixedExpenses: monthlyFixed,
     monthlyGoalTarget: totalGoalContributionRequired,
     remainingDays,
-    variableSpent
+    variableSpent,
+    allTimeBalance: allTimeIncome - allTimeExpense
   };
 };
 
@@ -164,6 +199,13 @@ export async function getFinancialContext(query: string = '') {
   const rawBudgets = await database.get('budgets').query().fetch();
 
   const insights = calculateBudgetInsights(incomes, expenses, goals, (v) => v, baseCurrency);
+  const runway = calculateRunway({
+    portfolio,
+    expenses,
+    allTimeBalance: insights.allTimeBalance,
+    convertFn: (v) => v,
+    baseCurrency
+  });
 
   // ── 1. Full Monthly History with Categorical Breakdown ──
   const monthlyAggregates: Record<string, {

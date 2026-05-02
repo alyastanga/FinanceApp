@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, Dimensions, TouchableOpacity } from 'react-native';
-import { Canvas, Path, LinearGradient, vec, Skia } from '@shopify/react-native-skia';
+import { Canvas, LinearGradient, Path, Skia, vec } from '@shopify/react-native-skia';
+import React, { useMemo, useState } from 'react';
+import { Dimensions, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 
 interface SavingsRateViewProps {
@@ -67,9 +67,9 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
     return (
       <View className="items-center py-4">
         <View className={`relative items-center justify-center h-32 w-32 rounded-full border-[10px] ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-          <View 
-            style={{ 
-              position: 'absolute', 
+          <View
+            style={{
+              position: 'absolute',
               top: -10, left: -10, right: -10, bottom: -10,
               borderRadius: 100,
               borderWidth: 10,
@@ -77,7 +77,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
               borderTopColor: 'transparent',
               borderRightColor: 'transparent',
               transform: [{ rotate: `${Math.min(180, (currentRate / 100) * 180)}deg` }]
-            }} 
+            }}
           />
           <Text className={`text-4xl font-black ${textClass}`}>{Math.round(currentRate)}%</Text>
           <Text className="text-[9px] font-black text-muted-foreground uppercase tracking-widest mt-1">Efficiency</Text>
@@ -94,7 +94,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
   const renderTrend = () => {
     const padding = 20;
     const effectiveWidth = size || 300;
-    const graphWidth = effectiveWidth - padding * 2;
+    const graphWidth = effectiveWidth - padding * 1;
     const maxRate = Math.max(...trendData.map(d => d.rate), 20);
     const minRate = Math.min(...trendData.map(d => d.rate), 0);
     const range = maxRate - minRate || 1;
@@ -137,7 +137,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
             </Path>
             <Path
               path={strokePath}
-              strokeWidth={3}
+              strokeWidth={2}
               style="stroke"
               strokeJoin="round"
               strokeCap="round"
@@ -163,7 +163,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
   return (
     <View className="w-full">
       <View className={`flex-row ${isDark ? 'bg-white/5' : 'bg-black/5'} p-1 rounded-2xl self-center mb-6 border ${isDark ? 'border-white/5' : 'border-black/5'}`}>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setViewMode('month')}
           activeOpacity={0.7}
           style={{ paddingHorizontal: 24, paddingVertical: 8, borderRadius: 12, backgroundColor: viewMode === 'month' ? '#10b981' : 'transparent' }}
@@ -172,7 +172,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
             Month
           </Text>
         </TouchableOpacity>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={() => setViewMode('trend')}
           activeOpacity={0.7}
           style={{ paddingHorizontal: 24, paddingVertical: 8, borderRadius: 12, backgroundColor: viewMode === 'trend' ? '#10b981' : 'transparent' }}

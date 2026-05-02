@@ -1,7 +1,9 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { seedDatabase } from '../_tests_dev/seed';
 import { CurrencyCode, useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
@@ -11,6 +13,9 @@ export default function Settings() {
   const { currency, setCurrency, loading, symbol } = useCurrency();
   const { isDark } = useTheme();
   const [showPicker, setShowPicker] = useState(false);
+
+  const textClass = isDark ? 'text-white' : 'text-black';
+  const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
 
   const SUPPORTED: { code: CurrencyCode, label: string }[] = [
     { code: 'USD', label: 'US Dollar ($)' },
@@ -32,100 +37,125 @@ export default function Settings() {
   };
 
   return (
-    <View className={`flex-1 items-center p-6 pt-20 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
-      <Text className={`text-3xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Settings</Text>
-      <Text className={`mt-2 text-[10px] font-black uppercase tracking-[2px] ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-        App Infrastructure & Debug
-      </Text>
-
-      <View className="mt-12 w-full gap-y-4">
-        {/* Financial Context */}
-        <View className="mb-4">
-          <Text className={`text-[10px] font-black uppercase tracking-[3px] ml-6 mb-4 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Financial Context</Text>
-          <TouchableOpacity
-            onPress={() => setShowPicker(!showPicker)}
-            className={`w-full rounded-[24px] p-6 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}
+    <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
+      <LinearGradient
+        colors={isDark ? ['#10b98108', 'transparent'] : ['#10b98103', 'transparent']}
+        className="absolute inset-0"
+      />
+      
+      <SafeAreaView className="flex-1" edges={['top']}>
+        {/* Navigation Bar */}
+        <View className="px-6 py-4 flex-row items-center justify-between">
+          <TouchableOpacity 
+            onPress={() => router.back()} 
+            className={`h-10 w-10 rounded-xl items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
           >
-            <View className="flex-row items-center gap-x-4">
-              <View className="h-8 w-8 bg-blue-500/20 rounded-xl items-center justify-center">
-                <Text className="text-blue-500 font-black text-xs">{symbol}</Text>
-              </View>
-              <View>
-                <Text className={`font-black uppercase tracking-widest text-[10px] ${isDark ? 'text-white' : 'text-black'}`}>
-                  Primary Currency
-                </Text>
-                <Text className={`font-bold text-[10px] mt-0.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
-                  {currency} (Displaying converted rates)
-                </Text>
-              </View>
-            </View>
-            <IconSymbol name={showPicker ? "chevron.up" : "chevron.down"} size={14} color={isDark ? "white" : "black"} style={{ opacity: 0.4 }} />
+            <IconSymbol name="chevron.left" size={20} color={isDark ? "white" : "black"} />
           </TouchableOpacity>
-
-          {showPicker && (
-            <View className="mt-4 gap-y-2 px-2">
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                {SUPPORTED.map((item) => (
-                  <TouchableOpacity
-                    key={item.code}
-                    onPress={() => {
-                      setCurrency(item.code);
-                      setShowPicker(false);
-                    }}
-                    className={`px-6 py-4 rounded-[20px] border ${currency === item.code ? 'bg-primary/20 border-primary/40' : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
-                  >
-                    <Text className={`font-black text-[10px] uppercase tracking-widest ${currency === item.code ? 'text-primary' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
-                      {item.code}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          <Text className={`text-xl font-black ${textClass} tracking-tighter`}>Settings</Text>
+          <View className="w-10" />
         </View>
 
-        {/* Infrastructure */}
-        <Text className={`text-[10px] font-black uppercase tracking-[3px] ml-6 mb-2 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Infrastructure</Text>
-
-        <TouchableOpacity
-          onPress={() => router.push('/model-settings')}
-          className={`w-full rounded-[24px] p-6 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}
+        <ScrollView 
+          className="flex-1" 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}
         >
-          <View className="flex-row items-center gap-x-4">
-            <View className="h-8 w-8 bg-[#10b981]/20 rounded-xl items-center justify-center">
-              <IconSymbol name="cpu.fill" size={16} color="#10b981" />
+          <View className="mt-4 mb-10 items-center">
+            <View className={`h-16 w-16 rounded-[24px] ${isDark ? 'bg-white/5' : 'bg-black/5'} items-center justify-center border ${isDark ? 'border-white/5' : 'border-black/5'} mb-4`}>
+              <IconSymbol name="gearshape.fill" size={28} color="#10b981" />
             </View>
-            <Text className={`font-black uppercase tracking-widest text-xs ${isDark ? 'text-white/60' : 'text-black/60'}`}>
-              AI Local Engine
+            <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-[3px]`}>
+              Infrastructure & Debug
             </Text>
           </View>
-          <IconSymbol name="chevron.right" size={14} color="#10b981" />
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleSeed}
-          className={`w-full rounded-[24px] p-6 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}
-        >
-          <View className="flex-row items-center gap-x-4 opacity-40">
-            <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-white/10' : 'bg-black/10'}`}>
-              <IconSymbol name="bolt.fill" size={16} color={isDark ? "white" : "black"} />
+          <View className="gap-y-8">
+            {/* Context Section */}
+            <View>
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] ${isDark ? 'text-white/20' : 'text-black/30'} mb-4 ml-1`}>Financial Context</Text>
+              <TouchableOpacity
+                onPress={() => setShowPicker(!showPicker)}
+                activeOpacity={0.7}
+                className={`w-full rounded-[28px] p-5 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'}`}
+              >
+                <View className="flex-row items-center gap-x-4">
+                  <View className="h-10 w-10 bg-primary/10 rounded-2xl items-center justify-center border border-primary/20">
+                    <Text className="text-primary font-black text-xs">{symbol}</Text>
+                  </View>
+                  <View>
+                    <Text className={`font-black uppercase tracking-widest text-[9px] ${textClass}`}>Primary Currency</Text>
+                    <Text className={`font-bold text-[11px] mt-0.5 ${subTextClass}`}>{currency}</Text>
+                  </View>
+                </View>
+                <IconSymbol name={showPicker ? "chevron.up" : "chevron.down"} size={14} color={isDark ? "white" : "black"} style={{ opacity: 0.3 }} />
+              </TouchableOpacity>
+
+              {showPicker && (
+                <View className="mt-3">
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                    {SUPPORTED.map((item) => (
+                      <TouchableOpacity
+                        key={item.code}
+                        onPress={() => {
+                          setCurrency(item.code);
+                          setShowPicker(false);
+                        }}
+                        className={`px-5 py-3 rounded-2xl border ${currency === item.code ? 'bg-primary border-primary' : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
+                      >
+                        <Text className={`font-black text-[10px] uppercase tracking-widest ${currency === item.code ? (isDark ? 'text-[#050505]' : 'text-white') : subTextClass}`}>
+                          {item.code}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
             </View>
-            <Text className={`font-black uppercase tracking-widest text-xs ${isDark ? 'text-white' : 'text-black'}`}>
-              Seed Database
-            </Text>
-          </View>
-          <IconSymbol name="chevron.right" size={14} color={isDark ? "white" : "black"} style={{ opacity: 0.2 }} />
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.back()}
-          className={`mt-6 w-full rounded-[24px] p-6 items-center border ${isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10'}`}
-        >
-          <Text className={`font-black uppercase tracking-widest text-xs ${isDark ? 'text-white' : 'text-black'}`}>
-            Back to Dashboard
-          </Text>
-        </TouchableOpacity>
-      </View>
+            {/* Engine Section */}
+            <View>
+              <Text className={`text-[10px] font-black uppercase tracking-[2px] ${isDark ? 'text-white/20' : 'text-black/30'} mb-4 ml-1`}>System Engines</Text>
+              
+              <View className="gap-y-3">
+                <TouchableOpacity
+                  onPress={() => router.push('/model-settings')}
+                  activeOpacity={0.7}
+                  className={`w-full rounded-[28px] p-5 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'}`}
+                >
+                  <View className="flex-row items-center gap-x-4">
+                    <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                      <IconSymbol name="cpu.fill" size={18} color="#10b981" />
+                    </View>
+                    <View>
+                      <Text className={`font-black uppercase tracking-widest text-[9px] ${textClass}`}>AI Intelligence</Text>
+                      <Text className={`font-bold text-[11px] mt-0.5 ${subTextClass}`}>Local Inference Engine</Text>
+                    </View>
+                  </View>
+                  <IconSymbol name="chevron.right" size={14} color={isDark ? "white" : "black"} style={{ opacity: 0.3 }} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleSeed}
+                  activeOpacity={0.7}
+                  className={`w-full rounded-[28px] p-5 border flex-row items-center justify-between ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.02] border-black/5'}`}
+                >
+                  <View className="flex-row items-center gap-x-4">
+                    <View className={`h-10 w-10 rounded-2xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                      <IconSymbol name="bolt.fill" size={18} color={isDark ? "white" : "black"} style={{ opacity: 0.4 }} />
+                    </View>
+                    <View>
+                      <Text className={`font-black uppercase tracking-widest text-[9px] ${textClass}`}>Data Simulation</Text>
+                      <Text className={`font-bold text-[11px] mt-0.5 ${subTextClass}`}>Seed Mock Database</Text>
+                    </View>
+                  </View>
+                  <IconSymbol name="chevron.right" size={14} color={isDark ? "white" : "black"} style={{ opacity: 0.3 }} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }

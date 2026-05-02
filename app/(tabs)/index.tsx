@@ -79,13 +79,16 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const currentMonthIncomes = (incomes || []).filter(i => i.createdAt >= startOfMonth);
   const currentMonthExpenses = (expenses || []).filter(e => e.createdAt >= startOfMonth);
 
-  const totalIncome = currentMonthIncomes.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
-  const totalExpenses = currentMonthExpenses.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
-  const netFlow = totalIncome - totalExpenses;
+  const monthlyIncome = currentMonthIncomes.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+  const monthlyExpenses = currentMonthExpenses.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+
+  const allTimeIncome = (incomes || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+  const allTimeExpenses = (expenses || []).reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
+  const totalLiquidity = allTimeIncome - allTimeExpenses;
 
   // Budget calculations
   const totalBudgetLimit = budgets.reduce((acc, b) => acc + convertFrom((b.amountLimit || 0), b.currency || b._currency || currency), 0);
-  const budgetProgress = totalBudgetLimit > 0 ? (totalExpenses / totalBudgetLimit) * 100 : 0;
+  const budgetProgress = totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) * 100 : 0;
 
   // Group expenses by category for monitoring mini-chart
   const categoryMap = currentMonthExpenses.reduce((acc, curr) => {
@@ -112,7 +115,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const topExpensesData = chartData.slice(0, 3).map(item => ({
     label: item.label,
     value: item.value,
-    max: totalExpenses,
+    max: monthlyExpenses,
     amountFormatted: format(item.value),
     color: item.color
   }));
@@ -163,7 +166,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                     Available Liquidity
                   </Text>
                   <Text className={`text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
-                    {format(netFlow)}
+                    {format(totalLiquidity)}
                   </Text>
                 </View>
                 <View className={`px-3 py-1 rounded-full border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'}`}>
@@ -174,12 +177,12 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
               <View className="flex-row items-center gap-x-3 pt-4 border-t border-black/[0.03] dark:border-white/[0.03]">
                 <View className="flex-1">
                   <Text className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
-                  <Text className="text-sm font-bold text-primary" numberOfLines={1}>+{format(totalIncome)}</Text>
+                  <Text className="text-sm font-bold text-primary" numberOfLines={1}>+{format(monthlyIncome)}</Text>
                 </View>
                 <View className={`w-[1px] h-6 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
                 <View className="flex-1">
                   <Text className={`text-[8px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
-                  <Text className="text-sm font-bold text-destructive" numberOfLines={1}>-{format(totalExpenses)}</Text>
+                  <Text className="text-sm font-bold text-destructive" numberOfLines={1}>-{format(monthlyExpenses)}</Text>
                 </View>
               </View>
             </View>
@@ -256,12 +259,12 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                 <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
                   <IconSymbol name="chart.line.uptrend.xyaxis.circle.fill" size={16} color="#10b77fff" />
                 </View>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-white/20' : 'text-black/30'}`}>Monitor</Text>
+                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Monitor</Text>
               </View>
 
               {currentMonthExpenses.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className={`font-black text-[8px] uppercase tracking-widest ${isDark ? 'text-white/30' : 'text-black/40'}`}>No Data</Text>
+                  <Text className={`font-black text-[8px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>No Data</Text>
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center pt-2">
@@ -279,16 +282,16 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                 <View className={`h-8 w-8 rounded-xl items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
                   <IconSymbol name="dollarsign.circle.fill" size={16} color="#10b981" />
                 </View>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-primary/40' : 'text-primary/50'}`}>Budget</Text>
+                <Text className={`text-[8px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Budget</Text>
               </View>
 
               {budgets.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Set Limit</Text>
+                  <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Set Budget</Text>
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center pt-2">
-                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (totalExpenses / totalBudgetLimit) : 0} size={150} isDark={isDark} />
+                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) : 0} size={150} isDark={isDark} />
                 </View>
               )}
             </TouchableOpacity>

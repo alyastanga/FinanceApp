@@ -235,10 +235,15 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
 
   const insights = calculateBudgetInsights(incomes, expenses, goals, convertFrom, currency);
-  const runway = calculateRunway(portfolio, expenses, convertFrom, currency);
+  const runway = calculateRunway({
+    portfolio,
+    expenses,
+    allTimeBalance: insights.allTimeBalance,
+    convertFn: convertFrom,
+    baseCurrency: currency
+  });
   const totalPortfolioValue = portfolio.reduce((sum, p) => sum + convertFrom(p.value || 0, p.currency || p._currency || currency), 0);
-  const netFlowValue = insights.monthlyIncome - insights.monthlyFixedExpenses - (insights.variableSpent || 0);
-  const netWorthValue = totalPortfolioValue + (netFlowValue > 0 ? netFlowValue : 0);
+  const netWorthValue = totalPortfolioValue + insights.allTimeBalance;
 
   return (
     <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
@@ -263,9 +268,9 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
               <Text className={`${isDark ? 'text-white' : 'text-black'} text-6xl font-black tracking-tighter`}>
                 {format(netWorthValue)}
               </Text>
-              <View className="bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-                <Text className="text-primary font-black text-[10px] uppercase tracking-widest">
-                  {runway.runwayDays > 365 ? `${(runway.runwayDays / 365).toFixed(1)}YR` : `${runway.runwayDays} Days`} Freedom
+              <View className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'bg-red-500/20 border-red-500/30' : 'bg-primary/10 border-primary/20'} px-3 py-1 rounded-full border`}>
+                <Text className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'text-red-500' : 'text-primary'} font-black text-[10px] uppercase tracking-widest`}>
+                  {runway.runwayDays === -1 ? 'Infinite' : runway.runwayDays > 365 ? `${(runway.runwayDays / 365).toFixed(1)}YR` : `${runway.runwayDays} Days`} Freedom
                 </Text>
               </View>
             </View>
@@ -299,180 +304,187 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, useLocal =
 
         <View className="px-6 gap-y-10">
           {/* Main Financial Gauges */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Budget Intelligence</Text>
-              <TouchableOpacity
-                onPress={() => handleExplain('budget', 'Daily Budget Health & Safe-to-Spend', { dailySafeToSpend: insights.dailySafeToSpend, monthlyIncome: insights.monthlyIncome, fixedExpenses: insights.monthlyFixedExpenses })}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
-              >
-                {loadingExplains['budget'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
-              </TouchableOpacity>
+          {(incomes.length > 0 || expenses.length > 0) && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Budget Intelligence</Text>
+                <TouchableOpacity
+                  onPress={() => handleExplain('budget', 'Daily Budget Health & Safe-to-Spend', { dailySafeToSpend: insights.dailySafeToSpend, monthlyIncome: insights.monthlyIncome, fixedExpenses: insights.monthlyFixedExpenses })}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                >
+                  {loadingExplains['budget'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                </TouchableOpacity>
+              </View>
+              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden`}>
+                <SafeToSpendView
+                  amount={insights.dailySafeToSpend}
+                  totalMonthlyIncome={insights.monthlyIncome}
+                  isDark={isDark}
+                />
+                <View className={`mx-6 my-4 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
+                <SavingsRateView incomes={incomes} expenses={expenses} isDark={isDark} />
+              </BlurView>
+              {renderAIInsight('budget', 'Explain the Daily Budget Health and Safe-to-Spend limit based on my current month in more detail.')}
             </View>
-            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden`}>
-              <SafeToSpendView
-                amount={insights.dailySafeToSpend}
-                totalMonthlyIncome={insights.monthlyIncome}
-                isDark={isDark}
-              />
-              <View className={`mx-6 my-4 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
-              <SavingsRateView incomes={incomes} expenses={expenses} isDark={isDark} />
-            </BlurView>
-            {renderAIInsight('budget', 'Explain the Daily Budget Health and Safe-to-Spend limit based on my current month in more detail.')}
-          </View>
+          )}
 
           {/* Performance & Trends */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Performance</Text>
+          {(incomes.length > 0 || expenses.length > 0) && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Performance</Text>
+                <TouchableOpacity
+                  onPress={() => handleExplain('performance', '6-Month Performance Trends', trendData)}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                >
+                  {loadingExplains['performance'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                </TouchableOpacity>
+              </View>
               <TouchableOpacity
-                onPress={() => handleExplain('performance', '6-Month Performance Trends', trendData)}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                onPress={() => setShowTrendDetail(true)}
+                activeOpacity={0.8}
               >
-                {loadingExplains['performance'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden p-5`}>
+                  <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
+                </BlurView>
               </TouchableOpacity>
+              {renderAIInsight('performance', 'Analyze my 6-month wealth velocity and performance trends in more detail.')}
             </View>
-            <TouchableOpacity
-              onPress={() => setShowTrendDetail(true)}
-              activeOpacity={0.8}
-            >
-              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'} overflow-hidden p-5`}>
-                <TrendChart incomes={incomes} expenses={expenses} isDark={isDark} />
-              </BlurView>
-            </TouchableOpacity>
-            {renderAIInsight('performance', 'Analyze my 6-month wealth velocity and performance trends in more detail.')}
-          </View>
+          )}
 
           {/* Spending Habits */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <View>
-                <Text className={`text-[10px] font-black uppercase ${isDark ? 'text-white/40' : 'text-black/40'} tracking-[3px]`}>Spending Habits</Text>
-                <Text className={`text-[9px] font-black uppercase tracking-[1px] mt-1 ${isDark ? 'text-white/20' : 'text-black/20'}`}>
-                  {spendingMode === 'current' ? 'Insights for current month' : spendingMode === 'overall' ? 'Lifetime distribution' : 'In-depth archive'}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleExplain('spending', 'Categorical Spending Habits', categorySpending)}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
-              >
-                {loadingExplains['spending'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
-              </TouchableOpacity>
-            </View>
-
-            {/* Mode Selector */}
-            <View className={`flex-row rounded-2xl p-1 border mx-2 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-              {[
-                { id: 'current', label: 'Current' },
-                { id: 'overall', label: 'Overall' },
-                { id: 'history', label: 'History' }
-              ].map((m) => (
-                <TouchableOpacity
-                  key={m.id}
-                  onPress={() => setSpendingMode(m.id as any)}
-                  className={`flex-1 py-2.5 rounded-xl items-center ${spendingMode === m.id ? 'bg-primary' : ''}`}
-                >
-                  <Text className={`text-[9px] font-black uppercase tracking-widest ${spendingMode === m.id ? 'text-[#050505]' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
-                    {m.label}
+          {expenses.length > 0 && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <View>
+                  <Text className={`text-[10px] font-black uppercase ${isDark ? 'text-white/40' : 'text-black/40'} tracking-[3px]`}>Spending Habits</Text>
+                  <Text className={`text-[9px] font-black uppercase tracking-[1px] mt-1 ${isDark ? 'text-white/20' : 'text-black/20'}`}>
+                    {spendingMode === 'current' ? 'Insights for current month' : spendingMode === 'overall' ? 'Lifetime distribution' : 'In-depth archive'}
                   </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => handleExplain('spending', 'Categorical Spending Habits', categorySpending)}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center shadow-sm shadow-primary/20"
+                >
+                  {loadingExplains['spending'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
                 </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Month Browser (History Mode) */}
-            {spendingMode === 'history' && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                className="mb-2"
-                contentContainerStyle={{ paddingHorizontal: 12, columnGap: 8 }}
-              >
-                {availableMonths.map((mString) => {
-                  const [y, m] = mString.split('-');
-                  const date = new Date(Number(y), Number(m) - 1);
-                  const isSelected = selectedHistoryMonth === mString;
-
-                  return (
-                    <TouchableOpacity
-                      key={mString}
-                      onPress={() => setSelectedHistoryMonth(mString)}
-                      className={`px-4 py-3 rounded-2xl border ${isSelected ? (isDark ? 'bg-primary/20 border-primary/40' : 'bg-primary/20 border-primary/40') : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
-                    >
-                      <Text className={`text-[10px] font-black uppercase tracking-[1.5px] ${isSelected ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>
-                        {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
-
-            <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-              <View className="p-8">
-                <BudgetChart
-                  data={categorySpending}
-                  isDark={isDark}
-                  size={260}
-                  title={spendingMode === 'current' ? "MONTHLY" : spendingMode === 'overall' ? "LIFETIME" : (selectedHistoryMonth ? selectedHistoryMonth.replace('-', ' ') : 'ARCHIVE')}
-                />
               </View>
-            </BlurView>
-            {renderAIInsight('spending', 'Provide a detailed breakdown of my categorical spending habits with actionable advice.')}
-          </View>
+
+              {/* Mode Selector */}
+              <View className={`flex-row rounded-2xl p-1 border mx-2 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                {[
+                  { id: 'current', label: 'Current' },
+                  { id: 'overall', label: 'Overall' },
+                  { id: 'history', label: 'History' }
+                ].map((m) => (
+                  <TouchableOpacity
+                    key={m.id}
+                    onPress={() => setSpendingMode(m.id as any)}
+                    className={`flex-1 py-2.5 rounded-xl items-center ${spendingMode === m.id ? 'bg-primary' : ''}`}
+                  >
+                    <Text className={`text-[9px] font-black uppercase tracking-widest ${spendingMode === m.id ? 'text-[#050505]' : (isDark ? 'text-white/40' : 'text-black/40')}`}>
+                      {m.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Month Browser (History Mode) */}
+              {spendingMode === 'history' && (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  className="mb-2"
+                  contentContainerStyle={{ paddingHorizontal: 12, columnGap: 8 }}
+                >
+                  {availableMonths.map((mString) => {
+                    const [y, m] = mString.split('-');
+                    const date = new Date(Number(y), Number(m) - 1);
+                    const isSelected = selectedHistoryMonth === mString;
+
+                    return (
+                      <TouchableOpacity
+                        key={mString}
+                        onPress={() => setSelectedHistoryMonth(mString)}
+                        className={`px-4 py-3 rounded-2xl border ${isSelected ? (isDark ? 'bg-primary/20 border-primary/40' : 'bg-primary/20 border-primary/40') : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')}`}
+                      >
+                        <Text className={`text-[10px] font-black uppercase tracking-[1.5px] ${isSelected ? 'text-primary' : (isDark ? 'text-white/60' : 'text-black/60')}`}>
+                          {date.toLocaleString('default', { month: 'short', year: '2-digit' })}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              <BlurView intensity={15} tint={isDark ? "dark" : "light"} className={`rounded-[44px] border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
+                <View className="p-8">
+                  <BudgetChart
+                    data={categorySpending}
+                    isDark={isDark}
+                    size={260}
+                    title={spendingMode === 'current' ? "MONTHLY" : spendingMode === 'overall' ? "LIFETIME" : (selectedHistoryMonth ? selectedHistoryMonth.replace('-', ' ') : 'ARCHIVE')}
+                  />
+                </View>
+              </BlurView>
+              {renderAIInsight('spending', 'Provide a detailed breakdown of my categorical spending habits with actionable advice.')}
+            </View>
+          )}
 
           {/* Wealth Management */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Wealth Management</Text>
-              <TouchableOpacity
-                onPress={() => handleExplain('wealth', 'Asset Allocation & Wealth Management', portfolio)}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
-              >
-                {loadingExplains['wealth'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
-              </TouchableOpacity>
+          {portfolio.length > 0 && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Wealth Management</Text>
+                <TouchableOpacity
+                  onPress={() => handleExplain('wealth', 'Asset Allocation & Wealth Management', portfolio)}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                >
+                  {loadingExplains['wealth'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                </TouchableOpacity>
+              </View>
+              <PortfolioSnapshot portfolio={portfolio} isDark={isDark} />
+              {renderAIInsight('wealth', 'Evaluate my current Asset Allocation diversity and Wealth Management strategy in more detail.')}
             </View>
-            <PortfolioSnapshot portfolio={portfolio} isDark={isDark} />
-            {renderAIInsight('wealth', 'Evaluate my current Asset Allocation diversity and Wealth Management strategy in more detail.')}
-          </View>
+          )}
 
           {/* Strategy */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Strategy</Text>
-              <TouchableOpacity
-                onPress={() => handleExplain('strategy', 'Financial Strategy & Projections', { incomes: incomes.length, expenses: expenses.length, goals: goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })) })}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
-              >
-                {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
-              </TouchableOpacity>
+          {(incomes.length > 0 || expenses.length > 0 || goals.length > 0) && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Strategy</Text>
+                <TouchableOpacity
+                  onPress={() => handleExplain('strategy', 'Financial Strategy & Projections', { incomes: incomes.length, expenses: expenses.length, goals: goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })) })}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                >
+                  {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                </TouchableOpacity>
+              </View>
+              <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} isDark={isDark} />
+              {renderAIInsight('strategy', 'Run a scenario simulation on my current financial strategy and wealth projections in more detail.')}
             </View>
-            <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} isDark={isDark} />
-            {renderAIInsight('strategy', 'Run a scenario simulation on my current financial strategy and wealth projections in more detail.')}
-          </View>
+          )}
 
           {/* Goal Progress Monitoring */}
-          <View className="gap-y-6">
-            <View className="flex-row justify-between items-center px-2">
-              <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Goal Monitoring</Text>
-              <TouchableOpacity
-                onPress={() => handleExplain('goals', 'Goal Progress & Milestones', goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })))}
-                className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
-              >
-                {loadingExplains['goals'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
-              </TouchableOpacity>
+          {goals.length > 0 && (
+            <View className="gap-y-6">
+              <View className="flex-row justify-between items-center px-2">
+                <Text className={`text-xs font-black ${isDark ? 'text-white' : 'text-black'} uppercase tracking-[3px] opacity-50`}>Goal Monitoring</Text>
+                <TouchableOpacity
+                  onPress={() => handleExplain('goals', 'Goal Progress & Milestones', goals.map((g: any) => ({ name: g.name, target: g.targetAmount, current: g.currentAmount })))}
+                  className="h-8 w-8 rounded-full bg-primary/20 items-center justify-center"
+                >
+                  {loadingExplains['goals'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={14} color="#10b981" />}
+                </TouchableOpacity>
+              </View>
+              <View className="gap-y-4">
+                {goals.map((goal: any) => (
+                  <GoalMonitoringItem key={goal.id} goal={goal} isDark={isDark} />
+                ))}
+              </View>
+              {renderAIInsight('goals', 'Summarize my progress across all financial goals and milestones in more detail.')}
             </View>
-            <View className="gap-y-4">
-              {goals.map((goal: any) => (
-                <GoalMonitoringItem key={goal.id} goal={goal} isDark={isDark} />
-              ))}
-              {goals.length === 0 && (
-                <View className={`p-10 items-center justify-center ${isDark ? 'bg-white/[0.02]' : 'bg-black/[0.02]'} rounded-[32px] border border-dashed ${isDark ? 'border-white/10' : 'border-black/10'}`}>
-                  <Text className="text-muted-foreground text-xs italic">Set a goal to start monitoring.</Text>
-                </View>
-              )}
-            </View>
-            {renderAIInsight('goals', 'Summarize my progress across all financial goals and milestones in more detail.')}
-          </View>
+          )}
         </View>
       </ScrollView>
 

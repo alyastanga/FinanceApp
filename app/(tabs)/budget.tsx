@@ -1,25 +1,24 @@
-import React, { useState, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import database from '../../database';
 
 // UI Components
-import { IconSymbol } from '@/components/ui/icon-symbol';
+import { AllocationCard } from '@/components/ui/AllocationCard';
 import { BudgetChart } from '@/components/ui/BudgetChart';
 import { BudgetComparison } from '@/components/ui/BudgetComparison';
-import { AllocationCard } from '@/components/ui/AllocationCard';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 
 // Context & Services
-import { useTheme } from '../../context/ThemeContext';
-import { useAI } from '../../context/AIContext';
-import { explainFinancialGraph, generateSuggestedBudget } from '@/lib/ai-service';
+import { applyAIAllocation, upsertBudget } from '@/lib/budget-actions';
 import { calculateBudgetInsights } from '@/lib/budget-engine';
-import { upsertBudget, applyAIAllocation } from '@/lib/budget-actions';
+import { useAI } from '../../context/AIContext';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useTheme } from '../../context/ThemeContext';
 
 interface BudgetScreenProps {
   budgets: any[];
@@ -35,15 +34,20 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'velocity' | 'allocation'>('overview');
   const [explanation, setExplanation] = useState<string | null>(null);
   const [isExplaining, setIsExplaining] = useState(false);
-  
+
   // AI Allocation State
-  const [aiSuggestions, setAiSuggestions] = useState<{category: string, amount_limit: number}[] | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<{ category: string, amount_limit: number }[] | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Manual Add State
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryLimit, setNewCategoryLimit] = useState('500');
+  const [selectedPredefined, setSelectedPredefined] = useState('Food');
+
+  const EXPENSE_CATEGORIES = [
+    'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Other'
+  ];
 
   const textClass = isDark ? 'text-white' : 'text-black';
   const subTextClass = isDark ? 'text-white/40' : 'text-black/40';
@@ -52,7 +56,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
   const { categoryData, totalAllocated, totalSpent, velocityData, monthlyIncomeValue } = useMemo(() => {
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    
+
     // Group expenses by category for current month
     const expenseMap = expenses.reduce((acc, exp) => {
       const t = exp.createdAt instanceof Date ? exp.createdAt.getTime() : Number(exp.createdAt);
@@ -145,7 +149,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
               Budget Analysis
             </Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleExplain}
             className="h-12 w-12 rounded-2xl bg-primary/20 items-center justify-center border border-primary/20"
           >
@@ -155,11 +159,11 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
 
         {explanation && (
           <BlurView intensity={20} tint={isDark ? "dark" : "light"} className="mb-8 p-6 rounded-[32px] border border-primary/20 overflow-hidden">
-             <View className="flex-row items-center gap-x-2 mb-2">
-                <IconSymbol name="sparkles" size={12} color="#10b981" />
-                <Text className="text-[10px] font-black text-primary uppercase tracking-widest">AI Intelligence</Text>
-             </View>
-             <Text className={`${isDark ? 'text-white/80' : 'text-black/80'} text-xs leading-5`}>{explanation}</Text>
+            <View className="flex-row items-center gap-x-2 mb-2">
+              <IconSymbol name="sparkles" size={12} color="#10b981" />
+              <Text className="text-[10px] font-black text-primary uppercase tracking-widest">AI Intelligence</Text>
+            </View>
+            <Text className={`${isDark ? 'text-white/80' : 'text-black/80'} text-xs leading-5`}>{explanation}</Text>
           </BlurView>
         )}
 
@@ -184,55 +188,57 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
         {/* Content View */}
         {activeTab === 'overview' && (
           <View className="mb-10">
-             <BudgetChart 
-                data={categoryData.length > 0 ? categoryData.map((c, i) => ({
+            {categoryData.length > 0 && (
+              <BudgetChart
+                data={categoryData.map((c, i) => ({
                   label: c.category,
                   value: c.limit,
                   color: ['#10b981', '#3b82f6', '#f59e0b', '#064e3b', '#1f2937'][i % 5]
-                })) : []} 
+                }))}
                 size={240}
                 title="Current Allocation"
                 emptyMessage="Start allocation to see budget distribution"
                 isDark={isDark}
               />
-             
-             <View className="flex-row gap-x-4 mt-8">
-               <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-                 <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Budget</Text>
-                 <Text className={`${textClass} text-xl font-black`}>{format(totalAllocated)}</Text>
-               </View>
-               <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-                 <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Spent</Text>
-                 <Text className={`${textClass} text-xl font-black`}>{format(totalSpent)}</Text>
-               </View>
-             </View>
+            )}
 
-             {/* Tactical Insights List */}
-             <View className="gap-y-4 mt-10">
-                <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
-                   <View className="h-10 w-10 bg-primary/20 rounded-2xl items-center justify-center">
-                      <IconSymbol name="bolt.fill" size={20} color="#10b981" />
-                   </View>
-                   <View className="flex-1">
-                      <Text className={`${textClass} font-bold text-sm mb-0.5`}>Budget Velocity</Text>
-                      <Text className="text-muted-foreground text-[11px]">
-                        You are spending {format(Math.abs(velocityData.dailyLimit - velocityData.currentVelocity))} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
-                      </Text>
-                   </View>
-                </View>
+            <View className={`flex-row gap-x-4 ${categoryData.length > 0 ? 'mt-8' : ''}`}>
+              <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Budget</Text>
+                <Text className={`${textClass} text-xl font-black`}>{format(totalAllocated)}</Text>
+              </View>
+              <View className={`flex-1 p-5 rounded-[32px] border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+                <Text className={`${subTextClass} text-[8px] font-black uppercase tracking-widest mb-1`}>Total Spent</Text>
+                <Text className={`${textClass} text-xl font-black`}>{format(totalSpent)}</Text>
+              </View>
+            </View>
 
-                <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
-                   <View className="h-10 w-10 bg-accent/20 rounded-2xl items-center justify-center">
-                      <IconSymbol name="target" size={20} color="#3b82f6" />
-                   </View>
-                   <View className="flex-1">
-                      <Text className={`${textClass} font-bold text-sm mb-0.5`}>Category Alignment</Text>
-                      <Text className="text-muted-foreground text-[11px]">
-                        {categoryData.filter(c => c.spent <= c.limit).length} of {categoryData.length} categories are within budget.
-                      </Text>
-                   </View>
+            {/* Tactical Insights List */}
+            <View className="gap-y-4 mt-10">
+              <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
+                <View className="h-10 w-10 bg-primary/20 rounded-2xl items-center justify-center">
+                  <IconSymbol name="bolt.fill" size={20} color="#10b981" />
                 </View>
-             </View>
+                <View className="flex-1">
+                  <Text className={`${textClass} font-bold text-sm mb-0.5`}>Budget Velocity</Text>
+                  <Text className="text-muted-foreground text-[11px]">
+                    You are spending {format(Math.abs(velocityData.dailyLimit - velocityData.currentVelocity))} {velocityData.isSlower ? 'under' : 'over'} your daily theoretical limit.
+                  </Text>
+                </View>
+              </View>
+
+              <View className={`${isDark ? 'bg-white/5' : 'bg-white'} p-6 rounded-[32px] border ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center gap-x-4 shadow-sm shadow-black/5`}>
+                <View className="h-10 w-10 bg-accent/20 rounded-2xl items-center justify-center">
+                  <IconSymbol name="target" size={20} color="#3b82f6" />
+                </View>
+                <View className="flex-1">
+                  <Text className={`${textClass} font-bold text-sm mb-0.5`}>Category Alignment</Text>
+                  <Text className="text-muted-foreground text-[11px]">
+                    {categoryData.filter(c => c.spent <= c.limit).length} of {categoryData.length} categories are within budget.
+                  </Text>
+                </View>
+              </View>
+            </View>
           </View>
         )}
 
@@ -244,7 +250,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
               </View>
             ) : (
               categoryData.map((item, index) => (
-                <BudgetComparison 
+                <BudgetComparison
                   key={index}
                   category={item.category}
                   budgetLimit={item.limit}
@@ -303,7 +309,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                     <Text className="text-muted-foreground text-[13px] text-center mb-10 px-6 leading-5">
                       Let AI analyze your active goals and monthly income to suggest a balanced allocation.
                     </Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={handleGenerateAI}
                       className="bg-primary w-full py-5 rounded-[32px] items-center shadow-xl shadow-primary/30"
                     >
@@ -317,14 +323,14 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                         <Text className={`${textClass} font-black text-2xl tracking-tight`}>AI Suggestion</Text>
                         <Text className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest mt-1">Optimized Allocation</Text>
                       </View>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={() => setAiSuggestions(null)}
                         className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}
                       >
                         <IconSymbol name="xmark" size={16} color={isDark ? "#fff" : "#000"} />
                       </TouchableOpacity>
                     </View>
-                    
+
                     <View className="gap-y-3 mb-10">
                       {aiSuggestions.map((s, idx) => (
                         <View key={idx} className={`flex-row justify-between p-5 rounded-[28px] border ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
@@ -334,7 +340,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                       ))}
                     </View>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       onPress={handleApplyAI}
                       className="bg-primary w-full py-5 rounded-[32px] items-center shadow-xl shadow-primary/30"
                     >
@@ -353,7 +359,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                   <View className="px-3 py-1 bg-primary/20 rounded-full">
                     <Text className="text-primary text-[10px] font-black uppercase">Surplus: {format(remainingToAllocate)}</Text>
                   </View>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     onPress={() => setIsAddingCategory(!isAddingCategory)}
                     className="h-8 w-8 rounded-full bg-primary items-center justify-center"
                   >
@@ -361,17 +367,50 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                   </TouchableOpacity>
                 </View>
               </View>
-              
+
               <View>
                 {isAddingCategory && (
                   <BlurView intensity={20} tint={isDark ? "dark" : "light"} className={`p-6 rounded-[32px] border border-primary/30 mb-6 overflow-hidden`}>
                     <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-widest mb-4`}>New Budget Category</Text>
+
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      className="mb-6"
+                      contentContainerStyle={{ gap: 8 }}
+                    >
+                      {EXPENSE_CATEGORIES.map((cat) => {
+                        const isSelected = selectedPredefined === cat;
+                        return (
+                          <TouchableOpacity
+                            key={cat}
+                            onPress={() => {
+                              setSelectedPredefined(cat);
+                              setNewCategoryName(cat);
+                            }}
+                            className={`px-5 py-3 rounded-2xl border ${isSelected ? 'bg-primary border-primary' : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')}`}
+                          >
+                            <Text className={`font-black text-[10px] uppercase tracking-widest ${isSelected ? (isDark ? 'text-[#050505]' : 'text-white') : 'text-muted-foreground'}`}>
+                              {cat}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+
                     <TextInput
                       value={newCategoryName}
-                      onChangeText={setNewCategoryName}
+                      onChangeText={(text) => {
+                        setNewCategoryName(text);
+                        if (!EXPENSE_CATEGORIES.includes(text)) {
+                          setSelectedPredefined('');
+                        } else {
+                          setSelectedPredefined(text);
+                        }
+                      }}
                       placeholder="Category Name (e.g. Travel)"
                       placeholderTextColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}
-                      className={`text-lg font-black ${textClass} mb-4 p-2`}
+                      className={`text-lg font-black ${textClass} mb-4 p-2 border-b ${isDark ? 'border-white/5' : 'border-black/5'}`}
                     />
                     <View className="flex-row items-center gap-x-4 mb-6">
                       <View className="flex-1">
@@ -383,7 +422,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                           className={`text-lg font-black ${textClass} p-2 border-b ${isDark ? 'border-white/10' : 'border-black/10'}`}
                         />
                       </View>
-                      <TouchableOpacity 
+                      <TouchableOpacity
                         onPress={handleAddNewCategory}
                         className="bg-primary h-14 px-8 rounded-2xl items-center justify-center self-end"
                       >
@@ -399,7 +438,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
                   </View>
                 ) : (
                   categoryData.map((item, index) => (
-                    <AllocationCard 
+                    <AllocationCard
                       key={index}
                       category={item.category}
                       limit={item.limit}

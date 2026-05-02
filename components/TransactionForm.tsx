@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View, Keyboard } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { CurrencyCode, SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import database from '../database';
-import { fetchExchangeRate } from '../lib/market-service';
 import { generateUUID } from '../lib/id-utils';
+import { fetchExchangeRate } from '../lib/market-service';
 
 interface TransactionFormProps {
   initialType?: 'income' | 'expense';
@@ -25,7 +25,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
 
   const INCOME_CATEGORIES = ['Salary', 'Business', 'Investment', 'Gift', 'Allowance', 'Other'];
   const EXPENSE_CATEGORIES = [
-    'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'
+    'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Other'
   ];
 
   const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -54,8 +54,8 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
 
   async function handleSubmit() {
     if (!amount || !category || !user) {
-        Alert.alert('Incomplete Data', 'Please enter an amount and select a category.');
-        return;
+      Alert.alert('Incomplete Data', 'Please enter an amount and select a category.');
+      return;
     }
 
     try {
