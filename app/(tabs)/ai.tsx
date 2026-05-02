@@ -562,11 +562,11 @@ export default function AIChatScreen() {
         />
 
         {/* Input Area */}
-        <View className="px-5 pb-8 pt-4">
+        <View className="px-gsd-lg pb-gsd-lg pt-gsd-sm">
           <BlurView
-            intensity={isDark ? 40 : 90}
+            intensity={isDark ? 30 : 60}
             tint={isDark ? "dark" : "light"}
-            className={`rounded-[32px] border overflow-hidden shadow-2xl ${isDark ? 'bg-black/20 border-white/10' : 'bg-white/40 border-black/5'}`}
+            className={`rounded-[32px] border overflow-hidden ${isDark ? 'bg-transparent border-white/10' : 'bg-transparent border-black/5'}`}
           >
             {/* Stacked Agent Suggestions */}
             {showSuggestions && (
@@ -598,14 +598,14 @@ export default function AIChatScreen() {
             <View className={`flex-row items-center p-2 pr-2`}>
               {(!input || input.length === 0) && (
                 <View className="pl-4 pr-1">
-                  <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+                  <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
                 </View>
               )}
               <TextInput
                 value={input}
                 onChangeText={handleInputChange}
                 placeholder="Summon an expert..."
-                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"}
                 className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
                 multiline
               />
