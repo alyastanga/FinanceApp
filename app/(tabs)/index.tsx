@@ -205,18 +205,18 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
 
               <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
                 <View className="flex-1">
-                  <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
+                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
                   <View className="flex-row items-baseline">
-                    <Text className="text-[8px] font-black text-primary opacity-30 mr-0.5">+{symbol}</Text>
-                    <Text className="text-xs font-bold text-primary" numberOfLines={1}>{formatValue(monthlyIncome)}</Text>
+                    <Text className="text-[12px] font-black text-primary opacity-30 mr-0.5">+{symbol}</Text>
+                    <Text className="text-[12px] font-bold text-primary" numberOfLines={1}>{formatValue(monthlyIncome)}</Text>
                   </View>
                 </View>
                 <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
                 <View className="flex-1">
-                  <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
+                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
                   <View className="flex-row items-baseline">
-                    <Text className="text-[8px] font-black text-destructive opacity-30 mr-0.5">-{symbol}</Text>
-                    <Text className="text-xs font-bold text-destructive" numberOfLines={1}>{formatValue(monthlyExpenses)}</Text>
+                    <Text className="text-[12px] font-black text-destructive opacity-30 mr-0.5">-{symbol}</Text>
+                    <Text className="text-[12px] font-bold text-destructive" numberOfLines={1}>{formatValue(monthlyExpenses)}</Text>
                   </View>
                 </View>
               </View>

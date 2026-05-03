@@ -18,7 +18,7 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const [viewMode, setViewMode] = useState<'month' | 'trend'>('month');
   const size = Dimensions.get('window').width - 80;
-  const chartHeight = 120;
+  const chartHeight = 160; // Increased height for better clarity
 
   // Calculate stats
   const { currentRate, trendData } = useMemo(() => {
@@ -92,16 +92,22 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
 
   // 6-Month Trend View
   const renderTrend = () => {
-    const padding = 20;
+    const leftPadding = 45; // Space for Y labels
+    const rightPadding = 15;
+    const topPadding = 20;
+    const bottomPadding = 30;
+
     const effectiveWidth = size || 300;
-    const graphWidth = effectiveWidth - padding * 1;
+    const graphWidth = effectiveWidth - leftPadding - rightPadding;
+    const graphHeight = chartHeight - topPadding - bottomPadding;
+
     const maxRate = Math.max(...trendData.map(d => d.rate), 20);
     const minRate = Math.min(...trendData.map(d => d.rate), 0);
     const range = maxRate - minRate || 1;
 
     const points = trendData.map((d, i) => ({
-      x: padding + (i * (graphWidth / (trendData.length - 1))),
-      y: chartHeight - padding - ((d.rate - minRate) / range) * (chartHeight - padding * 2)
+      x: leftPadding + (i * (graphWidth / (trendData.length - 1))),
+      y: topPadding + graphHeight - ((d.rate - minRate) / range) * graphHeight
     }));
 
     const strokePath = Skia.Path.Make();
@@ -117,43 +123,87 @@ export const SavingsRateView = ({ incomes, expenses, isDark: isDarkProp }: Savin
 
     const fillPath = strokePath.copy();
     if (points.length > 0) {
-      fillPath.lineTo(points[points.length - 1].x, chartHeight);
-      fillPath.lineTo(points[0].x, chartHeight);
+      fillPath.lineTo(points[points.length - 1].x, topPadding + graphHeight);
+      fillPath.lineTo(points[0].x, topPadding + graphHeight);
       fillPath.close();
     }
 
     const hasData = trendData.some(d => d.rate !== 0);
 
+    // Y Axis Labels
+    const yLabels = [
+      { val: maxRate, label: `${Math.round(maxRate)}%` },
+      { val: minRate + range / 2, label: `${Math.round(minRate + range / 2)}%` },
+      { val: minRate, label: `${Math.round(minRate)}%` }
+    ];
+
     return (
-      <View className="py-4">
+      <View className="py-2">
         {hasData ? (
-          <Canvas style={{ width: effectiveWidth, height: chartHeight }}>
-            <Path path={fillPath}>
-              <LinearGradient
-                start={vec(0, 0)}
-                end={vec(0, chartHeight)}
-                colors={['#10b98130', 'transparent']}
+          <View>
+            {/* Y Axis Labels */}
+            <View style={{ position: 'absolute', left: 10, top: topPadding, height: graphHeight, justifyContent: 'space-between', zIndex: 10 }}>
+              {yLabels.map((l, i) => (
+                <Text key={i} className={`text-[9px] font-black uppercase ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+                  {l.label}
+                </Text>
+              ))}
+            </View>
+
+            <Canvas style={{ width: effectiveWidth, height: chartHeight }}>
+              {/* Grid Lines */}
+              {yLabels.map((_, i) => {
+                const y = topPadding + (i * (graphHeight / (yLabels.length - 1)));
+                return (
+                  <Path
+                    key={`grid-${i}`}
+                    path={`M ${leftPadding} ${y} L ${effectiveWidth - rightPadding} ${y}`}
+                    strokeWidth={1}
+                    style="stroke"
+                    color={isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'}
+                  />
+                );
+              })}
+
+              <Path path={fillPath}>
+                <LinearGradient
+                  start={vec(0, 0)}
+                  end={vec(0, chartHeight)}
+                  colors={['#10b98130', 'transparent']}
+                />
+              </Path>
+              <Path
+                path={strokePath}
+                strokeWidth={2}
+                style="stroke"
+                strokeJoin="round"
+                strokeCap="round"
+                color="#10b981"
               />
-            </Path>
-            <Path
-              path={strokePath}
-              strokeWidth={2}
-              style="stroke"
-              strokeJoin="round"
-              strokeCap="round"
-              color="#10b981"
-            />
-          </Canvas>
+            </Canvas>
+          </View>
         ) : (
           <View style={{ width: effectiveWidth, height: chartHeight, alignItems: 'center', justifyContent: 'center' }}>
             <Text className={`${subTextClass} text-[9px] font-black uppercase tracking-widest opacity-30`}>Insufficient data for trend</Text>
           </View>
         )}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 8, marginTop: 8 }}>
-          {trendData.map((d, i) => (
-            <Text key={i} style={{ fontSize: 8, fontWeight: '900', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase' }}>
-              {d.label}
-            </Text>
+
+        {/* X Axis Labels - Absolute positioning to match graph points exactly */}
+        <View style={{ height: 20, marginTop: -15 }}>
+          {points.map((p, i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: p.x - 20,
+                width: 40,
+                alignItems: 'center'
+              }}
+            >
+              <Text style={{ fontSize: 9, fontWeight: '900', color: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)', textTransform: 'uppercase' }}>
+                {trendData[i].label}
+              </Text>
+            </View>
           ))}
         </View>
       </View>
