@@ -318,6 +318,43 @@ export async function unlockVault(passphrase: string): Promise<Uint8Array> {
   return await loadDEKWithPassphrase(passphrase);
 }
 
+/**
+ * Updates the vault passphrase by re-wrapping the DEK.
+ * This is called during a password change flow.
+ */
+export async function updatePassphrase(oldPassphrase: string, newPassphrase: string): Promise<void> {
+  // 1. Load current DEK to verify old passphrase and get the key material
+  const dek = await loadDEKWithPassphrase(oldPassphrase);
+  
+  try {
+    const saltBase64 = await SecureStore.getItemAsync(SECURE_KEY_SALT);
+    if (!saltBase64) throw new Error('Salt missing from secure storage.');
+    
+    const salt = new Uint8Array(
+      atob(saltBase64).split('').map((c) => c.charCodeAt(0))
+    );
+
+    // 2. Derive new Master Key
+    const newMasterKey = await deriveKey(newPassphrase, salt);
+    
+    // 3. Re-wrap and store locally
+    await storeLocalDEK(dek, newMasterKey, saltBase64);
+    
+    // 4. Update Cloud DEK (if currently using the passphrase-derived key)
+    const deviceId = await getDeviceId();
+    await uploadCloudDEK(dek, newMasterKey, deviceId, saltBase64);
+
+    // 5. Zero sensitive material
+    zeroBuffer(newMasterKey);
+    zeroBuffer(salt);
+    zeroBuffer(dek);
+  } catch (err) {
+    if (dek) zeroBuffer(dek);
+    throw err;
+  }
+}
+
+
 // ─── Recovery (Seed Phrase → Master Key → DEK) ──────────────────────────────
 
 /**

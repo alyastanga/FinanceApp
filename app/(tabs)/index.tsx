@@ -185,7 +185,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
             <View className="p-gsd-lg">
               <View className="flex-row justify-between items-start mb-gsd-md">
                 <View>
-                  <Text className={`text-[9px] font-black uppercase tracking-[2px] mb-1 ${isDark ? 'text-white/30' : 'text-black/40'}`}>
+                  <Text className={`text-[10px] font-black uppercase tracking-[2px] mb-1 ${isDark ? 'text-white/30' : 'text-black/40'}`}>
                     Liquidity
                   </Text>
                   <View className="flex-row items-baseline">
@@ -195,17 +195,11 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                     </Text>
                   </View>
                 </View>
-                <View className="items-end">
-                  <View className={`px-gsd-md py-gsd-xs rounded-gsd-sm border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'} mb-1`}>
-                    <Text className="text-primary font-black text-[8px] uppercase tracking-widest">Active Pulse</Text>
-                  </View>
-                  <Text className={`${isDark ? 'text-white/20' : 'text-black/20'} text-[6px] font-black uppercase tracking-widest`}>Includes Cash + Stables</Text>
-                </View>
               </View>
 
               <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
                 <View className="flex-1">
-                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
+                  <Text className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
                   <View className="flex-row items-baseline">
                     <Text className="text-[12px] font-black text-primary opacity-30 mr-0.5">+{symbol}</Text>
                     <Text className="text-[12px] font-bold text-primary" numberOfLines={1}>{formatValue(monthlyIncome)}</Text>
@@ -213,7 +207,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                 </View>
                 <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
                 <View className="flex-1">
-                  <Text className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
+                  <Text className={`text-[9px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
                   <View className="flex-row items-baseline">
                     <Text className="text-[12px] font-black text-destructive opacity-30 mr-0.5">-{symbol}</Text>
                     <Text className="text-[12px] font-bold text-destructive" numberOfLines={1}>{formatValue(monthlyExpenses)}</Text>

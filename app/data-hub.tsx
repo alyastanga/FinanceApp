@@ -201,16 +201,20 @@ export default function DataHubScreen() {
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       <BlurView intensity={isDark ? 20 : 80} tint={isDark ? "dark" : "light"} className="flex-1">
-        <ScrollView className="p-6" showsVerticalScrollIndicator={false}>
-          <View className="flex-row justify-between items-center mb-8">
-            <View>
-              <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-neutral-900'}`}>Data Hub</Text>
-              <Text className={`text-xs uppercase tracking-widest mt-1 ${isDark ? 'text-white/40' : 'text-neutral-500'}`}>Migration & Portability</Text>
-            </View>
-            <TouchableOpacity onPress={() => router.back()} className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-              <IconSymbol name="xmark" size={20} color={isDark ? "white" : "black"} />
-            </TouchableOpacity>
+        <View className="pt-20 px-gsd-lg pb-gsd-lg flex-row items-center">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+          >
+            <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
+          </TouchableOpacity>
+          <View className="flex-1 items-center">
+            <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-neutral-900'} tracking-tighter`}>Data Hub</Text>
           </View>
+          <View className="w-gsd-huge" />
+        </View>
+
+        <ScrollView className="p-gsd-lg" showsVerticalScrollIndicator={false}>
 
           {/* Primary Action: Export */}
           <TouchableOpacity 

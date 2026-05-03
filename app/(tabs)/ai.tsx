@@ -576,7 +576,7 @@ export default function AIChatScreen() {
             onPress={() => setMessages([])}
             className={`h-10 w-10 rounded-2xl items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
           >
-            <IconSymbol name="trash" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+            <IconSymbol name="trash.fill" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
           </TouchableOpacity>
         </View>
       </BlurView>

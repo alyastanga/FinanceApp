@@ -1,17 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { router, useNavigation } from 'expo-router';
-import { startRotation, resumeRotation } from '../../lib/dek-rotation';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { IconSymbol } from '../../components/ui/icon-symbol';
+import { useTheme } from '../../context/ThemeContext';
+import { resumeRotation, startRotation } from '../../lib/dek-rotation';
 import { getRotationCheckpoint, RotationProgress } from '../../lib/key-manager';
+import { PasswordInput } from '../../components/ui/PasswordInput';
 
 export default function DEKRotationScreen() {
   const navigation = useNavigation();
+  const { isDark } = useTheme();
 
   const [passphrase, setPassphrase] = useState('');
   const [seedPhrase, setSeedPhrase] = useState('');
-  
+
   const [isRotating, setIsRotating] = useState(false);
   const [progress, setProgress] = useState<RotationProgress | null>(null);
+
+  const textClass = isDark ? 'text-white' : 'text-neutral-900';
+  const subTextClass = isDark ? 'text-neutral-400' : 'text-neutral-500';
+  const bgClass = isDark ? 'bg-[#050505]' : 'bg-neutral-50';
+  const cardBgClass = isDark ? 'bg-[#0A0A0A]' : 'bg-white';
+  const borderClass = isDark ? 'border-white/5' : 'border-neutral-200';
+  const inputBgClass = isDark ? 'bg-black/40' : 'bg-neutral-100';
 
   // Check for interrupted rotation on mount
   useEffect(() => {
@@ -19,7 +31,7 @@ export default function DEKRotationScreen() {
       const checkpoint = await getRotationCheckpoint();
       if (checkpoint && checkpoint.status === 'in_progress') {
         Alert.alert(
-          'Rotation Interrupted', 
+          'Rotation Interrupted',
           'A previous key rotation was interrupted. The app will now resume the process to secure your data.',
           [{ text: 'Resume', onPress: executeResume }]
         );
@@ -81,8 +93,8 @@ export default function DEKRotationScreen() {
       'This will replace your current encryption key. All your data will be re-encrypted and synced. Do not close the app until complete.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Start Rotation', 
+        {
+          text: 'Start Rotation',
           style: 'destructive',
           onPress: async () => {
             setIsRotating(true);
@@ -99,80 +111,102 @@ export default function DEKRotationScreen() {
     );
   };
 
-  const percent = progress && progress.total > 0 
-    ? Math.round((progress.completed / progress.total) * 100) 
+  const percent = progress && progress.total > 0
+    ? Math.round((progress.completed / progress.total) * 100)
     : 0;
 
   return (
-    <ScrollView className="flex-1 bg-neutral-950 p-6">
-      <View className="max-w-md mx-auto w-full pb-10 mt-4">
-        <View className="w-16 h-16 bg-red-900/30 rounded-full items-center justify-center mb-6 border border-red-900/50">
-          <Text className="text-red-400 text-2xl">🔄</Text>
+    <SafeAreaView className={`flex-1 ${bgClass}`} edges={['top']}>
+      <View className="px-gsd-lg py-gsd-lg flex-row items-center">
+        <TouchableOpacity
+          onPress={() => !isRotating && router.back()}
+          disabled={isRotating}
+          className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+        >
+          <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
+        </TouchableOpacity>
+        <View className="flex-1 items-center">
+          <Text className={`text-2xl font-black ${textClass} tracking-tighter`}>Rotation</Text>
         </View>
-        
-        <Text className="text-3xl font-bold text-white mb-2">Rotate Encryption Key</Text>
-        <Text className="text-neutral-400 mb-8 leading-relaxed">
-          If you believe your encryption key is compromised, or you want to revoke access from a lost device, you can rotate your key. This will re-encrypt all your cloud data.
-        </Text>
-
-        {!isRotating ? (
-          <>
-            <View className="mb-6 p-4 bg-neutral-900 rounded-xl border border-neutral-800">
-              <Text className="text-neutral-300 font-semibold mb-4">Authentication Required</Text>
-              
-              <Text className="text-neutral-500 mb-2">Daily Passphrase</Text>
-              <TextInput
-                className="bg-neutral-950 text-white p-4 rounded-xl border border-neutral-800 mb-4"
-                placeholder="Enter current passphrase"
-                placeholderTextColor="#52525b"
-                secureTextEntry
-                value={passphrase}
-                onChangeText={setPassphrase}
-              />
-
-              <Text className="text-neutral-500 mb-2">Recovery Phrase</Text>
-              <TextInput
-                className="bg-neutral-950 text-white p-4 rounded-xl border border-neutral-800 min-h-[100px]"
-                placeholder="Paste your 24 words here..."
-                placeholderTextColor="#52525b"
-                multiline
-                autoCapitalize="none"
-                autoCorrect={false}
-                value={seedPhrase}
-                onChangeText={setSeedPhrase}
-                textAlignVertical="top"
-              />
-            </View>
-
-            <TouchableOpacity 
-              onPress={handleStartRotation}
-              className="w-full py-4 rounded-xl shadow-lg bg-red-600 shadow-red-900/20"
-            >
-              <Text className="text-white text-center font-bold text-lg">Initiate Rotation</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View className="bg-neutral-900 p-6 rounded-xl border border-neutral-800 items-center">
-            <ActivityIndicator size="large" color="#f87171" className="mb-6" />
-            <Text className="text-xl font-bold text-white mb-2">Rotating Keys...</Text>
-            
-            <View className="w-full h-3 bg-neutral-800 rounded-full mb-4 overflow-hidden">
-              <View 
-                className="h-full bg-red-500 rounded-full" 
-                style={{ width: `${percent}%` }}
-              />
-            </View>
-            
-            <Text className="text-neutral-400 font-medium">
-              {progress ? `Processing ${progress.completed} of ${progress.total} records (${percent}%)` : 'Initializing...'}
-            </Text>
-            
-            <Text className="text-neutral-500 text-center mt-6 text-sm leading-relaxed">
-              Please do not close the app. Background sync is temporarily paused to ensure data integrity.
-            </Text>
-          </View>
-        )}
+        <View className="w-gsd-huge" />
       </View>
-    </ScrollView>
+
+      <ScrollView className="flex-1 p-6" showsVerticalScrollIndicator={false}>
+        <View className="max-w-md mx-auto w-full pb-10">
+          <Text className={`${subTextClass} mb-8 leading-relaxed font-medium`}>
+            If you believe your encryption key is compromised, or you want to revoke access from a lost device, you can rotate your key. This will re-encrypt all your cloud data.
+          </Text>
+
+          {!isRotating ? (
+            <>
+              <View className={`${cardBgClass} p-5 rounded-[32px] border ${borderClass} mb-8`}>
+                <Text className={`${textClass} font-black text-[10px] uppercase tracking-[3px] mb-6 opacity-40 ml-1`}>Authentication Required</Text>
+
+                <View className="mb-6">
+                  <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-widest mb-2 ml-1`}>Daily Passphrase</Text>
+                  <PasswordInput
+                    className={`${textClass} font-medium`}
+                    containerClass={`${inputBgClass} p-4 rounded-2xl border ${borderClass}`}
+                    placeholder="Enter current passphrase"
+                    placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.3)"}
+                    value={passphrase}
+                    onChangeText={setPassphrase}
+                    isDark={isDark}
+                  />
+                </View>
+
+                <View>
+                  <Text className={`${subTextClass} text-[10px] font-black uppercase tracking-widest mb-2 ml-1`}>Recovery Phrase</Text>
+                  <TextInput
+                    className={`${inputBgClass} ${textClass} p-4 rounded-2xl border ${borderClass} min-h-[120px] font-medium`}
+                    placeholder="Paste your 24 words here..."
+                    placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.3)"}
+                    multiline
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={seedPhrase}
+                    onChangeText={setSeedPhrase}
+                    textAlignVertical="top"
+                  />
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={handleStartRotation}
+                className="w-full py-5 rounded-[32px] shadow-xl bg-red-500 shadow-red-500/20"
+              >
+                <Text className="text-white text-center font-black text-xs uppercase tracking-widest">Initiate Rotation</Text>
+              </TouchableOpacity>
+
+              <Text className={`${subTextClass} text-[9px] text-center mt-6 px-6 leading-4 font-bold uppercase tracking-tight`}>
+                Warning: This process may take several minutes depending on your record count. Do not close the app.
+              </Text>
+            </>
+          ) : (
+            <View className={`${cardBgClass} p-8 rounded-[40px] border ${borderClass} items-center shadow-2xl`}>
+              <ActivityIndicator size="large" color="#f87171" className="mb-6" />
+              <Text className={`text-2xl font-black ${textClass} mb-2 tracking-tight`}>Rotating Keys...</Text>
+
+              <View className="w-full h-3 bg-neutral-800 rounded-full my-6 overflow-hidden">
+                <View
+                  className="h-full bg-red-500 rounded-full"
+                  style={{ width: `${percent}%` }}
+                />
+              </View>
+
+              <Text className={`${textClass} font-black text-[10px] uppercase tracking-widest opacity-60`}>
+                {progress ? `Processing ${progress.completed} / ${progress.total} records` : 'Initializing...'}
+              </Text>
+
+              <View className={`mt-8 p-4 rounded-2xl ${isDark ? 'bg-red-500/5' : 'bg-red-500/10'} border border-red-500/20`}>
+                <Text className="text-red-400 text-center text-xs font-bold leading-5">
+                  Critical security process in progress. Sync is paused to ensure data integrity.
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

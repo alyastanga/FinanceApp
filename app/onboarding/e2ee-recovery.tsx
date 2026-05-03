@@ -1,4 +1,5 @@
 import { IconSymbol } from '@/components/ui/icon-symbol';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
@@ -72,18 +73,20 @@ export default function E2EERecoveryScreen() {
       />
 
       <SafeAreaView className="flex-1" edges={['top']}>
-        {/* Navigation Bar */}
-        <View className="px-gsd-lg py-gsd-lg flex-row items-center justify-between">
+        <View className="px-gsd-lg py-gsd-lg flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
-            className={`h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+            className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
           >
             <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
           </TouchableOpacity>
-          <View>
+
+          <View className="flex-1 items-center">
             <Text className={`text-2xl font-black ${textClass} tracking-tighter`}>Recovery</Text>
-            <Text className={`${subTextClass} text-[9px] font-bold uppercase tracking-widest`}>Unlock Encrypted Data</Text>
           </View>
+
+          {/* Spacer for centering */}
+          <View className="w-gsd-huge" />
         </View>
 
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 24 }}>
@@ -119,26 +122,24 @@ export default function E2EERecoveryScreen() {
               </View>
 
               <View className="gap-y-3">
-                <View className={`rounded-[16px] border ${isDark ? 'bg-black/20 border-white/5' : 'bg-white/50 border-black/5'}`}>
-                  <TextInput
-                    className={`px-5 py-3 text-sm font-bold ${textClass}`}
-                    placeholder="New Passphrase (8+ chars)"
-                    placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)"}
-                    secureTextEntry
-                    value={newPassphrase}
-                    onChangeText={setNewPassphrase}
-                  />
-                </View>
-                <View className={`rounded-[16px] border ${isDark ? 'bg-black/20 border-white/5' : 'bg-white/50 border-black/5'}`}>
-                  <TextInput
-                    className={`px-5 py-3 text-sm font-bold ${textClass}`}
-                    placeholder="Confirm Passphrase"
-                    placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)"}
-                    secureTextEntry
-                    value={confirmPassphrase}
-                    onChangeText={setConfirmPassphrase}
-                  />
-                </View>
+                <PasswordInput
+                  className={`flex-1 px-5 py-3 text-sm font-bold ${textClass}`}
+                  containerClass={`rounded-[16px] border ${isDark ? 'bg-black/20 border-white/5' : 'bg-white/50 border-black/5'}`}
+                  placeholder="New Passphrase (8+ chars)"
+                  placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)"}
+                  value={newPassphrase}
+                  onChangeText={setNewPassphrase}
+                  isDark={isDark}
+                />
+                <PasswordInput
+                  className={`flex-1 px-5 py-3 text-sm font-bold ${textClass}`}
+                  containerClass={`rounded-[16px] border ${isDark ? 'bg-black/20 border-white/5' : 'bg-white/50 border-black/5'}`}
+                  placeholder="Confirm Passphrase"
+                  placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.2)"}
+                  value={confirmPassphrase}
+                  onChangeText={setConfirmPassphrase}
+                  isDark={isDark}
+                />
               </View>
             </View>
 

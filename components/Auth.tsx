@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Alert, StyleSheet, View, TextInput, Button, Text } from 'react-native'
 import { supabase } from '../lib/supabase'
+import { PasswordInput } from './ui/PasswordInput'
 
 export default function Auth() {
   const [email, setEmail] = useState('')
@@ -46,13 +47,13 @@ export default function Auth() {
         />
       </View>
       <View style={styles.verticallySpaced}>
-        <TextInput
+        <PasswordInput
           style={styles.input}
           onChangeText={(text) => setPassword(text)}
           value={password}
-          secureTextEntry={true}
           placeholder="Password"
           autoCapitalize={'none'}
+          containerClass="flex-row items-center"
         />
       </View>
       <View style={[styles.verticallySpaced, styles.mt20]}>

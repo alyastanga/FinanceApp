@@ -34,17 +34,17 @@ export default function Settings() {
   return (
     <View className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       {/* Navigation Bar */}
-      <View className="pt-20 px-gsd-lg pb-gsd-lg flex-row items-center justify-between">
+      <View className="pt-20 px-gsd-lg pb-gsd-lg flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
-          className={`h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+          className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
         >
           <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
         </TouchableOpacity>
-        <View className="items-end">
+        <View className="flex-1 items-center">
           <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter`}>Settings</Text>
-          <Text className={`${isDark ? 'text-white/40' : 'text-black/40'} text-[9px] font-bold uppercase tracking-widest`}>Infrastructure & Debug</Text>
         </View>
+        <View className="w-gsd-huge" />
       </View>
 
       <ScrollView className="flex-1 w-full" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>

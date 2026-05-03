@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } fro
 import { supabase } from '../../lib/supabase';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 export default function LoginScreen() {
   const { isDark } = useTheme();
@@ -56,13 +57,15 @@ export default function LoginScreen() {
 
         <View>
           <Text className={`text-sm font-medium mb-1 ml-1 ${isDark ? 'text-white/80' : 'text-slate-700'}`}>Password</Text>
-          <TextInput
-            className={`border rounded-xl px-4 py-3 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
+          <PasswordInput
+            className="flex-1 text-base"
+            containerClass={`border rounded-xl px-4 py-1.5 ${isDark ? 'bg-white/5 border-white/10 text-white' : 'bg-white border-slate-200 text-slate-900'}`}
             placeholder="••••••••"
             placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "#94a3b8"}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry={true}
+            isDark={isDark}
+            style={{ color: isDark ? 'white' : '#0f172a' }}
           />
         </View>
       </View>

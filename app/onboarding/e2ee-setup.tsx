@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { router } from 'expo-router';
-import { usePreventScreenCapture } from 'expo-screen-capture';
-import { generateSeedPhrase, generateConfirmationQuiz, verifyQuizAnswers } from '../../lib/bip39-service';
-import { setupE2EE } from '../../lib/key-manager';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { usePreventScreenCapture } from 'expo-screen-capture';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { PasswordInput } from '../../components/ui/PasswordInput';
+import { generateConfirmationQuiz, generateSeedPhrase, verifyQuizAnswers } from '../../lib/bip39-service';
+import { setupE2EE } from '../../lib/key-manager';
 
 type SetupStep = 'intro' | 'phrase' | 'quiz' | 'passphrase';
 
@@ -19,7 +20,7 @@ export default function E2EESetupScreen() {
   const [words, setWords] = useState<string[]>([]);
   const [quiz, setQuiz] = useState<{ position: number; correctWord: string }[]>([]);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
-  
+
   const [passphrase, setPassphrase] = useState('');
   const [confirmPassphrase, setConfirmPassphrase] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -31,7 +32,7 @@ export default function E2EESetupScreen() {
       setPhrase(phrase);
       setPhraseHash(phraseHash);
       setWords(words);
-      
+
       const generatedQuiz = generateConfirmationQuiz(phrase, 4);
       setQuiz(generatedQuiz.questions);
     }
@@ -72,28 +73,28 @@ export default function E2EESetupScreen() {
 
   return (
     <View className="flex-1 bg-neutral-950 p-6 pt-16">
-      
+
       {/* STEP 1: INTRO */}
       {step === 'intro' && (
         <View className="flex-1 justify-center items-center max-w-md mx-auto">
           <View className="w-16 h-16 bg-blue-900 rounded-full items-center justify-center mb-6">
             <Text className="text-blue-300 text-2xl">🔒</Text>
           </View>
-          <Text className="text-3xl font-bold text-white text-center mb-4">Zero-Knowledge Security</Text>
+          <Text className="text-2xl font-black text-white text-center mb-4 tracking-tighter">Zero-Knowledge Security</Text>
           <Text className="text-neutral-400 text-center mb-8 text-lg leading-relaxed">
-            Your data will be encrypted on your device before it ever reaches the cloud. 
+            Your data will be encrypted on your device before it ever reaches the cloud.
             Even we cannot see your financial data.
           </Text>
-          
+
           <View className="bg-red-950/30 p-4 rounded-xl border border-red-900/50 mb-8 w-full">
             <Text className="text-red-400 font-semibold mb-2">⚠️ Important Warning</Text>
             <Text className="text-red-200/80 leading-relaxed">
-              If you lose your device and forget your Recovery Phrase, your data will be permanently unrecoverable. 
+              If you lose your device and forget your Recovery Phrase, your data will be permanently unrecoverable.
               There is no "forgot password" button.
             </Text>
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setStep('phrase')}
             className="bg-blue-600 w-full py-4 rounded-xl shadow-lg shadow-blue-900/20"
           >
@@ -105,7 +106,7 @@ export default function E2EESetupScreen() {
       {/* STEP 2: PHRASE DISPLAY */}
       {step === 'phrase' && (
         <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 40 }}>
-          <Text className="text-2xl font-bold text-white mb-2">Secret Recovery Phrase</Text>
+          <Text className="text-2xl font-black text-white mb-2 tracking-tighter">Secret Recovery Phrase</Text>
           <Text className="text-neutral-400 mb-6">
             Write down these 24 words in the exact order. Do not save them digitally. Screenshots are disabled for your security.
           </Text>
@@ -119,7 +120,7 @@ export default function E2EESetupScreen() {
             ))}
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={async () => {
               await Clipboard.setStringAsync(phrase);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -130,7 +131,7 @@ export default function E2EESetupScreen() {
             <Text className="text-neutral-400 font-bold uppercase tracking-widest text-xs">Copy Recovery Phrase</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setStep('quiz')}
             className="bg-blue-600 w-full py-4 rounded-xl mt-6 shadow-lg shadow-blue-900/20"
           >
@@ -142,7 +143,7 @@ export default function E2EESetupScreen() {
       {/* STEP 3: QUIZ */}
       {step === 'quiz' && (
         <View className="flex-1 justify-center max-w-md mx-auto w-full">
-          <Text className="text-2xl font-bold text-white mb-2">Verify Backup</Text>
+          <Text className="text-2xl font-black text-white mb-2 tracking-tighter">Verify Backup</Text>
           <Text className="text-neutral-400 mb-8">
             To make sure you've written down your phrase correctly, please enter the requested words below.
           </Text>
@@ -162,7 +163,7 @@ export default function E2EESetupScreen() {
             </View>
           ))}
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleVerifyQuiz}
             className="bg-blue-600 w-full py-4 rounded-xl mt-6 shadow-lg shadow-blue-900/20"
           >
@@ -174,36 +175,38 @@ export default function E2EESetupScreen() {
       {/* STEP 4: PASSPHRASE */}
       {step === 'passphrase' && (
         <View className="flex-1 justify-center max-w-md mx-auto w-full">
-          <Text className="text-2xl font-bold text-white mb-2">Set Daily Passphrase</Text>
+          <Text className="text-2xl font-black text-white mb-2 tracking-tighter">Set Daily Passphrase</Text>
           <Text className="text-neutral-400 mb-8">
             This passphrase will be used to quickly unlock your local app data. It replaces your Recovery Phrase for daily use.
           </Text>
 
           <View className="mb-4">
             <Text className="text-neutral-300 font-medium mb-2 ml-1">Passphrase</Text>
-            <TextInput
-              className="bg-neutral-900 text-white p-4 rounded-xl border border-neutral-800"
+            <PasswordInput
+              className="text-white font-medium"
+              containerClass="bg-neutral-900 p-4 rounded-xl border border-neutral-800"
               placeholder="Min. 8 characters"
               placeholderTextColor="#52525b"
-              secureTextEntry
               value={passphrase}
               onChangeText={setPassphrase}
+              isDark={true}
             />
           </View>
 
           <View className="mb-8">
             <Text className="text-neutral-300 font-medium mb-2 ml-1">Confirm Passphrase</Text>
-            <TextInput
-              className="bg-neutral-900 text-white p-4 rounded-xl border border-neutral-800"
+            <PasswordInput
+              className="text-white font-medium"
+              containerClass="bg-neutral-900 p-4 rounded-xl border border-neutral-800"
               placeholder="Re-enter passphrase"
               placeholderTextColor="#52525b"
-              secureTextEntry
               value={confirmPassphrase}
               onChangeText={setConfirmPassphrase}
+              isDark={true}
             />
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={handleSetupE2EE}
             disabled={isProcessing}
             className={`w-full py-4 rounded-xl shadow-lg ${isProcessing ? 'bg-blue-800' : 'bg-blue-600 shadow-blue-900/20'}`}

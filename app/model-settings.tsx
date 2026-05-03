@@ -113,14 +113,17 @@ export default function ModelSettings() {
 
   return (
     <View className={`flex-1 p-6 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
-      <View className="flex-row items-center gap-x-4 mb-10 pt-12">
-        <TouchableOpacity onPress={() => router.back()} className={`h-10 w-10 rounded-full items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
-          <IconSymbol name="chevron.left" size={20} color={isDark ? "white" : "black"} />
+      <View className="px-gsd-lg py-gsd-lg flex-row items-center pt-12">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
+        >
+          <IconSymbol name="chevron.left" size={18} color={isDark ? "#fff" : "#000"} />
         </TouchableOpacity>
-        <View>
+        <View className="flex-1 items-center">
           <Text className={`text-2xl font-black ${isDark ? 'text-white' : 'text-black'} tracking-tighter`}>AI Engine</Text>
-          <Text className={`text-xs uppercase tracking-widest ${isDark ? 'text-white/40' : 'text-black/40'}`}>Model Management</Text>
         </View>
+        <View className="w-gsd-huge" />
       </View>
 
       <ScrollView className="flex-1">

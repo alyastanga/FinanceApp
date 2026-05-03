@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, Modal, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, Modal, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from './ui/icon-symbol';
 import { AnimatedProgressBar } from './ui/AnimatedProgressBar';
+import { useTheme } from '../context/ThemeContext';
+import { PasswordInput } from './ui/PasswordInput';
 
 interface VaultUnlockModalProps {
   isVisible: boolean;
@@ -11,6 +13,7 @@ interface VaultUnlockModalProps {
 }
 
 export function VaultUnlockModal({ isVisible, onClose, onSubmit }: VaultUnlockModalProps) {
+  const { isDark } = useTheme();
   const [passphrase, setPassphrase] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -45,6 +48,12 @@ export function VaultUnlockModal({ isVisible, onClose, onSubmit }: VaultUnlockMo
     }
   };
 
+  const textClass = isDark ? 'text-white' : 'text-neutral-900';
+  const subTextClass = isDark ? 'text-white/40' : 'text-neutral-500';
+  const bgClass = isDark ? 'bg-[#0A0A0A]' : 'bg-white';
+  const borderClass = isDark ? 'border-white/10' : 'border-neutral-200';
+  const inputBgClass = isDark ? 'bg-white/5' : 'bg-neutral-100';
+
   return (
     <Modal
       visible={isVisible}
@@ -56,30 +65,29 @@ export function VaultUnlockModal({ isVisible, onClose, onSubmit }: VaultUnlockMo
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <BlurView intensity={30} tint="dark" className="flex-1 items-center justify-center px-6">
-          <View className="w-full bg-[#0A0A0A] rounded-[48px] border border-white/10 p-10 shadow-2xl">
+        <BlurView intensity={30} tint={isDark ? "dark" : "light"} className="flex-1 items-center justify-center px-6">
+          <View className={`w-full ${bgClass} rounded-[48px] border ${borderClass} p-10 shadow-2xl`}>
             <View className="items-center mb-8">
               <View className="h-20 w-20 bg-emerald-500/20 rounded-[28px] items-center justify-center mb-6">
                 <IconSymbol name="lock.shield.fill" size={32} color="#10b981" />
               </View>
-              <Text className="text-white text-2xl font-black text-center tracking-tight">Unlock Vault</Text>
-              <Text className="text-white/40 text-[11px] text-center mt-3 leading-5 px-6 uppercase tracking-widest font-bold">
+              <Text className={`${textClass} text-2xl font-black text-center tracking-tight`}>Unlock Vault</Text>
+              <Text className={`${subTextClass} text-[11px] text-center mt-3 leading-5 px-6 uppercase tracking-widest font-bold`}>
                 Zero-Knowledge Encryption Required
               </Text>
             </View>
 
             {!isProcessing ? (
-              <View className="bg-white/5 border border-white/10 rounded-3xl px-6 py-5 mb-8">
-                <TextInput
-                  secureTextEntry
-                  placeholder="Daily Passphrase"
-                  placeholderTextColor="rgba(255,255,255,0.2)"
-                  className="text-white font-bold text-lg"
-                  value={passphrase}
-                  onChangeText={setPassphrase}
-                  autoFocus
-                />
-              </View>
+              <PasswordInput
+                className={`flex-1 ${textClass} font-bold text-lg`}
+                containerClass={`${inputBgClass} border ${borderClass} rounded-3xl px-6 py-5 mb-8`}
+                placeholder="Daily Passphrase"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.3)"}
+                value={passphrase}
+                onChangeText={setPassphrase}
+                autoFocus
+                isDark={isDark}
+              />
             ) : (
               <View className="mb-8 py-4">
                 <AnimatedProgressBar progress={progress} label={statusText} />
@@ -90,9 +98,9 @@ export function VaultUnlockModal({ isVisible, onClose, onSubmit }: VaultUnlockMo
               <TouchableOpacity 
                 onPress={onClose}
                 disabled={isProcessing}
-                className="flex-1 py-5 items-center bg-white/5 rounded-3xl"
+                className={`flex-1 py-5 items-center ${inputBgClass} rounded-3xl`}
               >
-                <Text className="text-white/60 font-black text-[11px] uppercase tracking-widest">Cancel</Text>
+                <Text className={`${subTextClass} font-black text-[11px] uppercase tracking-widest`}>Cancel</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -106,7 +114,7 @@ export function VaultUnlockModal({ isVisible, onClose, onSubmit }: VaultUnlockMo
               </TouchableOpacity>
             </View>
 
-            <Text className="text-white/20 text-[9px] uppercase font-black text-center mt-8 tracking-[2px]">
+            <Text className={`${isDark ? 'text-white/20' : 'text-neutral-300'} text-[9px] uppercase font-black text-center mt-8 tracking-[2px]`}>
               E2EE Active • AES-256-GCM
             </Text>
           </View>
