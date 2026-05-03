@@ -52,5 +52,166 @@ export const PARSER_TEMPLATES: ParserTemplate[] = [
         }
       }
     ]
+  },
+  {
+    name: 'BDO',
+    senders: ['bdo-alerts@bdo.com.ph', 'no-reply@bdo.com.ph'],
+    patterns: [
+      {
+        // "transaction with amount of PHP 1,000.00 was made... at [Place]"
+        regex: /amount\sof\s(?:PHP|USD)\s?([\d,]+\.\d{2})\swas\smade\s(?:on|at)\s(.*?)(?:\.|\son|$)/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'General',
+          description: `BDO: ${match[2].trim()}`,
+          external_id: `bdo-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'BPI',
+    senders: ['expressonline@bpi.com.ph', 'notifications@bpi.com.ph'],
+    patterns: [
+      {
+        // "payment of PHP 500.00 to [Merchant]"
+        regex: /payment\sof\s(?:PHP|USD)\s?([\d,]+\.\d{2})\sto\s(.*?)\son/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Bills',
+          description: `BPI: ${match[2].trim()}`,
+          external_id: `bpi-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'GoTyme',
+    senders: ['no-reply@gotyme.com.ph', 'notifications@gotyme.com.ph'],
+    patterns: [
+      {
+        // "You've spent PHP 150.00 at [Place]"
+        regex: /spent\s(?:PHP|USD)\s?([\d,]+\.\d{2})\sat\s(.*?)(?:\.|using|$)/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Shopping',
+          description: `GoTyme: ${match[2].trim()}`,
+          external_id: `gotyme-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'Maribank',
+    senders: ['notifications@maribank.sg', 'no-reply@maribank.sg'],
+    patterns: [
+      {
+        // "successfully paid SGD 20.00 to [Merchant]"
+        regex: /paid\s(?:SGD|PHP|USD)\s?([\d,]+\.\d{2})\sto\s(.*?)(?:\.|$)/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'General',
+          description: `Maribank: ${match[2].trim()}`,
+          external_id: `maribank-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'Shopee',
+    senders: ['info@shopee.ph', 'no-reply@shopee.ph'],
+    patterns: [
+      {
+        // "Payment for Order [ID] ... amount of PHP 299.00"
+        regex: /amount\sof\s(?:PHP|USD)\s?([\d,]+\.\d{2})\shas\sbeen\sconfirmed/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Shopping',
+          description: 'Shopee Purchase',
+          external_id: `shopee-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'Lazada',
+    senders: ['member@lazada.com.ph', 'no-reply@lazada.com.ph'],
+    patterns: [
+      {
+        // "Order #[ID] placed for PHP 450.00"
+        regex: /placed\sfor\s(?:PHP|USD)\s?([\d,]+\.\d{2})/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Shopping',
+          description: 'Lazada Purchase',
+          external_id: `lazada-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'Utilities',
+    senders: [
+      'no-reply@meralco.com.ph', 
+      'notifications@mayniladwater.com.ph', 
+      'no-reply@pldt.com.ph', 
+      'customercare@convergeict.com'
+    ],
+    patterns: [
+      {
+        // "payment of PHP 1,500.00 ... received"
+        regex: /payment\sof\s(?:PHP|USD)\s?([\d,]+\.\d{2}).*?received/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Bills',
+          description: 'Utility Bill Payment',
+          external_id: `util-${Date.now()}`,
+          type: 'expense',
+        }),
+      }
+    ]
+  },
+  {
+    name: 'Universal',
+    senders: [], // Matches by keyword instead of specific sender
+    patterns: [
+      {
+        // "Spent/Paid [Currency] [Amount] at [Place]"
+        regex: /(?:spent|paid|purchased)\s(?:[A-Z]{3}|[$€£₱])\s?([\d,]+\.\d{2})\s(?:at|to)\s(.*?)(?:\.|$)/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'General',
+          description: match[2].trim(),
+          external_id: `univ-exp-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          type: 'expense',
+        }),
+      },
+      {
+        // "Received [Currency] [Amount] from [Sender]"
+        regex: /(?:received|credited)\s(?:[A-Z]{3}|[$€£₱])\s?([\d,]+\.\d{2})\sfrom\s(.*?)(?:\.|$)/i,
+        handler: (match) => ({
+          amount: parseFloat(match[1].replace(/,/g, '')),
+          date: Date.now(),
+          category: 'Income',
+          description: match[2].trim(),
+          external_id: `univ-inc-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+          type: 'income',
+        }),
+      }
+    ]
   }
 ];

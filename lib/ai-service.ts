@@ -4,13 +4,30 @@ import { generateLocalResponse, initLocalModel } from './llama-service';
 
 // const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 // Option A (V1Beta + 3.0 Flash): Recommended for systemInstruction support
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
-
-
-
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
 import { AI_AGENTS, DEFAULT_AGENT } from './ai-agents';
+
+const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+const PROVIDER_CONFIGS = {
+  gemini: {
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+    defaultModel: 'gemini-2.5-flash',
+  },
+  openai: {
+    baseUrl: 'https://api.openai.com/v1/chat/completions',
+    defaultModel: 'gpt-4o-mini',
+  },
+  anthropic: {
+    baseUrl: 'https://api.anthropic.com/v1/messages',
+    defaultModel: 'claude-3-5-sonnet-latest',
+  },
+  xai: {
+    baseUrl: 'https://api.x.ai/v1/chat/completions',
+    defaultModel: 'grok-beta',
+  }
+};
 
 export async function generateAIResponse(
   messages: { role: string; content: string }[],
@@ -20,6 +37,14 @@ export async function generateAIResponse(
 ) {
   const agent = agentId ? (AI_AGENTS[agentId] || DEFAULT_AGENT) : DEFAULT_AGENT;
 
+  // 1. Check for User Settings in Storage
+  const keysJson = await AsyncStorage.getItem('cloud_ai_keys');
+  const aiKeys = keysJson ? JSON.parse(keysJson) : {};
+  const userProvider = (await AsyncStorage.getItem('cloud_ai_provider')) || 'gemini';
+  const userModel = await AsyncStorage.getItem('cloud_ai_model');
+
+  const providerKey = aiKeys[userProvider];
+
   // ── Local Mode: Route directly to on-device engine ──
   if (useLocal) {
     console.log(`[AI Assistant] Using LOCAL mode with agent: ${agent.name}`);
@@ -27,7 +52,9 @@ export async function generateAIResponse(
     return generateLocalResponse(messages, agent.id, onToken);
   }
 
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  const envKey = userProvider === 'gemini' ? process.env.EXPO_PUBLIC_GEMINI_API_KEY : undefined;
+  const apiKey = providerKey || envKey;
+  const model = userModel || PROVIDER_CONFIGS[userProvider as keyof typeof PROVIDER_CONFIGS]?.defaultModel || PROVIDER_CONFIGS.gemini.defaultModel;
 
   // Diagnostic log for the user/developer
   console.log('[AI Assistant] Using CLOUD mode (Gemini). API Key present:', !!apiKey);
@@ -83,62 +110,92 @@ export async function generateAIResponse(
   const timeoutId = setTimeout(() => controller.abort(), 40000);
 
   try {
-    /* Commented out OpenRouter implementation
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'http://localhost:8081',
-        'X-Title': 'FinanceApp',
-      },
-      body: JSON.stringify({
-        model: 'openrouter/free',
-        messages: [systemPrompt, ...messages],
-      }),
-    });
-    */
+    let response;
+    const body: any = {
+      model: model,
+      temperature: 0.7,
+      max_tokens: 4096,
+    };
 
-    const geminiMessages = messages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      signal: controller.signal,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: geminiMessages,
-        system_instruction: {
-          parts: [{ text: systemInstructionText }]
+    if (userProvider === 'gemini') {
+      const geminiMessages = messages.map(msg => ({
+        role: msg.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: msg.content }]
+      }));
+      const apiUrl = `${PROVIDER_CONFIGS.gemini.baseUrl}/${model}:generateContent?key=${apiKey}`;
+      
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: geminiMessages,
+          system_instruction: { parts: [{ text: systemInstructionText }] },
+          generationConfig: { temperature: 0.7, maxOutputTokens: 4096 }
+        }),
+      });
+    } else if (userProvider === 'anthropic') {
+      response = await fetch(PROVIDER_CONFIGS.anthropic.baseUrl, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey as string,
+          'anthropic-version': '2023-06-01'
         },
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 4096,
-        }
-      }),
-    });
+        body: JSON.stringify({
+          model: model,
+          system: systemInstructionText,
+          messages: messages,
+          max_tokens: 4096
+        }),
+      });
+    } else {
+      // OpenAI, Grok (xAI) and other OpenAI-compatible providers
+      const url = userProvider === 'xai' ? PROVIDER_CONFIGS.xai.baseUrl : PROVIDER_CONFIGS.openai.baseUrl;
+      response = await fetch(url, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey as string}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'system', content: systemInstructionText }, ...messages],
+          max_tokens: 4096
+        }),
+      });
+    }
 
     clearTimeout(timeoutId);
     const data = await response.json();
 
     if (data.error) {
-      console.error('Gemini Error:', data.error);
-      return `Gemini Error: ${data.error.message || 'Unknown error'}`;
+      console.error(`${userProvider} Error:`, data.error);
+      // Auto-fallback to local on API errors (quota, auth, etc)
+      console.log(`[AI Assistant] ${userProvider} failed with error, falling back to local mode.`);
+      await initLocalModel();
+      return generateLocalResponse(messages, agent.id, onToken);
     }
 
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('[Gemini Diagnostic] Unexpected response structure:', JSON.stringify(data, null, 2));
+    // Extract text based on provider format
+    let resultText = '';
+    if (userProvider === 'gemini') {
+      resultText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else if (userProvider === 'anthropic') {
+      resultText = data.content?.[0]?.text || '';
+    } else {
+      // OpenAI / xAI format
+      resultText = data.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) {
+      console.error(`[${userProvider} Diagnostic] Unexpected response structure:`, JSON.stringify(data, null, 2));
       return "The AI returned an empty or restricted response. Check console for details.";
     }
 
-    return data.candidates[0].content.parts[0].text;
+    return resultText;
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
@@ -157,7 +214,16 @@ export async function generateAIResponse(
 }
 
 export async function generateSuggestedBudget() {
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
+  const keysJson = await AsyncStorage.getItem('cloud_ai_keys');
+  const aiKeys = keysJson ? JSON.parse(keysJson) : {};
+  const userProvider = (await AsyncStorage.getItem('cloud_ai_provider')) || 'gemini';
+  const userModel = await AsyncStorage.getItem('cloud_ai_model');
+
+  const providerKey = aiKeys[userProvider];
+  const envKey = userProvider === 'gemini' ? process.env.EXPO_PUBLIC_GEMINI_API_KEY : undefined;
+  const apiKey = providerKey || envKey;
+  const model = userModel || PROVIDER_CONFIGS[userProvider as keyof typeof PROVIDER_CONFIGS]?.defaultModel || PROVIDER_CONFIGS.gemini.defaultModel;
+
   if (!apiKey || apiKey === 'your_key_here') return null;
 
   const context = await getFinancialContext();
@@ -191,18 +257,46 @@ export async function generateSuggestedBudget() {
     
     Do not include any other text or explanation. Only the JSON array.`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: "Please generate the budget based on the context provided in your system instructions." }] }],
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        }
-      }),
-    });
+    let response;
+    if (userProvider === 'gemini') {
+      const apiUrl = `${PROVIDER_CONFIGS.gemini.baseUrl}/${model}:generateContent?key=${apiKey}`;
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: "Please generate the budget based on the context provided in your system instructions." }] }],
+          system_instruction: { parts: [{ text: systemInstruction }] }
+        }),
+      });
+    } else if (userProvider === 'anthropic') {
+      response = await fetch(PROVIDER_CONFIGS.anthropic.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey as string,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: model,
+          system: systemInstruction,
+          messages: [{ role: 'user', content: "Please generate the budget." }],
+          max_tokens: 4096
+        }),
+      });
+    } else {
+      const url = userProvider === 'xai' ? PROVIDER_CONFIGS.xai.baseUrl : PROVIDER_CONFIGS.openai.baseUrl;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey as string}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'system', content: systemInstruction }, { role: 'user', content: "Please generate the budget." }],
+        }),
+      });
+    }
 
     const data = await response.json();
 
@@ -226,18 +320,19 @@ export async function generateSuggestedBudget() {
 }
 
 export async function explainFinancialGraph(data: any, context: string, useLocal: boolean = false) {
-  // ── Local Mode Fallback ──
-  if (useLocal) {
-    console.log('[AI Service] Interpreting graph in LOCAL mode...');
-    await initLocalModel();
-    const prompt = [{ role: 'user', content: `Analyze this ${context} chart data: ${JSON.stringify(data)}. Give me a 2-sentence summary.` }];
-    return generateLocalResponse(prompt);
-  }
+  const keysJson = await AsyncStorage.getItem('cloud_ai_keys');
+  const aiKeys = keysJson ? JSON.parse(keysJson) : {};
+  const userProvider = (await AsyncStorage.getItem('cloud_ai_provider')) || 'gemini';
+  const userModel = await AsyncStorage.getItem('cloud_ai_model');
 
-  const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_key_here') {
-    // Auto-fallback if no key
-    console.log('[AI Service] No Gemini API key for graph, falling back to local mode.');
+  const providerKey = aiKeys[userProvider];
+  const envKey = userProvider === 'gemini' ? process.env.EXPO_PUBLIC_GEMINI_API_KEY : undefined;
+  const apiKey = providerKey || envKey;
+  const model = userModel || PROVIDER_CONFIGS[userProvider as keyof typeof PROVIDER_CONFIGS]?.defaultModel || PROVIDER_CONFIGS.gemini.defaultModel;
+
+  // ── Local Mode Fallback ──
+  if (useLocal || !apiKey || apiKey === 'your_key_here') {
+    console.log('[AI Service] Interpreting graph in LOCAL mode...');
     await initLocalModel();
     const prompt = [{ role: 'user', content: `Analyze this ${context} chart data: ${JSON.stringify(data)}. Give me a 2-sentence summary.` }];
     return generateLocalResponse(prompt);
@@ -290,27 +385,65 @@ export async function explainFinancialGraph(data: any, context: string, useLocal
     - Use a confident yet empathetic tone of a veteran wealth manager.
     - USE PLAIN TEXT ONLY. NO BOLDING (**), NO HASHTAGS (#).`;
 
-    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: "Please interpret this graph data." }] }],
-        systemInstruction: {
-          parts: [{ text: systemInstruction }]
-        }
-      }),
-    });
+    let response;
+    if (userProvider === 'gemini') {
+      const apiUrl = `${PROVIDER_CONFIGS.gemini.baseUrl}/${model}:generateContent?key=${apiKey}`;
+      response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: "Please interpret this graph data." }] }],
+          system_instruction: { parts: [{ text: systemInstruction }] }
+        }),
+      });
+    } else if (userProvider === 'anthropic') {
+      response = await fetch(PROVIDER_CONFIGS.anthropic.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey as string,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: model,
+          system: systemInstruction,
+          messages: [{ role: 'user', content: "Please interpret this graph data." }],
+          max_tokens: 4096
+        }),
+      });
+    } else {
+      const url = userProvider === 'xai' ? PROVIDER_CONFIGS.xai.baseUrl : PROVIDER_CONFIGS.openai.baseUrl;
+      response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey as string}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{ role: 'system', content: systemInstruction }, { role: 'user', content: "Please interpret this graph data." }],
+        }),
+      });
+    }
 
     const result = await response.json();
 
-    if (!result.candidates?.[0]?.content?.parts?.[0]?.text) {
-      console.error('[Gemini Graph Diagnostic] Unexpected response structure:', JSON.stringify(result, null, 2));
+    // Extract result based on provider
+    let resultText = '';
+    if (userProvider === 'gemini') {
+      resultText = result.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    } else if (userProvider === 'anthropic') {
+      resultText = result.content?.[0]?.text || '';
+    } else {
+      resultText = result.choices?.[0]?.message?.content || '';
+    }
+
+    if (!resultText) {
+      console.error(`[${userProvider} Graph Diagnostic] Unexpected response structure:`, JSON.stringify(result, null, 2));
       return "The AI could not interpret this graph at this time.";
     }
 
-    return result.candidates[0].content.parts[0].text;
+    return resultText;
   } catch (e) {
     console.error('Graph Explain Error:', e);
     return "Failed to connect to the AI service.";

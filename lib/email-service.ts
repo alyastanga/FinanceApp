@@ -18,8 +18,9 @@ export const EmailService = {
    * emails are processed from this point forward.
    */
   async initializeSync() {
-    const now = Math.floor(Date.now() / 1000);
-    await AsyncStorage.setItem(LAST_SYNC_KEY, String(now));
+    // Look back 30 days on initial connection to populate history
+    const thirtyDaysAgo = Math.floor((Date.now() - (30 * 24 * 60 * 60 * 1000)) / 1000);
+    await AsyncStorage.setItem(LAST_SYNC_KEY, String(thirtyDaysAgo));
   },
 
   /**
@@ -40,8 +41,9 @@ export const EmailService = {
 
     try {
       // Query Gmail for messages after the last sync timestamp
-      // Query: "after:[timestamp] (from:maya OR from:uob OR subject:transaction)"
-      const query = encodeURIComponent(`after:${lastSync} (maya OR uob OR "bank" OR "transaction")`);
+      // Enhanced query to catch a broader range of financial notifications
+      const financialKeywords = '(maya OR uob OR gcash OR bpi OR bdo OR citi OR shopee OR lazada OR meralco OR maynilad OR pldt OR converge OR "bank" OR "transaction" OR "alert" OR "spent" OR "received" OR "confirmed" OR "statement")';
+      const query = encodeURIComponent(`after:${lastSync} ${financialKeywords}`);
       const response = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${query}`, {
         headers: { Authorization: `Bearer ${token}` }
       });

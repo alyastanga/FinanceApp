@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { DateRangeModal } from '@/components/DateRangeModal';
+import { PasswordPromptModal } from '@/components/PasswordPromptModal';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useCurrency } from '@/context/CurrencyContext';
+import { useTheme } from '@/context/ThemeContext';
+import database from '@/database';
+import Expense from '@/database/models/Expense';
+import Income from '@/database/models/Income';
+import { CSVMapping, getCSVHeaders, guessMappings, transformRows } from '@/lib/csv-utils';
+import { ExportTransaction, exportTransactionsToCSV } from '@/lib/export-service';
+import { PDFService } from '@/lib/pdf-service';
+import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 import { useRouter } from 'expo-router';
-import { BlurView } from 'expo-blur';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { getCSVHeaders, guessMappings, transformRows, CSVMapping } from '@/lib/csv-utils';
-import database from '@/database';
-import { useCurrency } from '@/context/CurrencyContext';
-import { useTheme } from '@/context/ThemeContext';
-import { DateRangeModal } from '@/components/DateRangeModal';
-import { exportTransactionsToCSV, ExportTransaction } from '@/lib/export-service';
-import { PasswordPromptModal } from '@/components/PasswordPromptModal';
-import { PDFService } from '@/lib/pdf-service';
-import Income from '@/database/models/Income';
-import Expense from '@/database/models/Expense';
+import React, { useState } from 'react';
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DataHubScreen() {
   const router = useRouter();
@@ -50,7 +50,7 @@ export default function DataHubScreen() {
 
       if (!result.canceled && result.assets && result.assets[0]) {
         const asset = result.assets[0];
-        
+
         if (asset.mimeType === 'application/pdf' || asset.name.toLowerCase().endsWith('.pdf')) {
           setPendingPdfUri(asset.uri);
           setPendingPdfName(asset.name);
@@ -107,7 +107,7 @@ export default function DataHubScreen() {
     setIsProcessing(true);
     try {
       const parsed = transformRows(csvText, mapping);
-      
+
       await database.write(async () => {
         const incomesStore = database.get<Income>('incomes');
         const expensesStore = database.get<Expense>('expenses');
@@ -116,8 +116,8 @@ export default function DataHubScreen() {
         const existingExpenses = await expensesStore.query().fetch();
 
         const isDuplicate = (t: any, existing: any[]) => {
-          return existing.some(e => 
-            Math.abs(e.amount - t.amount) < 0.01 && 
+          return existing.some(e =>
+            Math.abs(e.amount - t.amount) < 0.01 &&
             e.category === t.category &&
             (e.description || '') === (t.description || '') &&
             new Date(e.createdAt).getTime() === t.createdAt.getTime()
@@ -139,7 +139,7 @@ export default function DataHubScreen() {
           });
           importedCount++;
         }
-        
+
         Alert.alert('Success', `Imported ${importedCount} new transactions.`);
       });
 
@@ -201,7 +201,7 @@ export default function DataHubScreen() {
   return (
     <SafeAreaView className={`flex-1 ${isDark ? 'bg-[#050505]' : 'bg-[#F5F5F5]'}`}>
       <BlurView intensity={isDark ? 20 : 80} tint={isDark ? "dark" : "light"} className="flex-1">
-        <View className="pt-20 px-gsd-lg pb-gsd-lg flex-row items-center">
+        <View className="pt-0 px-gsd-lg pb-gsd-lg flex-row items-center">
           <TouchableOpacity
             onPress={() => router.back()}
             className={`z-10 h-gsd-huge w-gsd-huge rounded-gsd-md items-center justify-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
@@ -217,7 +217,7 @@ export default function DataHubScreen() {
         <ScrollView className="p-gsd-lg" showsVerticalScrollIndicator={false}>
 
           {/* Primary Action: Export */}
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => setShowExportModal(true)}
             className={`p-8 rounded-[40px] border flex-row items-center gap-x-6 mb-12 ${isDark ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-emerald-500/5 border-emerald-500/10'}`}
           >
@@ -234,9 +234,9 @@ export default function DataHubScreen() {
           {/* Import Section */}
           <View className="mb-10">
             <Text className={`text-[12px] font-black uppercase tracking-[4px] mb-6 ${isDark ? 'text-white' : 'text-black'}`}>Import Transactions</Text>
-            
+
             {!csvText ? (
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handlePickFile}
                 className={`h-48 w-full border-2 border-dashed rounded-[32px] items-center justify-center ${isDark ? 'border-white/10 bg-white/[0.02]' : 'border-black/10 bg-black/[0.02]'}`}
               >
@@ -257,7 +257,7 @@ export default function DataHubScreen() {
                     <Text className="text-red-400 font-bold text-[10px] uppercase tracking-widest">Reset</Text>
                   </TouchableOpacity>
                 </View>
-                
+
                 <View className="mb-6">
                   <Text className={`text-[10px] font-black uppercase tracking-widest mb-4 ${isDark ? 'text-white/40' : 'text-black/40'}`}>Map Columns to Database</Text>
                   {headers.map((h, index) => (
@@ -298,7 +298,7 @@ export default function DataHubScreen() {
                   ))}
                 </View>
 
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={executeImport}
                   disabled={isProcessing}
                   className="mt-4 bg-primary p-5 rounded-2xl items-center shadow-lg shadow-primary/20"
@@ -315,7 +315,7 @@ export default function DataHubScreen() {
         </ScrollView>
       </BlurView>
 
-      <DateRangeModal 
+      <DateRangeModal
         isVisible={showExportModal}
         onClose={() => setShowExportModal(false)}
         onExport={handleExport}

@@ -24,20 +24,39 @@ export async function processEmailToTransaction(email: {
 
   // 2. Try Template Parsing (Fast & Offline-Ready)
   for (const template of PARSER_TEMPLATES) {
+    // Universal templates have empty senders and match purely by content
+    const isUniversal = template.senders.length === 0;
     const isFromBank = template.senders.some(s => email.from.toLowerCase().includes(s.toLowerCase()));
-    if (isFromBank || template.name === 'Maya') { // Added manual check for Maya statement text
+    
+    if (isUniversal || isFromBank || template.name === 'Maya') {
       for (const pattern of template.patterns) {
         const match = email.body.match(pattern.regex);
         if (match) {
           const parsed = pattern.handler(match);
           if (parsed) {
-            // Check if the handler returned a unique refId that we should also check for duplicates
-            if (parsed.external_id && parsed.external_id !== email.messageId) {
-               const dupCheck = await database.get(parsed.type === 'income' ? 'incomes' : 'expenses')
+            // Hardened De-duplication: Check for specific external_id AND general signature
+            const table = parsed.type === 'income' ? 'incomes' : 'expenses';
+            
+            // Check 1: External ID
+            if (parsed.external_id) {
+               const dupCheck = await database.get(table)
                  .query(Q.where('external_id', parsed.external_id))
                  .fetch();
                if (dupCheck.length > 0) return { status: 'duplicate' };
             }
+
+            // Check 2: Signature (Amount + Category + Date window)
+            // This prevents duplicate imports of the same transaction from different notification sources
+            const sameAmount = await database.get(table)
+              .query(
+                Q.and(
+                  Q.where('amount', parsed.amount),
+                  Q.where('category', parsed.category),
+                  Q.where('created_at', Q.between(parsed.date - 60000, parsed.date + 60000)) // 1 min window
+                )
+              ).fetch();
+            if (sameAmount.length > 0) return { status: 'duplicate' };
+
             return { status: 'success', data: parsed };
           }
         }

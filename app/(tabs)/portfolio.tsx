@@ -39,7 +39,7 @@ const PortfolioCard = ({ asset, onPress, isDark }: { asset: Portfolio, onPress: 
             name={
               asset.assetType === 'crypto' ? 'bitcoinsign.circle' :
                 asset.assetType === 'stock' ? 'chart.line.uptrend.xyaxis' :
-                  asset.assetType === 'realestate' ? 'house.fill' : 'banknote'
+                  asset.assetType === 'realestate' ? 'house' : 'banknote'
             }
             size={20}
             color={isDark ? "#fff" : "#000"}
@@ -169,7 +169,7 @@ const PortfolioScreenBase = ({ portfolio }: PortfolioScreenProps) => {
         }
       >
         {/* Header Section */}
-        <View className="pt-8 pb-10">
+        <View className="pt-5 pb-10">
           <View className="flex-row justify-between items-center mb-10">
             <View>
               <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>Asset Manager</Text>

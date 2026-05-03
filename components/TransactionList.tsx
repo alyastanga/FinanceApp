@@ -4,6 +4,7 @@ import { Alert, FlatList, Keyboard, LayoutAnimation, Platform, Pressable, Scroll
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import database from '../database';
+import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SwipeableSheet } from './ui/SwipeableSheet';
 
 // Enable LayoutAnimation for Android
@@ -114,14 +115,49 @@ const EditTransactionModal = ({
 
   useEffect(() => {
     if (transaction) {
-      setAmount(transaction.amount.toString());
+      // Ensure the displayed amount is rounded to 2 decimal places
+      const roundedAmount = parseFloat(transaction.amount || 0).toFixed(2);
+      setAmount(roundedAmount === '0.00' && !transaction.amount ? '' : roundedAmount);
       setCategory(transaction.category || '');
       setDescription(transaction.description || '');
     }
   }, [transaction]);
 
+  const handleDelete = async () => {
+    Alert.alert(
+      "Delete Transaction",
+      "Are you sure you want to permanently remove this record? This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            setIsSaving(true);
+            try {
+              await database.write(async () => {
+                const table = transaction.type === 'income' ? 'incomes' : 'expenses';
+                const record = await database.get(table).find(transaction.id);
+                await record.markAsDeleted(); // WatermelonDB soft delete or destroy
+                await record.destroyPermanently();
+              });
+              onClose();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete transaction.");
+            } finally {
+              setIsSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleUpdate = async () => {
     if (!amount || !category) return;
+
+    // Round the input amount to 2 decimal places before saving
+    const finalAmount = parseFloat(parseFloat(amount).toFixed(2));
 
     Alert.alert(
       "Confirm Update",
@@ -138,7 +174,7 @@ const EditTransactionModal = ({
                 const table = transaction.type === 'income' ? 'incomes' : 'expenses';
                 const record = await database.get(table).find(transaction.id);
                 await record.update((r: any) => {
-                  r.amount = parseFloat(amount);
+                  r.amount = finalAmount;
                   r.category = category;
                   r.description = description.trim() || null;
                   if (table === 'incomes') {
@@ -165,8 +201,18 @@ const EditTransactionModal = ({
     <SwipeableSheet isVisible={visible} onClose={onClose}>
       <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Pressable onPress={Keyboard.dismiss} className="mb-4">
-          <Text className={`text-2xl font-black tracking-tighter mb-1 ${isDark ? 'text-white' : 'text-black'}`}>Edit {transaction.type === 'income' ? 'Income' : 'Expense'}</Text>
-          <Text className="text-muted-foreground text-[10px] font-black uppercase tracking-[2px] mb-8">Update your records</Text>
+          <View className="flex-row justify-between items-start mb-8">
+            <View className="flex-1">
+              <Text className={`text-2xl font-black tracking-tighter mb-1 ${isDark ? 'text-white' : 'text-black'}`}>Edit {transaction.type === 'income' ? 'Income' : 'Expense'}</Text>
+              <Text className="text-muted-foreground text-[10px] font-black uppercase tracking-[2px]">Update your records</Text>
+            </View>
+            <TouchableOpacity
+              onPress={handleDelete}
+              className={`h-12 w-12 rounded-2xl items-center justify-center border border-red-500/20 bg-red-500/5`}
+            >
+              <IconSymbol name="trash" size={20} color="#ef4444" />
+            </TouchableOpacity>
+          </View>
 
           <View className="gap-y-6">
             <View>

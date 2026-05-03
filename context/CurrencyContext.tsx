@@ -190,7 +190,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { sign, value: absVal.toFixed(decimals), suffix: '' };
   };
 
-  const format = (val: number, fromCurrency?: string, decimals: number = 0) => {
+  const format = (val: number, fromCurrency?: string, decimals: number = 2) => {
     const converted = (fromCurrency && fromCurrency !== currency) 
       ? convertFrom(val, fromCurrency) 
       : (fromCurrency ? val : convert(val));
@@ -199,12 +199,12 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return `${sign}${CURRENCY_MAP[currency].symbol}${value}${suffix}`;
   };
 
-  const formatRaw = (val: number, decimals: number = 0) => {
+  const formatRaw = (val: number, decimals: number = 2) => {
     const { sign, value, suffix } = getFormattedValue(val, decimals);
     return `${sign}${CURRENCY_MAP[currency].symbol}${value}${suffix}`;
   };
 
-  const formatValue = (val: number, decimals: number = 0) => {
+  const formatValue = (val: number, decimals: number = 2) => {
     const { sign, value, suffix } = getFormattedValue(val, decimals);
     return `${sign}${value}${suffix}`;
   };

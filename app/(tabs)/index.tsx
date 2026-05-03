@@ -275,14 +275,14 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
             )}
           </TouchableOpacity>
 
-          <View className="flex-row gap-x-4">
+          <View className="flex-row gap-x-3">
             {/* Performance Panel */}
             <TouchableOpacity
               onPress={() => router.push('/analytics')}
               className={`flex-1 rounded-gsd-lg border p-gsd-md h-36 justify-between overflow-hidden shadow-xl ${isDark ? 'bg-[#0C0C0C] border-white/5 shadow-black' : 'bg-white border-neutral-50 shadow-neutral-300'}`}
             >
               <View className="flex-row justify-between items-start">
-                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-white/5' : 'bg-black/5'}`}>
+                <View className={`h-gsd-huge w-gsd-huge rounded-gsd-sm items-center justify-center ${isDark ? 'bg-primary/10' : 'bg-primary/10'}`}>
                   <IconSymbol name="chart.line.uptrend.xyaxis.circle.fill" size={14} color="#10b77fff" />
                 </View>
                 <Text className={`text-[7px] font-black uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Analytics</Text>

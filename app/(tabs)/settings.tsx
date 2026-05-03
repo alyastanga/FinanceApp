@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { seedDatabase } from '../../_tests_dev/seed';
 import { VaultUnlockModal } from '../../components/VaultUnlockModal';
@@ -35,6 +35,12 @@ export default function SettingsScreen() {
   const [isGmailConnected, setIsGmailConnected] = React.useState(false);
   const [isEmailSyncing, setIsEmailSyncing] = React.useState(false);
   const [showVaultModal, setShowVaultModal] = React.useState(false);
+  
+  // Cloud AI Settings
+  const [aiKeys, setAiKeys] = React.useState<Record<string, string>>({});
+  const [cloudAiKey, setCloudAiKey] = React.useState('');
+  const [cloudAiModel, setCloudAiModel] = React.useState('gemini-2.5-flash');
+  const [cloudAiProvider, setCloudAiProvider] = React.useState('gemini');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -42,9 +48,19 @@ export default function SettingsScreen() {
       const fetchState = async () => {
         const state = await getE2EEState();
         const token = await AsyncStorage.getItem('gmail_oauth_token');
+        const keysJson = await AsyncStorage.getItem('cloud_ai_keys');
+        const loadedKeys = keysJson ? JSON.parse(keysJson) : {};
+        const aiModel = await AsyncStorage.getItem('cloud_ai_model');
+        const aiProvider = await AsyncStorage.getItem('cloud_ai_provider');
+        const currentProvider = aiProvider || 'gemini';
+
         if (isMounted) {
           setE2eeState(state);
           setIsGmailConnected(!!token);
+          setAiKeys(loadedKeys);
+          setCloudAiKey(loadedKeys[currentProvider] || '');
+          if (aiModel) setCloudAiModel(aiModel);
+          if (aiProvider) setCloudAiProvider(currentProvider);
         }
       };
       fetchState();
@@ -245,12 +261,21 @@ export default function SettingsScreen() {
                   : 'Local Mode uses on-device inference for maximum privacy and offline stability.'}
               </Text>
 
-              <Link href="/model-settings" asChild>
-                <TouchableOpacity className="flex-row items-center justify-between">
-                  <Text className="text-primary text-[10px] font-black uppercase tracking-widest">Manage Native AI Engine</Text>
-                  <IconSymbol name="chevron.right" size={14} color="#10b981" />
-                </TouchableOpacity>
-              </Link>
+              <TouchableOpacity 
+                onPress={() => router.push('/model-settings')}
+                className="flex-row items-center justify-between mb-4"
+              >
+                <Text className="text-primary text-[10px] font-black uppercase tracking-widest">Manage Native AI Engine</Text>
+                <IconSymbol name="chevron.right" size={14} color="#10b981" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                onPress={() => router.push('/cloud-ai-settings')}
+                className="flex-row items-center justify-between"
+              >
+                <Text className="text-primary text-[10px] font-black uppercase tracking-widest">Configure Cloud AI</Text>
+                <IconSymbol name="chevron.right" size={14} color="#10b981" />
+              </TouchableOpacity>
             </View>
 
             <View className="flex-row items-center justify-between p-4">
@@ -266,7 +291,6 @@ export default function SettingsScreen() {
             </View>
           </View>
         </View>
-
 
         {/* Financial Context Section */}
         <View className="mb-gsd-lg">

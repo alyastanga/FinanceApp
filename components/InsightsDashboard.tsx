@@ -275,7 +275,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
           <BlurView intensity={isDark ? 15 : 40} tint={isDark ? "dark" : "light"} className={`rounded-gsd-lg border p-gsd-lg mb-gsd-lg overflow-hidden ${isDark ? 'border-white/5' : 'border-black/5'}`}>
             <View className="flex-row justify-between items-start mb-gsd-md">
               <View>
-                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[8px] font-black uppercase tracking-[3px] mb-1`}>Net Worth</Text>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[10px] font-black uppercase tracking-[3px] mb-1`}>Net Worth</Text>
                 <Text className={`${isDark ? 'text-white' : 'text-black'} text-4xl font-black tracking-tighter`}>
                   {format(netWorthValue)}
                 </Text>
@@ -288,12 +288,12 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
             </View>
             <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
               <View className="flex-1">
-                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Income</Text>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[9px] font-black uppercase tracking-[1px]`}>Income</Text>
                 <Text className={`${isDark ? 'text-white/70' : 'text-black/70'} text-[12px] font-bold`}>{format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}</Text>
               </View>
               <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
               <View className="flex-1">
-                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[9px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
                 <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
               </View>
             </View>

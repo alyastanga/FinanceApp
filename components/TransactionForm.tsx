@@ -80,7 +80,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
         if (type === 'income') {
           await database.get('incomes').create((record: any) => {
             record._raw.id = generateUUID();
-            record.amount = finalAmount;
+            record.amount = parseFloat(finalAmount.toFixed(2));
             record.category = category;
             record.description = trimmedDescription;
             record._currency = currency;
@@ -91,7 +91,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
         } else {
           await database.get('expenses').create((record: any) => {
             record._raw.id = generateUUID();
-            record.amount = finalAmount;
+            record.amount = parseFloat(finalAmount.toFixed(2));
             record.category = category;
             record.description = trimmedDescription;
             record._currency = currency;
