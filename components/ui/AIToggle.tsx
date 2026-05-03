@@ -4,9 +4,10 @@
  * Cloud mode: Uses OpenRouter for full GPT-class responses.
  * Local mode: Uses on-device llama.rn (or fallback engine) for offline privacy.
  */
-import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
 import type { AIMode } from '@/lib/llama-service';
+import React from 'react';
+import { Text, TouchableOpacity, View } from 'react-native';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AIToggleProps {
   mode: AIMode;
@@ -14,6 +15,7 @@ interface AIToggleProps {
 }
 
 export function AIToggle({ mode, onToggle }: AIToggleProps) {
+  const { isDark } = useTheme();
   return (
     <View style={{ flexDirection: 'row', alignSelf: 'center', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)', backgroundColor: 'rgba(255,255,255,0.03)' }}>
       <TouchableOpacity
@@ -31,9 +33,9 @@ export function AIToggle({ mode, onToggle }: AIToggleProps) {
           fontWeight: '900',
           textTransform: 'uppercase',
           letterSpacing: 1.5,
-          color: mode === 'cloud' ? '#050505' : 'rgba(255,255,255,0.35)',
+          color: mode === 'cloud' ? '#050505' : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'),
         }}>
-          ☁ Cloud
+          Cloud
         </Text>
       </TouchableOpacity>
       <TouchableOpacity
@@ -51,9 +53,9 @@ export function AIToggle({ mode, onToggle }: AIToggleProps) {
           fontWeight: '900',
           textTransform: 'uppercase',
           letterSpacing: 1.5,
-          color: mode === 'local' ? '#ffffff' : 'rgba(255,255,255,0.35)',
+          color: mode === 'local' ? '#050505' : (isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.35)'),
         }}>
-          ⚡ Local
+          Local
         </Text>
       </TouchableOpacity>
     </View>
