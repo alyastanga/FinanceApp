@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { seedDatabase } from '../../_tests_dev/seed';
 import { VaultUnlockModal } from '../../components/VaultUnlockModal';
@@ -35,7 +35,7 @@ export default function SettingsScreen() {
   const [isGmailConnected, setIsGmailConnected] = React.useState(false);
   const [isEmailSyncing, setIsEmailSyncing] = React.useState(false);
   const [showVaultModal, setShowVaultModal] = React.useState(false);
-  
+
   // Cloud AI Settings
   const [aiKeys, setAiKeys] = React.useState<Record<string, string>>({});
   const [cloudAiKey, setCloudAiKey] = React.useState('');
@@ -261,7 +261,7 @@ export default function SettingsScreen() {
                   : 'Local Mode uses on-device inference for maximum privacy and offline stability.'}
               </Text>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => router.push('/model-settings')}
                 className="flex-row items-center justify-between mb-4"
               >
@@ -269,7 +269,7 @@ export default function SettingsScreen() {
                 <IconSymbol name="chevron.right" size={14} color="#10b981" />
               </TouchableOpacity>
 
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => router.push('/cloud-ai-settings')}
                 className="flex-row items-center justify-between"
               >
@@ -369,7 +369,7 @@ export default function SettingsScreen() {
                 <IconSymbol name="calendar.badge.plus" size={20} color="#10b981" />
                 <View>
                   <Text className={`${textClass} font-medium text-base`}>Connect Google Calendar</Text>
-                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Available in Pro</Text>
+                  {/* <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Available in Pro</Text> */}
                 </View>
               </View>
               <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />

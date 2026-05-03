@@ -3,7 +3,7 @@ import { useTheme } from '@/context/ThemeContext';
 import { initLocalModel, releaseLocalModel } from '@/lib/llama-service';
 import { BlurView } from 'expo-blur';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 
@@ -12,7 +12,6 @@ const MODEL_NAME = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
 const MODEL_SIZE_MB = 1120;
 
 export default function ModelSettings() {
-  const router = useRouter();
   const { isDark } = useTheme();
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);

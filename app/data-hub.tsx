@@ -12,13 +12,12 @@ import { PDFService } from '@/lib/pdf-service';
 import { BlurView } from 'expo-blur';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DataHubScreen() {
-  const router = useRouter();
   const { isDark } = useTheme();
   const { currency, symbolFor } = useCurrency();
   const currentSymbol = symbolFor(currency);

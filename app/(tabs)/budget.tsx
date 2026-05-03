@@ -1,7 +1,7 @@
 import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -28,7 +28,6 @@ interface BudgetScreenProps {
 
 const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => {
   const { isDark } = useTheme();
-  const router = useRouter();
   const { format, convertFrom, currency } = useCurrency();
   const { aiMode } = useAI();
   const [activeTab, setActiveTab] = useState<'overview' | 'categories' | 'velocity' | 'allocation'>('overview');
