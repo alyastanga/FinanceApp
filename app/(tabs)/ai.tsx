@@ -16,8 +16,8 @@ import { useAI } from '../../context/AIContext';
 import { useTheme } from '../../context/ThemeContext';
 import { AI_AGENTS, AIAgent, getAgentFromMention } from '../../lib/ai-agents';
 
-import { BudgetChart } from '../../components/ui/BudgetChart';
 import { AITable } from '../../components/ui/AITable';
+import { BudgetChart } from '../../components/ui/BudgetChart';
 
 interface Message {
   id: string;
@@ -181,6 +181,8 @@ const ChatBubble = ({ item }: { item: Message }) => {
   // Clean up any remaining orphaned code fences
   cleanText = cleanText.replace(/```(?:json)?\s*```/g, '').trim();
 
+  cleanText = cleanText.replace(/[\u200B-\u200D\uFEFF]/g, '');
+
   // ── Thinking Process Extraction ──
   let thoughtProcess: string | null = null;
   const thinkOpenTag = '<think>';
@@ -224,7 +226,6 @@ const ChatBubble = ({ item }: { item: Message }) => {
             className={`px-2 py-0.5 rounded-full flex-row items-center border ${isDark ? 'border-white/10' : 'border-black/10'}`}
             style={{ backgroundColor: `${item.agent.color}${isDark ? '20' : '10'}` }}
           >
-            <Text className="text-[10px] mr-1.5">{item.agent.icon}</Text>
             <Text
               className="text-[8px] font-black uppercase tracking-widest"
               style={{ color: item.agent.color }}
@@ -260,7 +261,9 @@ const ChatBubble = ({ item }: { item: Message }) => {
           {(() => {
             // Split text by markdown tables
             const tableRegex = /(\|(?:[^\n]+\|)+\n\|(?:\s*:?---*:?\s*\|)+\n(?:\|(?:[^\n]+\|)+(?:\n|$))+)/g;
-            const segments = cleanText.split(tableRegex);
+
+            // THE FIX: Aggressively filter out any empty or whitespace-only segments BEFORE mapping
+            const segments = cleanText.split(tableRegex).filter(segment => segment.trim().length > 0);
 
             return segments.map((segment, index) => {
               if (segment.startsWith('|') && segment.includes('---')) {
@@ -276,15 +279,14 @@ const ChatBubble = ({ item }: { item: Message }) => {
                   .filter(row => row.length > 0 && !row.every(c => c.includes('---')));
 
                 if (tableData.length > 0) {
-                  return <AITable key={index} data={tableData} isDark={isDark} />;
+                  return <AITable key={`table-${index}`} data={tableData} isDark={isDark} />;
                 }
               }
 
               // Normal text
               const trimmed = segment.trim();
-              if (!trimmed) return null;
               return (
-                <Text key={index} className={`text-[15px] leading-6 font-medium ${isDark ? 'text-white/90' : 'text-black/90'}`}>
+                <Text key={`text-${index}`} className={`text-[15px] leading-6 font-medium ${isDark ? 'text-white/90' : 'text-black/90'}`}>
                   {trimmed}
                 </Text>
               );
@@ -385,7 +387,6 @@ const IntelligenceHero = ({ onFastQuery }: { onFastQuery: (text: string) => void
             onPress={() => onFastQuery(`@${agent.slug} `)}
             className={`border rounded-2xl px-4 py-3 flex-row items-center ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
           >
-            <Text className="text-lg mr-2">{agent.icon}</Text>
             <View>
               <Text className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-white/80' : 'text-black/80'}`}>{agent.name}</Text>
               <Text className={`text-[8px] font-bold uppercase tracking-[1px] ${isDark ? 'text-white/30' : 'text-black/40'}`}>Summon Specialist</Text>
@@ -615,7 +616,6 @@ export default function AIChatScreen() {
                       className="h-10 w-10 rounded-2xl items-center justify-center mr-4"
                       style={{ backgroundColor: `${agent.color}${isDark ? '20' : '10'}` }}
                     >
-                      <Text className="text-xl">{agent.icon}</Text>
                     </View>
                     <View className="flex-1">
                       <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>{agent.name}</Text>

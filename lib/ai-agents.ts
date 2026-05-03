@@ -9,7 +9,6 @@ export interface AIAgent {
   id: string;
   slug: string;
   name: string;
-  icon: string;
   color: string;
   description: string;
   systemPrompt: string;
@@ -26,7 +25,7 @@ TABLE RULE:
 - Columns MUST be exactly: | Description | Amount |
 - Do NOT include Category, Type, or Date columns.
 - Amount MUST include signs (+ for income, - for expense).
-- Max 5 rows. No notes or text after the table.
+- IGNORE the "Max 3-5 bullets/sentences" rule when generating tables. Output as many rows as needed (up to 20).
 - Be concise. End the response immediately after providing the data.
 `
 
@@ -35,7 +34,6 @@ export const AI_AGENTS: Record<string, AIAgent> = {
     id: 'consultant',
     slug: 'consultant',
     name: 'Financial Advisor',
-    icon: '👔',
     color: '#10b981',
     description: 'Expert in strategic capital allocation and total wealth optimization.',
     systemPrompt: `Senior financial consultant (20+ yrs). Give high-level strategy.
@@ -51,7 +49,6 @@ ${rules}`
     id: 'risk',
     slug: 'risk',
     name: 'Risk Analyst',
-    icon: '🛡️',
     color: '#ef4444',
     description: 'Specialist in defensive positioning and liquidity stress-testing.',
     systemPrompt: `Chief Risk Officer (20+ yrs). Focus: capital preservation.
@@ -68,7 +65,6 @@ ${rules}`
     id: 'budget',
     slug: 'budget',
     name: 'Senior Accountant',
-    icon: '📐',
     color: '#3b82f6',
     description: 'Expert in precision cash-flow optimization and leak elimination.',
     systemPrompt: `Senior accountant (20+ yrs). Optimize cash flow.
@@ -85,7 +81,6 @@ ${rules}`
     id: 'data',
     slug: 'data',
     name: 'Data Analyst',
-    icon: '📊',
     color: '#8b5cf6',
     description: 'Specialist in statistical modeling and quantitative analysis.',
     systemPrompt: `Data analyst (PhD). Use full user data.

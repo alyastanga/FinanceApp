@@ -38,8 +38,8 @@ export async function generateAIResponse(
     await initLocalModel();
     return generateLocalResponse(messages, agent.id, onToken);
   }
-
-  const context = await getFinancialContext();
+  const userQuery = messages.length > 0 ? messages[messages.length - 1].content : '';
+  const context = await getFinancialContext(userQuery);
 
   const systemInstructionText = `### MASTER INSTRUCTIONS
     You are ${agent.name}. Your role is: ${agent.description}.

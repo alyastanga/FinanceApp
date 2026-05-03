@@ -35,7 +35,12 @@ export const AITable: React.FC<AITableProps> = ({ data, isDark }) => {
 
   return (
     <View className={`rounded-2xl border overflow-hidden ${isDark ? 'bg-white/[0.03] border-white/10' : 'bg-black/[0.02] border-black/5'}`}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={{ flexGrow: 0 }}
+        contentContainerStyle={{ flexGrow: 0 }}
+      >
         <View>
           {/* Header Row */}
           <View className={`flex-row border-b ${isDark ? 'border-white/10 bg-white/5' : 'border-black/5 bg-black/[0.02]'}`}>
@@ -50,8 +55,8 @@ export const AITable: React.FC<AITableProps> = ({ data, isDark }) => {
 
           {/* Data Rows */}
           {rows.map((row, rowIndex) => (
-            <View 
-              key={rowIndex} 
+            <View
+              key={rowIndex}
               className={`flex-row border-b ${isDark ? 'border-white/5' : 'border-black/[0.02]'} ${rowIndex === rows.length - 1 ? 'border-b-0' : ''}`}
             >
               {row.map((cell, cellIndex) => (
