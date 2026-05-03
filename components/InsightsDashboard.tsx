@@ -281,26 +281,22 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
                 </Text>
               </View>
               <View className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'bg-red-500/10 border-red-500/20' : 'bg-primary/10 border-primary/20'} px-gsd-md py-gsd-xs rounded-gsd-sm border`}>
-                <Text className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'text-red-500' : 'text-primary'} font-black text-[7px] uppercase tracking-widest`}>
+                <Text className={`${runway.runwayDays < 0 && runway.runwayDays !== -1 ? 'text-red-500' : 'text-primary'} font-black text-[10px] uppercase tracking-widest`}>
                   {runway.runwayDays === -1 ? 'Infinite' : runway.runwayDays > 365 ? `${(runway.runwayDays / 365).toFixed(1)}YR` : `${runway.runwayDays} Days`} Freedom
                 </Text>
               </View>
             </View>
-            <View className={`pt-gsd-md border-t ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center justify-between`}>
-              <View className="flex-row items-center gap-x-gsd-md">
-                <View>
-                  <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Income</Text>
-                  <Text className={`${isDark ? 'text-white/70' : 'text-black/70'} text-[12px] font-bold`}>{format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}</Text>
-                </View>
-                <View className={`w-[1px] h-3 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
-                <View>
+            <View className={`pt-gsd-md border-t ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center justify-between relative`}>
+              <View>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Income</Text>
+                <Text className={`${isDark ? 'text-white/70' : 'text-black/70'} text-[12px] font-bold`}>{format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}</Text>
+              </View>
+              
+              <View className="absolute inset-0 items-center justify-center pt-gsd-md">
+                <View className="items-center">
                   <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
                   <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
                 </View>
-              </View>
-              <View className="flex-row items-center gap-x-1">
-                <View className="h-1 w-1 rounded-full bg-primary" />
-                <Text className="text-primary text-[7px] font-black uppercase tracking-widest">Active Pulse</Text>
               </View>
             </View>
           </BlurView>

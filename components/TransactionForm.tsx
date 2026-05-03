@@ -112,35 +112,35 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
   }
 
   return (
-    <View className={`p-6 rounded-[32px] border ${isDark ? 'bg-card/40 border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+    <View className="flex-1">
       <Pressable onPress={Keyboard.dismiss}>
         {/* Hide toggle if we have a locked initialType */}
         {!initialType && (
-          <View className={`flex-row p-1 rounded-2xl mb-8 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+          <View className={`flex-row p-1 rounded-xl mb-6 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
             <Pressable
-              className={`flex-1 py-3 rounded-xl items-center ${type === 'expense' ? (isDark ? 'bg-white/10 shadow-sm' : 'bg-white shadow-sm') : ''}`}
+              className={`flex-1 py-2 rounded-lg items-center ${type === 'expense' ? (isDark ? 'bg-white/10 shadow-sm' : 'bg-white shadow-sm') : ''}`}
               onPress={() => setType('expense')}
             >
-              <Text className={`font-black text-[11px] uppercase tracking-widest ${type === 'expense' ? (isDark ? 'text-white' : 'text-black') : 'text-muted-foreground'}`}>Expense</Text>
+              <Text className={`font-bold text-[10px] uppercase tracking-widest ${type === 'expense' ? (isDark ? 'text-white' : 'text-black') : 'text-muted-foreground/60'}`}>Expense</Text>
             </Pressable>
             <Pressable
-              className={`flex-1 py-3 rounded-xl items-center ${type === 'income' ? (isDark ? 'bg-white/10 shadow-sm' : 'bg-white shadow-sm') : ''}`}
+              className={`flex-1 py-2 rounded-lg items-center ${type === 'income' ? (isDark ? 'bg-white/10 shadow-sm' : 'bg-white shadow-sm') : ''}`}
               onPress={() => setType('income')}
             >
-              <Text className={`font-black text-[11px] uppercase tracking-widest ${type === 'income' ? (isDark ? 'text-white' : 'text-black') : 'text-muted-foreground'}`}>Income</Text>
+              <Text className={`font-bold text-[10px] uppercase tracking-widest ${type === 'income' ? (isDark ? 'text-white' : 'text-black') : 'text-muted-foreground/60'}`}>Income</Text>
             </Pressable>
           </View>
         )}
 
-        <View className="gap-y-6">
+        <View className="gap-y-4">
           <View>
-            <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Amount ({symbolFor(txCurrency)})</Text>
-            <View className={`border rounded-2xl px-5 py-4 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+            <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Amount ({txCurrency})</Text>
+            <View className={`rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
               <TextInput
                 style={{ includeFontPadding: false }}
-                className={`text-4xl font-black py-2 h-16 ${isDark ? 'text-white' : 'text-black'}`}
+                className={`text-4xl font-black py-2 h-14 ${isDark ? 'text-white' : 'text-black'}`}
                 placeholder="0.00"
-                placeholderTextColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)"}
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={setAmount}
@@ -149,22 +149,22 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           </View>
 
           <View>
-            <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Currency</Text>
+            <Text className={`text-[11px] font-semibold mb-1 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Currency</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
+              contentContainerStyle={{ gap: 6 }}
             >
               {[...SUPPORTED_CURRENCIES].sort((a, b) => a.code === txCurrency ? -1 : b.code === txCurrency ? 1 : 0).map((info) => (
                 <Pressable
                   key={info.code}
                   onPress={() => setTxCurrency(info.code)}
-                  className={`px-5 py-3 rounded-2xl border ${txCurrency === info.code
+                  className={`px-3 py-1.5 rounded-lg border ${txCurrency === info.code
                     ? 'bg-primary border-primary'
-                    : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')
+                    : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')
                     }`}
                 >
-                  <Text className={`font-black text-[10px] uppercase tracking-widest ${txCurrency === info.code ? (isDark ? 'text-[#050505]' : 'text-white') : 'text-muted-foreground'
+                  <Text className={`font-bold text-[9px] uppercase tracking-widest ${txCurrency === info.code ? (isDark ? 'text-[#050505]' : 'text-white') : 'text-muted-foreground/60'
                     }`}>
                     {info.code}
                   </Text>
@@ -174,22 +174,22 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           </View>
 
           <View>
-            <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Category</Text>
+            <Text className={`text-[11px] font-semibold mb-1 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Category</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
+              contentContainerStyle={{ gap: 6 }}
             >
               {categories.map((cat) => (
                 <Pressable
                   key={cat}
                   onPress={() => setCategory(cat)}
-                  className={`px-5 py-3 rounded-2xl border ${category === cat
+                  className={`px-3 py-1.5 rounded-lg border ${category === cat
                     ? 'bg-primary border-primary'
-                    : (isDark ? 'bg-white/5 border-white/10' : 'bg-black/5 border-black/10')
+                    : (isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5')
                     }`}
                 >
-                  <Text className={`font-black text-[10px] uppercase tracking-widest ${category === cat ? (isDark ? 'text-[#050505]' : (isDark ? 'text-white/60' : 'text-black/60')) : 'text-muted-foreground'
+                  <Text className={`font-bold text-[9px] uppercase tracking-widest ${category === cat ? (isDark ? 'text-[#050505]' : 'text-black/60') : 'text-muted-foreground/60'
                     }`}>
                     {cat}
                   </Text>
@@ -199,13 +199,13 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           </View>
 
           <View>
-            <Text className="text-[10px] font-black uppercase tracking-[2px] text-muted-foreground/60 mb-3 pl-1">Description (Optional)</Text>
-            <View className={`border rounded-2xl px-5 py-4 ${isDark ? 'bg-white/[0.03] border-white/5' : 'bg-black/[0.03] border-black/5'}`}>
+            <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>Description</Text>
+            <View className={`rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
               <TextInput
                 style={{ includeFontPadding: false }}
-                className={`text-lg font-bold py-2 h-14 ${isDark ? 'text-white' : 'text-black'}`}
-                placeholder="Enter additional details..."
-                placeholderTextColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
+                className={`text-base font-bold py-2 h-10 ${isDark ? 'text-white' : 'text-black'}`}
+                placeholder="Optional details..."
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"}
                 value={description}
                 onChangeText={setDescription}
               />
@@ -213,13 +213,13 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           </View>
 
           <Pressable
-            className={`mt-4 overflow-hidden rounded-2xl`}
+            className={`mt-2 overflow-hidden rounded-xl`}
             onPress={handleSubmit}
           >
             {({ pressed }) => (
-              <View className={`py-4 items-center ${type === 'expense' ? 'bg-destructive/80' : 'bg-primary'} ${pressed ? 'opacity-70' : ''}`}>
-                <Text className={`font-black text-sm uppercase tracking-widest ${isDark ? 'text-white' : 'text-[#050505]'}`}>
-                  Lock In {type}
+              <View className={`py-3 items-center ${type === 'expense' ? 'bg-destructive/80' : 'bg-primary'} ${pressed ? 'opacity-70' : ''}`}>
+                <Text className={`font-black text-[11px] uppercase tracking-widest ${isDark ? 'text-white' : 'text-[#050505]'}`}>
+                  Commit {type}
                 </Text>
               </View>
             )}

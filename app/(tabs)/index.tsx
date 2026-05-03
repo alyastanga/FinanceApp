@@ -92,7 +92,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
       const symbol = (p.symbol || '').toUpperCase();
       const isCash = type === 'cash';
       const isStable = type === 'crypto' && (symbol.includes('USDT') || symbol.includes('USDC') || symbol.includes('DAI'));
-      
+
       if (isCash || isStable) {
         return sum + convertFrom(p.value || 0, p.currency || p._currency || currency);
       }
@@ -166,8 +166,8 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
       >
         <View className="flex-row items-center gap-x-3 mb-gsd-md">
           <View className={`h-11 w-11 rounded-gsd-md items-center justify-center ${isDark ? 'bg-[#10b98110]' : 'bg-[#10b98105]'} border ${isDark ? 'border-[#10b98120]' : 'border-[#10b98110]'}`}>
-            <Image 
-              source={require('../../assets/images/logo.png')} 
+            <Image
+              source={require('../../assets/images/logo.png')}
               className="w-8 h-8"
               style={{ resizeMode: 'contain' }}
             />
@@ -314,7 +314,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center pt-1">
-                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) : 0} size={120} isDark={isDark} />
+                  <MicroBudgetGauge progress={totalBudgetLimit > 0 ? (monthlyExpenses / totalBudgetLimit) : 0} size={150} isDark={isDark} />
                 </View>
               )}
             </TouchableOpacity>

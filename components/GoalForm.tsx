@@ -57,82 +57,116 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
     }
   };
 
+  const handleDelete = async () => {
+    if (!goal) return;
+
+    // Use a standard Alert for confirmation
+    const { Alert } = require('react-native');
+    Alert.alert(
+      'Delete Goal',
+      `Are you sure you want to remove "${goal.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await database.write(async () => {
+                await goal.markAsDeleted();
+                await goal.destroyPermanently();
+              });
+              onSuccess();
+            } catch (error) {
+              console.error('Failed to delete goal:', error);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View className="gap-y-6">
       <View>
-        <Text className={`text-3xl font-black mb-2 ${isDark ? 'text-white' : 'text-black'}`}>
+        <Text className={`text-2xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-black'}`}>
           {goal ? 'Refine Goal' : 'Set New Target'}
         </Text>
-        <Text className="text-sm font-medium text-muted-foreground">
+        <Text className={`text-xs font-medium mt-0.5 ${isDark ? 'text-white/40' : 'text-black/40'}`}>
           {goal ? 'Adjust your vision for this target.' : 'Define what you are building towards.'}
         </Text>
       </View>
 
       <View className="gap-y-4">
-        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-          <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
+        <View className={`rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
+          <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
             Goal Title
           </Text>
           <TextInput
             value={name}
             onChangeText={setName}
             placeholder="e.g. New Garage, Vacation Fund"
-            placeholderTextColor="#4b5563"
-            className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"}
+            style={{ includeFontPadding: false }}
+            className={`text-base font-bold px-1 h-10 ${isDark ? 'text-white' : 'text-black'}`}
           />
         </View>
 
-        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-          <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
-            Target Amount ({currentSymbol})
-          </Text>
-          <TextInput
-            value={targetAmount}
-            onChangeText={setTargetAmount}
-            placeholder="0.00"
-            placeholderTextColor="#4b5563"
-            keyboardType="numeric"
-            className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
-          />
-        </View>
-
-        {goal && (
-          <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-            <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
-              Saved Amount ({currentSymbol})
+        <View className="flex-row gap-x-gsd-sm">
+          <View className={`flex-1 rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
+            <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+              Target ({currency})
             </Text>
             <TextInput
-              value={currentAmount}
-              onChangeText={setCurrentAmount}
+              value={targetAmount}
+              onChangeText={setTargetAmount}
               placeholder="0.00"
-              placeholderTextColor="#4b5563"
+              placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"}
               keyboardType="numeric"
-              className={`text-lg font-bold px-2 py-1 ${isDark ? 'text-white' : 'text-black'}`}
+              style={{ includeFontPadding: false }}
+              className={`text-base font-bold px-1 h-10 ${isDark ? 'text-white' : 'text-black'}`}
             />
           </View>
-        )}
 
-        <View className={`rounded-3xl p-4 border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
-          <Text className="text-[10px] font-black uppercase text-muted-foreground mb-1 tracking-widest pl-2">
+          {goal && (
+            <View className={`flex-1 rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
+              <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
+                Saved ({currency})
+              </Text>
+              <TextInput
+                value={currentAmount}
+                onChangeText={setCurrentAmount}
+                placeholder="0.00"
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.15)"}
+                keyboardType="numeric"
+                style={{ includeFontPadding: false }}
+                className={`text-base font-bold px-1 h-10 ${isDark ? 'text-white' : 'text-black'}`}
+              />
+            </View>
+          )}
+        </View>
+
+        <View className={`rounded-xl px-gsd-md py-gsd-sm border ${isDark ? 'border-white/10' : 'border-black/5'}`}>
+          <Text className={`text-[11px] font-semibold mb-0.5 pl-1 ${isDark ? 'text-white/30' : 'text-black/30'}`}>
             Target Completion Date
           </Text>
-          <TouchableOpacity onPress={() => setShowDatePicker(true)} className="px-2 py-1">
-            <Text className="text-lg font-bold text-primary">
-              {targetCompletionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+          <TouchableOpacity onPress={() => setShowDatePicker(true)} className="px-1 h-10 justify-center">
+            <Text className="text-base font-bold text-primary">
+              {targetCompletionDate.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <View className={`rounded-3xl p-4 border flex-row justify-between items-center px-6 ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}>
+        <View className={`rounded-xl px-gsd-md py-gsd-sm border flex-row justify-between items-center ${isDark ? 'border-white/10' : 'border-black/5'}`}>
            <View>
-              <Text className={`font-bold text-sm ${isDark ? 'text-white' : 'text-black'}`}>Sync to Google Calendar</Text>
-              <Text className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Connect your timeline</Text>
+              <Text className={`font-bold text-[13px] ${isDark ? 'text-white' : 'text-black'}`}>Sync to Google Calendar</Text>
+              <Text className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">Connect your timeline</Text>
            </View>
            <TouchableOpacity 
              onPress={() => setSyncToCalendar(!syncToCalendar)}
-             className={`w-12 h-6 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : (isDark ? 'bg-white/10' : 'bg-black/10')}`}
+             className={`w-10 h-5 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : (isDark ? 'bg-white/10' : 'bg-black/10')}`}
            >
-              <View className={`w-4 h-4 rounded-full ${syncToCalendar ? 'self-end' : 'self-start'} ${isDark ? 'bg-white' : 'bg-white shadow'}`} />
+              <View className={`w-3 h-3 rounded-full ${syncToCalendar ? 'self-end' : 'self-start'} bg-white`} />
            </TouchableOpacity>
         </View>
       </View>
@@ -146,21 +180,32 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
         title="Set Target Date"
       />
 
-      <View className="flex-row gap-x-4 pt-4">
-        <TouchableOpacity 
-          onPress={onCancel}
-          className={`flex-1 rounded-2xl p-5 items-center border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/5'}`}
-        >
-          <Text className={`font-black text-[12px] uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          onPress={handleSubmit}
-          className="flex-1 bg-primary rounded-2xl p-5 items-center"
-        >
-          <Text className="text-primary-foreground font-black text-[12px] uppercase tracking-widest">
-            {goal ? 'Update Goal' : 'Lock It In'}
-          </Text>
-        </TouchableOpacity>
+      <View className="gap-y-2 pt-2">
+        <View className="flex-row gap-x-gsd-md">
+          <TouchableOpacity 
+            onPress={onCancel}
+            className={`flex-1 rounded-xl p-gsd-md items-center border ${isDark ? 'border-white/10' : 'border-black/10'}`}
+          >
+            <Text className={`font-black text-[11px] uppercase tracking-widest ${isDark ? 'text-white' : 'text-black'}`}>Discard</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={handleSubmit}
+            className="flex-1 bg-primary rounded-xl p-gsd-md items-center"
+          >
+            <Text className={`font-black text-[11px] uppercase tracking-widest ${isDark ? 'text-[#050505]' : 'text-white'}`}>
+              {goal ? 'Update' : 'Commit'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {goal && (
+           <TouchableOpacity 
+             onPress={handleDelete}
+             className="w-full rounded-xl p-gsd-md items-center border border-destructive/20 mt-2"
+           >
+              <Text className="text-destructive font-black text-[11px] uppercase tracking-widest">Terminate Goal</Text>
+           </TouchableOpacity>
+        )}
       </View>
     </View>
   );
