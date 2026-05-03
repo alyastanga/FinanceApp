@@ -40,7 +40,7 @@ const GoalProgressGlimpse = withObservables(['goal'], ({ goal }) => ({
 const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionControlProps) => {
   const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
-  const { format, convertFrom, currency } = useCurrency();
+  const { symbol, format, formatValue, convertFrom, currency } = useCurrency();
   const [activeType, setActiveType] = useState<'income' | 'expense' | undefined>(undefined);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -76,8 +76,8 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const currentMonthIncomes = (incomes || []).filter(i => i.createdAt >= startOfMonth);
-  const currentMonthExpenses = (expenses || []).filter(e => e.createdAt >= startOfMonth);
+  const currentMonthIncomes = (incomes || []).filter(i => new Date(i.createdAt).getTime() >= startOfMonth.getTime());
+  const currentMonthExpenses = (expenses || []).filter(e => new Date(e.createdAt).getTime() >= startOfMonth.getTime());
 
   const monthlyIncome = currentMonthIncomes.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
   const monthlyExpenses = currentMonthExpenses.reduce((acc, curr) => acc + convertFrom((curr.amount || 0), curr.currency || curr._currency || currency), 0);
@@ -131,7 +131,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
   const topExpensesData = chartData.slice(0, 3).map(item => ({
     label: item.label,
     value: item.value,
-    max: monthlyExpenses,
+    max: chartData[0]?.value || 0,
     amountFormatted: format(item.value),
     color: item.color
   }));
@@ -188,9 +188,12 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
                   <Text className={`text-[9px] font-black uppercase tracking-[2px] mb-1 ${isDark ? 'text-white/30' : 'text-black/40'}`}>
                     Liquidity
                   </Text>
-                  <Text className={`text-3xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
-                    {format(totalLiquidity)}
-                  </Text>
+                  <View className="flex-row items-baseline">
+                    <Text className={`${isDark ? 'text-white' : 'text-black'} text-xl font-black opacity-20 mr-1`}>{symbol}</Text>
+                    <Text className={`text-4xl font-black tracking-tight ${isDark ? 'text-white' : 'text-black'}`} numberOfLines={1} adjustsFontSizeToFit>
+                      {formatValue(totalLiquidity)}
+                    </Text>
+                  </View>
                 </View>
                 <View className="items-end">
                   <View className={`px-gsd-md py-gsd-xs rounded-gsd-sm border ${isDark ? 'bg-primary/10 border-primary/20' : 'bg-primary/10 border-primary/20'} mb-1`}>
@@ -203,12 +206,18 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
               <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
                 <View className="flex-1">
                   <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Income</Text>
-                  <Text className="text-xs font-bold text-primary" numberOfLines={1}>+{format(monthlyIncome)}</Text>
+                  <View className="flex-row items-baseline">
+                    <Text className="text-[8px] font-black text-primary opacity-30 mr-0.5">+{symbol}</Text>
+                    <Text className="text-xs font-bold text-primary" numberOfLines={1}>{formatValue(monthlyIncome)}</Text>
+                  </View>
                 </View>
                 <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
                 <View className="flex-1">
                   <Text className={`text-[7px] font-black uppercase tracking-widest mb-0.5 ${isDark ? 'text-white/30' : 'text-black/40'}`}>Expenses</Text>
-                  <Text className="text-xs font-bold text-destructive" numberOfLines={1}>-{format(monthlyExpenses)}</Text>
+                  <View className="flex-row items-baseline">
+                    <Text className="text-[8px] font-black text-destructive opacity-30 mr-0.5">-{symbol}</Text>
+                    <Text className="text-xs font-bold text-destructive" numberOfLines={1}>{formatValue(monthlyExpenses)}</Text>
+                  </View>
                 </View>
               </View>
             </View>

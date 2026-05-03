@@ -286,19 +286,18 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
                 </Text>
               </View>
             </View>
-            <View className={`pt-gsd-md border-t ${isDark ? 'border-white/5' : 'border-black/5'} flex-row items-center justify-between relative`}>
-              <View>
+            <View className="flex-row items-center gap-x-gsd-md pt-gsd-md border-t border-black/[0.03] dark:border-white/[0.03]">
+              <View className="flex-1">
                 <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Income</Text>
                 <Text className={`${isDark ? 'text-white/70' : 'text-black/70'} text-[12px] font-bold`}>{format(insights.actualIncome > 0 ? insights.actualIncome : insights.monthlyIncome)}</Text>
               </View>
-              
-              <View className="absolute inset-0 items-center justify-center pt-gsd-md">
-                <View className="items-center">
-                  <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
-                  <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
-                </View>
+              <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
+              <View className="flex-1">
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[7px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
+                <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
               </View>
             </View>
+
           </BlurView>
         </View>
 
@@ -460,7 +459,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
                   {loadingExplains['strategy'] ? <ActivityIndicator size="small" color="#10b981" /> : <IconSymbol name="sparkles" size={16} color="#10b981" />}
                 </TouchableOpacity>
               </View>
-              <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} isDark={isDark} />
+              <ScenarioSimulator incomes={incomes} expenses={expenses} goals={goals} budgets={budgets} isDark={isDark} />
               {renderAIInsight('strategy', 'Run a scenario simulation on my current financial strategy and wealth projections in more detail.')}
             </View>
           )}

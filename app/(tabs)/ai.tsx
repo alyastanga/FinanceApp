@@ -17,6 +17,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { AI_AGENTS, AIAgent, getAgentFromMention } from '../../lib/ai-agents';
 
 import { BudgetChart } from '../../components/ui/BudgetChart';
+import { AITable } from '../../components/ui/AITable';
 
 interface Message {
   id: string;
@@ -175,6 +176,8 @@ const ChatBubble = ({ item }: { item: Message }) => {
 
   // Cleanup residual CHART_DATA tags and empty bracket remnants
   cleanText = cleanText.replace(/\[?\s*CHART_DATA\s*:?\s*\]?/gi, '').trim();
+  // Clean up markdown comments <!-- ... -->
+  cleanText = cleanText.replace(/<!--[\s\S]*?-->/g, '').trim();
   // Clean up any remaining orphaned code fences
   cleanText = cleanText.replace(/```(?:json)?\s*```/g, '').trim();
 
@@ -241,7 +244,7 @@ const ChatBubble = ({ item }: { item: Message }) => {
           </Text>
         </View>
       ) : (
-        <View className={`p-4 rounded-[32px] border rounded-tl-none shadow-xl ${isDark ? 'bg-[#121212] border-white/5' : 'bg-white border-black/5'}`}>
+        <View className={`p-4 rounded-[32px] border rounded-tl-none shadow-xl gap-y-3 ${isDark ? 'bg-[#121212] border-white/5' : 'bg-white border-black/5'}`}>
           {thoughtProcess && !item.text.includes('</think>') && (
             <View className={`mb-4 p-3 rounded-2xl border-l-2 ${isDark ? 'bg-white/5 border-primary/40' : 'bg-black/5 border-primary/60'}`}>
               <View className="flex-row items-center">
@@ -253,11 +256,42 @@ const ChatBubble = ({ item }: { item: Message }) => {
             </View>
           )}
 
-          <Text className={`text-[15px] leading-6 font-medium ${isDark ? 'text-white/90' : 'text-black/90'}`}>
-            {cleanText}
-          </Text>
-          {chartData && (chartData as any[]).length > 0 && (
-            <View className="mt-6">
+          {/* Render Text Segments (Supports Text and Tables) */}
+          {(() => {
+            // Split text by markdown tables
+            const tableRegex = /(\|(?:[^\n]+\|)+\n\|(?:\s*:?---*:?\s*\|)+\n(?:\|(?:[^\n]+\|)+(?:\n|$))+)/g;
+            const segments = cleanText.split(tableRegex);
+
+            return segments.map((segment, index) => {
+              if (segment.startsWith('|') && segment.includes('---')) {
+                // This is a table
+                const tableData = segment.trim().split('\n')
+                  .filter(line => line.includes('|'))
+                  .map(line =>
+                    line
+                      .split('|')
+                      .filter((_, i, arr) => i > 0 && i < arr.length - 1)
+                      .map(c => c.trim())
+                  )
+                  .filter(row => row.length > 0 && !row.every(c => c.includes('---')));
+
+                if (tableData.length > 0) {
+                  return <AITable key={index} data={tableData} isDark={isDark} />;
+                }
+              }
+
+              // Normal text
+              const trimmed = segment.trim();
+              if (!trimmed) return null;
+              return (
+                <Text key={index} className={`text-[15px] leading-6 font-medium ${isDark ? 'text-white/90' : 'text-black/90'}`}>
+                  {trimmed}
+                </Text>
+              );
+            });
+          })()}
+          {chartData && (chartData as any[]).length > 0 && (chartData as any[]).reduce((s, d) => s + d.value, 0) > 0 && (
+            <View className="mt-3">
               <View className="flex-row items-center mb-3 ml-1">
                 <IconSymbol name="chart.pie.fill" size={12} color="#10b981" />
                 <Text className="text-[10px] font-black uppercase text-emerald-500 tracking-[1.5px] ml-2">

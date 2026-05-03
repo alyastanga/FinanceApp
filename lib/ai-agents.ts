@@ -22,12 +22,13 @@ Rule:
 - Simple language, minimal numbers, no filler
 
 TABLE RULE:
-Use a table ONLY if it improves clarity.
-Use for breakdowns, comparisons, before/after.
-Max 5 rows.
-
-End: "Want a deeper breakdown?"
-If user asks detail → expand.`
+- Use a table ONLY if it improves clarity.
+- Columns MUST be exactly: | Description | Amount |
+- Do NOT include Category, Type, or Date columns.
+- Amount MUST include signs (+ for income, - for expense).
+- Max 5 rows. No notes or text after the table.
+- Be concise. End the response immediately after providing the data.
+`
 
 export const AI_AGENTS: Record<string, AIAgent> = {
   consultant: {

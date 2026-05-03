@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity } from 'react-native';
-import { IconSymbol } from './icon-symbol';
 import { simulatePurchaseImpact, SimulationResult } from '@/lib/simulation-engine';
+import React, { useState } from 'react';
+import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useTheme } from '../../context/ThemeContext';
 
@@ -9,10 +8,11 @@ interface ScenarioSimulatorProps {
   incomes: any[];
   expenses: any[];
   goals: any[];
+  budgets?: any[];
   isDark?: boolean;
 }
 
-export default function ScenarioSimulator({ incomes, expenses, goals, isDark: isDarkProp }: ScenarioSimulatorProps) {
+export default function ScenarioSimulator({ incomes, expenses, goals, budgets = [], isDark: isDarkProp }: ScenarioSimulatorProps) {
   const { isDark: themeIsDark } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { currency, symbolFor, convertFrom } = useCurrency();
@@ -23,8 +23,8 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark: is
   const handleSimulate = () => {
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) return;
-    
-    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals, [], convertFrom, currency);
+
+    const impacts = simulatePurchaseImpact(val, incomes, expenses, goals, budgets, convertFrom, currency);
     setResults(impacts);
   };
 
@@ -34,9 +34,6 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark: is
   return (
     <View className={`${isDark ? 'bg-white/[0.03]' : 'bg-black/[0.02]'} border ${isDark ? 'border-white/5' : 'border-black/5'} rounded-[40px] p-8 mt-6`}>
       <View className="flex-row items-center gap-x-3 mb-6">
-        <View className="h-8 w-8 bg-primary/20 rounded-xl items-center justify-center">
-          <IconSymbol name="sparkles" size={16} color="#10b981" />
-        </View>
         <Text className={`${textClass} font-black text-sm uppercase tracking-widest`}>Scenario Simulator</Text>
       </View>
 
@@ -45,19 +42,19 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark: is
       </Text>
 
       <View className="flex-row gap-x-3 mb-8">
-        <View className={`flex-1 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-2xl border ${isDark ? 'border-white/5' : 'border-black/5'} px-4 py-1 flex-row items-center`}>
-          <Text className={`${subTextClass} mr-2`}>{currentSymbol}</Text>
+        <View className={`flex-1 h-16 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-2xl border ${isDark ? 'border-white/5' : 'border-black/5'} px-5 flex-row items-center`}>
+          <Text className={`${textClass} font-black text-xl mr-2 opacity-20`}>{currentSymbol}</Text>
           <TextInput
-            style={{ includeFontPadding: false }}
-            className={`flex-1 h-14 py-2 ${textClass} font-black text-lg`}
+            style={{ includeFontPadding: false, textAlignVertical: 'center' }}
+            className={`flex-1 h-full ${textClass} font-black text-[26px]`}
             placeholder="2500.00"
-            placeholderTextColor={isDark ? "#666" : "#999"}
+            placeholderTextColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)"}
             keyboardType="numeric"
             value={amount}
             onChangeText={setAmount}
           />
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           onPress={handleSimulate}
           className="bg-primary px-6 rounded-2xl items-center justify-center shadow-lg shadow-primary/20"
         >
@@ -76,16 +73,14 @@ export default function ScenarioSimulator({ incomes, expenses, goals, isDark: is
                   Delay: {res.daysDelayed} days
                 </Text>
               </View>
-              <View className={`px-3 py-1 rounded-full border ${
-                res.impactScore === 'high' ? 'border-destructive/30 bg-destructive/10' :
+              <View className={`px-3 py-1 rounded-full border ${res.impactScore === 'high' ? 'border-destructive/30 bg-destructive/10' :
                 res.impactScore === 'medium' ? 'border-amber-500/30 bg-amber-500/10' :
-                'border-primary/30 bg-primary/10'
-              }`}>
-                <Text className={`text-[8px] font-black uppercase tracking-widest ${
-                  res.impactScore === 'high' ? 'text-destructive' :
-                  res.impactScore === 'medium' ? 'text-amber-500' :
-                  'text-primary'
+                  'border-primary/30 bg-primary/10'
                 }`}>
+                <Text className={`text-[8px] font-black uppercase tracking-widest ${res.impactScore === 'high' ? 'text-destructive' :
+                  res.impactScore === 'medium' ? 'text-amber-500' :
+                    'text-primary'
+                  }`}>
                   {res.impactScore} impact
                 </Text>
               </View>

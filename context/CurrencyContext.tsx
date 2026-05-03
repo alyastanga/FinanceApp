@@ -34,6 +34,8 @@ interface CurrencyContextType {
   format: (val: number, fromCurrency?: string, decimals?: number) => string;
   /** Format a value that has already been converted to the display currency (no conversion applied) */
   formatRaw: (val: number, decimals?: number) => string;
+  /** Format a value with suffix (K/M) but WITHOUT the symbol */
+  formatValue: (val: number, decimals?: number) => string;
   /** Convert a value from a specific source currency to the current display currency */
   convertFrom: (val: number, fromCurrency: string) => number;
   /** Get the symbol for any supported currency code */
@@ -180,38 +182,31 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return CURRENCY_MAP[code as CurrencyCode]?.symbol || code;
   }, []);
 
-  const format = (val: number, fromCurrency?: string, decimals: number = 0) => {
-    // If val is already in the target currency, use it directly to avoid drift/precision loss
-    const converted = (fromCurrency && fromCurrency !== currency) 
-      ? convertFrom(val, fromCurrency) 
-      : (fromCurrency ? val : convert(val)); // if no fromCurrency, assume val is "USD Base" (legacy fallback)
-
-    const absVal = Math.abs(converted);
-    const sym = CURRENCY_MAP[currency].symbol;
-    const sign = converted < 0 ? '-' : '';
-
-    if (absVal >= 1000000) {
-      return `${sign}${sym}${(absVal / 1000000).toFixed(1)}M`;
-    }
-    if (absVal >= 1000) {
-      return `${sign}${sym}${(absVal / 1000).toFixed(1)}K`;
-    }
-    return `${sign}${sym}${absVal.toFixed(decimals)}`;
+  const getFormattedValue = (val: number, decimals: number) => {
+    const absVal = Math.abs(val);
+    const sign = val < 0 ? '-' : '';
+    if (absVal >= 1000000) return { sign, value: (absVal / 1000000).toFixed(1), suffix: 'M' };
+    if (absVal >= 1000) return { sign, value: (absVal / 1000).toFixed(1), suffix: 'K' };
+    return { sign, value: absVal.toFixed(decimals), suffix: '' };
   };
 
-  /** Format value that is already in the display currency (no conversion) */
-  const formatRaw = (val: number, decimals: number = 0) => {
-    const absVal = Math.abs(val);
-    const sym = CURRENCY_MAP[currency].symbol;
-    const sign = val < 0 ? '-' : '';
+  const format = (val: number, fromCurrency?: string, decimals: number = 0) => {
+    const converted = (fromCurrency && fromCurrency !== currency) 
+      ? convertFrom(val, fromCurrency) 
+      : (fromCurrency ? val : convert(val));
 
-    if (absVal >= 1000000) {
-      return `${sign}${sym}${(absVal / 1000000).toFixed(1)}M`;
-    }
-    if (absVal >= 1000) {
-      return `${sign}${sym}${(absVal / 1000).toFixed(1)}K`;
-    }
-    return `${sign}${sym}${absVal.toFixed(decimals)}`;
+    const { sign, value, suffix } = getFormattedValue(converted, decimals);
+    return `${sign}${CURRENCY_MAP[currency].symbol}${value}${suffix}`;
+  };
+
+  const formatRaw = (val: number, decimals: number = 0) => {
+    const { sign, value, suffix } = getFormattedValue(val, decimals);
+    return `${sign}${CURRENCY_MAP[currency].symbol}${value}${suffix}`;
+  };
+
+  const formatValue = (val: number, decimals: number = 0) => {
+    const { sign, value, suffix } = getFormattedValue(val, decimals);
+    return `${sign}${value}${suffix}`;
   };
 
   return (
@@ -225,6 +220,7 @@ export const CurrencyProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         convert,
         format,
         formatRaw,
+        formatValue,
         convertFrom,
         symbolFor,
         refreshRates,
