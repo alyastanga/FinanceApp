@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../context/CurrencyContext';
 import { generateUUID } from '../lib/id-utils';
 import { useTheme } from '../context/ThemeContext';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface PortfolioFormProps {
   asset?: Portfolio | null;
@@ -43,7 +44,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
     const isCash = assetType === 'cash';
     
     if (!name || (!isAutomated && !isCash && !value)) {
-      Alert.alert('Error', 'Please fill in all required fields.');
+      CustomAlert.alert('Error', 'Please fill in all required fields.');
       return;
     }
 
@@ -105,7 +106,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
       onSuccess();
     } catch (error) {
       console.error('Failed to save portfolio asset:', error);
-      Alert.alert('Error', 'Failed to save asset. Please try again.');
+      CustomAlert.alert('Error', 'Failed to save asset. Please try again.');
     } finally {
       setIsSaving(false);
     }
@@ -114,7 +115,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
   const handleDelete = async () => {
     if (!asset) return;
     
-    Alert.alert(
+    CustomAlert.alert(
       'Delete Asset',
       `Are you sure you want to remove "${asset.name}"?`,
       [
@@ -131,7 +132,7 @@ export const PortfolioForm: React.FC<PortfolioFormProps> = ({ asset, onSuccess, 
               onSuccess();
             } catch (error) {
               console.error('Failed to delete asset:', error);
-              Alert.alert('Error', 'Failed to delete asset.');
+              CustomAlert.alert('Error', 'Failed to delete asset.');
             }
           }
         }

@@ -4,6 +4,7 @@ import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import database from '../database';
 import { generateUUID } from '../lib/id-utils';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface ExpenseFormProps {
   onSuccess?: () => void;
@@ -25,7 +26,7 @@ export default function ExpenseForm({ onSuccess, onCancel }: ExpenseFormProps) {
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount);
     if (!amount || !category || isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert("Invalid Input", "Please enter a valid amount and category.");
+      CustomAlert.alert("Invalid Input", "Please enter a valid amount and category.");
       return;
     }
 

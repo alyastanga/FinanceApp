@@ -15,25 +15,46 @@ interface GoalCardProps {
 import { GoalProgressCard } from './ui/GoalProgressCard';
 
 import { calculateSmartIncrement } from '../lib/goal-utils';
+import { CustomAlert } from './ui/CustomAlert';
 
 const GoalCardComp = ({ goal, onEdit }: GoalCardProps) => {
   const { format } = useCurrency();
   const { isDark } = useTheme();
   const handleQuickAdd = async () => {
     const increment = calculateSmartIncrement(goal.targetAmount);
+    console.log(`[GoalCard] Quick Add triggered: +${increment} for "${goal.name}"`);
+    
     try {
+      const { generateUUID } = require('../lib/id-utils');
+      
       await database.write(async () => {
+        // 1. Update the Goal progress
         await goal.update((record) => {
           record.currentAmount += increment;
         });
+
+        // 2. Create the Savings Transaction to deduct from liquidity
+        await database.get('expenses').create((exp: any) => {
+          exp._raw.id = generateUUID();
+          exp.amount = increment;
+          exp.category = 'Savings';
+          exp.description = `Quick Add: ${goal.name}`;
+          exp._currency = goal.currency;
+          exp.userId = goal.userId;
+          const now = new Date();
+          exp.createdAt = now;
+          exp.updatedAt = now;
+        });
+
+        console.log(`[GoalCard] SUCCESS: Created ₱${increment} Savings transaction.`);
       });
     } catch (error) {
-      console.error('Failed to update goal:', error);
+      console.error('[GoalCard] Failed to update goal/liquidity:', error);
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
+    CustomAlert.alert(
       'Delete Goal',
       `Are you sure you want to delete "${goal.name}"?`,
       [

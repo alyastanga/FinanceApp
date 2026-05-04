@@ -38,8 +38,22 @@ global.fetch = async (...args) => {
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Text, TouchableOpacity } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { SecurityProvider, useSecurity } from '../context/SecurityContext';
 import { ThemeProvider, useTheme } from '../context/ThemeContext';
+
+// Configure notification behavior
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
+import { CustomAlertProvider } from '../components/ui/CustomAlert';
 
 export default function RootLayout() {
   return (
@@ -49,7 +63,9 @@ export default function RootLayout() {
           <AIProvider>
             <CurrencyProvider>
               <DatabaseProvider database={database}>
-                <RootLayoutNav />
+                <CustomAlertProvider>
+                  <RootLayoutNav />
+                </CustomAlertProvider>
               </DatabaseProvider>
             </CurrencyProvider>
           </AIProvider>
@@ -128,6 +144,18 @@ function RootLayoutNav() {
       router.replace('/');
     }
   }, [session, loading, segments]);
+
+  // Handle Notification Response
+  React.useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const url = response.notification.request.content.data?.url;
+      if (url) {
+        console.log(`[Notification] Navigating to: ${url}`);
+        router.push(url);
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   if (loading) {
     return (

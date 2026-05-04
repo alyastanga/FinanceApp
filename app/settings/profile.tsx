@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { clearActiveDEK, updatePassphrase } from '../../lib/key-manager';
 import { supabase } from '../../lib/supabase';
 import { PasswordInput } from '@/components/ui/PasswordInput';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 export default function ProfileSettingsScreen() {
   const { isDark } = useTheme();
@@ -53,9 +54,9 @@ export default function ProfileSettingsScreen() {
       if (error) throw error;
 
       setOriginalName(displayName);
-      Alert.alert("Success", "Profile updated successfully.");
+      CustomAlert.alert("Success", "Profile updated successfully.");
     } catch (error: any) {
-      Alert.alert("Update Failed", error.message);
+      CustomAlert.alert("Update Failed", error.message);
     } finally {
       setIsUpdating(false);
     }
@@ -63,17 +64,17 @@ export default function ProfileSettingsScreen() {
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields.");
+      CustomAlert.alert("Error", "Please fill in all fields.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "New passwords do not match.");
+      CustomAlert.alert("Error", "New passwords do not match.");
       return;
     }
 
     if (newPassword.length < 8) {
-      Alert.alert("Error", "Password must be at least 8 characters long.");
+      CustomAlert.alert("Error", "Password must be at least 8 characters long.");
       return;
     }
 
@@ -90,20 +91,20 @@ export default function ProfileSettingsScreen() {
 
       if (error) throw error;
 
-      Alert.alert("Success", "Password updated successfully. Your encryption vault is now secured with the new password.");
+      CustomAlert.alert("Success", "Password updated successfully. Your encryption vault is now secured with the new password.");
       setIsPasswordModalVisible(false);
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
-      Alert.alert("Failed to update password", error.message || "An error occurred during re-encryption.");
+      CustomAlert.alert("Failed to update password", error.message || "An error occurred during re-encryption.");
     } finally {
       setIsChangingPassword(false);
     }
   };
 
   const handleLogout = async () => {
-    Alert.alert(
+    CustomAlert.alert(
       "Logout",
       "Are you sure you want to log out? This will also lock your encryption vault for security.",
       [
@@ -118,7 +119,7 @@ export default function ProfileSettingsScreen() {
               if (error) throw error;
               router.replace('/login');
             } catch (error: any) {
-              Alert.alert("Logout Failed", error.message);
+              CustomAlert.alert("Logout Failed", error.message);
             }
           }
         }

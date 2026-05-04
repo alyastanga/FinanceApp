@@ -7,7 +7,7 @@ import { generateUUID } from '../lib/id-utils';
 
 import { useTheme } from '../context/ThemeContext';
 
-const CATEGORY_PRESETS = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Savings', 'Misc'];
+const CATEGORY_PRESETS = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Insurance', 'Subscriptions', 'Savings', 'Misc'];
 
 interface BudgetFormProps {
   visible: boolean;

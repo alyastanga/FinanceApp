@@ -6,21 +6,22 @@ import { useTheme } from '../context/ThemeContext';
 import database from '../database';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { SwipeableSheet } from './ui/SwipeableSheet';
+import { CustomAlert } from './ui/CustomAlert';
 
 // Enable LayoutAnimation for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// Transaction Item component
-const TransactionItem = React.memo(({
-  item,
+// Transaction Item component - Enhanced to be reactive to the specific record
+const TransactionItemComp = ({
+  record,
   type,
   isExpanded,
   onToggle,
   onEdit
 }: {
-  item: any;
+  record: any;
   type: 'income' | 'expense';
   isExpanded: boolean;
   onToggle: () => void;
@@ -50,15 +51,15 @@ const TransactionItem = React.memo(({
           </View>
           <View className="flex-1">
             <Text className={`text-lg font-black tracking-tighter leading-tight ${isDark ? 'text-white' : 'text-black'}`}>
-              {item.category}
+              {record.category}
             </Text>
-            {item.description && (
+            {record.description && (
               <Text className={`text-[10px] font-bold ${isDark ? 'text-white/60' : 'text-black/60'} mt-0.5`}>
-                {item.description}
+                {record.description}
               </Text>
             )}
             <Text className="text-xs font-bold uppercase tracking-widest text-muted-foreground mt-1">
-              {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+              {new Date(record.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </Text>
           </View>
         </View>
@@ -67,7 +68,7 @@ const TransactionItem = React.memo(({
             className={`text-xl font-black tracking-tighter ${type === 'income' ? 'text-primary' : 'text-destructive'
               }`}
           >
-            {type === 'income' ? '+' : '-'} {format(item.amount, item.currency)}
+            {type === 'income' ? '+' : '-'} {format(record.amount, record.currency)}
           </Text>
         </View>
       </View>
@@ -75,7 +76,14 @@ const TransactionItem = React.memo(({
       {isExpanded && (
         <View className={`px-5 pb-5 pt-2 border-t ${isDark ? 'border-white/5' : 'border-black/5'}`}>
           <TouchableOpacity
-            onPress={() => onEdit(item)}
+            onPress={() => onEdit({
+              id: record.id,
+              amount: record.amount,
+              currency: record.currency,
+              category: record.category,
+              description: record.description,
+              type
+            })}
             className={`flex-row items-center justify-center py-3 rounded-2xl ${isDark ? 'bg-white/5' : 'bg-black/5'}`}
           >
             <Text className={`font-black text-[10px] uppercase tracking-[2px] ${isDark ? 'text-white/80' : 'text-black/80'}`}>
@@ -86,9 +94,11 @@ const TransactionItem = React.memo(({
       )}
     </Pressable>
   );
-});
+};
 
-TransactionItem.displayName = 'TransactionItem';
+const TransactionItem = withObservables(['record'], ({ record }) => ({
+  record: record.observe()
+}))(TransactionItemComp);
 
 // Edit Modal Component
 const EditTransactionModal = ({
@@ -109,7 +119,7 @@ const EditTransactionModal = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const INCOME_CATEGORIES = ['Salary', 'Business', 'Investment', 'Gift', 'Other'];
-  const EXPENSE_CATEGORIES = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'];
+  const EXPENSE_CATEGORIES = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Insurance', 'Subscriptions', 'Misc'];
 
   const categories = transaction?.type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -124,7 +134,7 @@ const EditTransactionModal = ({
   }, [transaction]);
 
   const handleDelete = async () => {
-    Alert.alert(
+    CustomAlert.alert(
       "Delete Transaction",
       "Are you sure you want to permanently remove this record? This cannot be undone.",
       [
@@ -143,7 +153,7 @@ const EditTransactionModal = ({
               });
               onClose();
             } catch (error) {
-              Alert.alert("Error", "Failed to delete transaction.");
+              CustomAlert.alert("Error", "Failed to delete transaction.");
             } finally {
               setIsSaving(false);
             }
@@ -159,40 +169,28 @@ const EditTransactionModal = ({
     // Round the input amount to 2 decimal places before saving
     const finalAmount = parseFloat(parseFloat(amount).toFixed(2));
 
-    Alert.alert(
-      "Confirm Update",
-      "Are you sure you want to update this transaction? This will modify your history.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Update",
-          style: "default",
-          onPress: async () => {
-            setIsSaving(true);
-            try {
-              await database.write(async () => {
-                const table = transaction.type === 'income' ? 'incomes' : 'expenses';
-                const record = await database.get(table).find(transaction.id);
-                await record.update((r: any) => {
-                  r.amount = finalAmount;
-                  r.category = category;
-                  r.description = description.trim() || null;
-                  if (table === 'incomes') {
-                    r.source = category; // Backwards compatibility
-                  }
-                  r.updatedAt = new Date();
-                });
-              });
-              onClose();
-            } catch (error) {
-              Alert.alert("Error", "Failed to update transaction.");
-            } finally {
-              setIsSaving(false);
-            }
+    setIsSaving(true);
+    try {
+      await database.write(async () => {
+        const table = transaction.type === 'income' ? 'incomes' : 'expenses';
+        const record = await database.get(table).find(transaction.id);
+        await record.update((r: any) => {
+          r.amount = finalAmount;
+          r.category = category;
+          r.description = description.trim() || null;
+          if (table === 'incomes') {
+            r.source = category; // Backwards compatibility
           }
-        }
-      ]
-    );
+          r.updatedAt = new Date();
+        });
+      });
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      onClose();
+    } catch (error) {
+      CustomAlert.alert("Error", "Failed to update transaction.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!transaction) return null;
@@ -355,15 +353,15 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
   const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
   const allTransactionsRaw = useMemo(() => [
-    ...incomes.map(i => ({ id: i.id, amount: i.amount, currency: i.currency, category: i.category, description: i.description, createdAt: i.createdAt, type: 'income' as const })),
-    ...expenses.map(e => ({ id: e.id, amount: e.amount, currency: e.currency, category: e.category, description: e.description, createdAt: e.createdAt, type: 'expense' as const }))
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [incomes, expenses]);
+    ...incomes.map(i => ({ record: i, type: 'income' as const })),
+    ...expenses.map(e => ({ record: e, type: 'expense' as const }))
+  ].sort((a, b) => new Date(b.record.createdAt).getTime() - new Date(a.record.createdAt).getTime()), [incomes, expenses]);
 
   // Dynamic Options Extraction
   const uniqueYears = useMemo(() => {
     const years = new Set<string>();
     allTransactionsRaw.forEach(t => {
-      const year = new Date(t.createdAt).getFullYear().toString();
+      const year = new Date(t.record.createdAt).getFullYear().toString();
       years.add(year);
     });
     return Array.from(years).sort((a, b) => b.localeCompare(a));
@@ -372,7 +370,7 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
   const uniqueCategories = useMemo(() => {
     const cats = new Set<string>();
     allTransactionsRaw.forEach(t => {
-      if (t.category) cats.add(t.category);
+      if (t.record.category) cats.add(t.record.category);
     });
     return Array.from(cats).sort();
   }, [allTransactionsRaw]);
@@ -382,16 +380,16 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
   const netBalance = totalIncome - totalExpense;
 
   const filteredTransactions = allTransactionsRaw.filter(item => {
-    const date = new Date(item.createdAt);
+    const date = new Date(item.record.createdAt);
     const itemYear = date.getFullYear().toString();
     const itemMonth = MONTHS[date.getMonth()];
 
     // Search Filter
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = !searchQuery ||
-      (item.category || '').toLowerCase().includes(searchLower) ||
-      (item.description || '').toLowerCase().includes(searchLower) ||
-      (item.amount?.toString() || '').includes(searchLower);
+      (item.record.category || '').toLowerCase().includes(searchLower) ||
+      (item.record.description || '').toLowerCase().includes(searchLower) ||
+      (item.record.amount?.toString() || '').includes(searchLower);
 
     // Year Filter
     const matchesYear = filterYear === 'All' || itemYear === filterYear;
@@ -400,7 +398,7 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
     const matchesMonth = filterMonth === 'All' || itemMonth === filterMonth;
 
     // Category Filter
-    const matchesCategory = filterCategory === 'All' || item.category === filterCategory;
+    const matchesCategory = filterCategory === 'All' || item.record.category === filterCategory;
 
     // Type Filter
     const matchesType = filterType === 'All' || (filterType === 'Inflow' ? item.type === 'income' : item.type === 'expense');
@@ -456,13 +454,13 @@ const TransactionList = ({ incomes, expenses, Header }: { incomes: any[]; expens
     <View className="flex-1 px-6">
       <FlatList
         data={filteredTransactions}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.record.id}
         renderItem={({ item }) => (
           <TransactionItem
-            item={item}
+            record={item.record}
             type={item.type}
-            isExpanded={expandedId === item.id}
-            onToggle={() => setExpandedId(expandedId === item.id ? null : item.id)}
+            isExpanded={expandedId === item.record.id}
+            onToggle={() => setExpandedId(expandedId === item.record.id ? null : item.record.id)}
             onEdit={handleEdit}
           />
         )}

@@ -4,6 +4,7 @@ import database from '../database';
 import { useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
 import { generateUUID } from '../lib/id-utils';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface IncomeFormProps {
   onSuccess?: () => void;
@@ -23,7 +24,7 @@ export default function IncomeForm({ onSuccess, onCancel }: IncomeFormProps) {
   const handleSubmit = async () => {
     const parsedAmount = parseFloat(amount);
     if (!amount || !category || isNaN(parsedAmount) || parsedAmount <= 0) {
-      Alert.alert("Invalid Input", "Please enter a valid amount and select a category.");
+      CustomAlert.alert("Invalid Input", "Please enter a valid amount and select a category.");
       return;
     }
     

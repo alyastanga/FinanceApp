@@ -41,9 +41,13 @@ export async function clearCloudData() {
     const tables = ['incomes', 'expenses', 'goals', 'budgets', 'portfolio', 'device_keys'];
 
     setSyncLock(true);
-    await Promise.all(tables.map(table => 
-      supabase.from(table).delete().eq('user_id', userId)
-    ));
+    
+    // Attempt deletion with both common column naming conventions to ensure success
+    await Promise.all(tables.flatMap(table => [
+      supabase.from(table).delete().eq('user_id', userId),
+      supabase.from(table).delete().eq('userId', userId)
+    ]));
+    
     console.log('[DataManagement] Cloud data wiped successfully.');
     return true;
   } catch (error) {

@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Alert, StyleSheet, View, TextInput, Button, Text } from 'react-native'
 import { supabase } from '../lib/supabase'
 import { PasswordInput } from './ui/PasswordInput'
+import { CustomAlert } from './ui/CustomAlert';
 
 export default function Auth() {
   const [email, setEmail] = useState('')
@@ -15,7 +16,7 @@ export default function Auth() {
       password: password,
     })
 
-    if (error) Alert.alert(error.message)
+    if (error) CustomAlert.alert(error.message)
     setLoading(false)
   }
 
@@ -29,8 +30,8 @@ export default function Auth() {
       password: password,
     })
 
-    if (error) Alert.alert(error.message)
-    if (!session && !error) Alert.alert('Please check your inbox for email verification!')
+    if (error) CustomAlert.alert(error.message)
+    if (!session && !error) CustomAlert.alert('Please check your inbox for email verification!')
     setLoading(false)
   }
 

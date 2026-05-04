@@ -6,6 +6,7 @@ import { ActivityIndicator, Alert, Image, ScrollView, Text, TextInput, Touchable
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 export default function SignUpScreen() {
   const { isDark } = useTheme();
@@ -17,7 +18,7 @@ export default function SignUpScreen() {
 
   async function signUpWithEmail() {
     if (password !== confirmPassword) {
-      Alert.alert('Passwords do not match');
+      CustomAlert.alert('Passwords do not match');
       return;
     }
 
@@ -28,9 +29,9 @@ export default function SignUpScreen() {
     });
 
     if (error) {
-      Alert.alert('Error', error.message);
+      CustomAlert.alert('Error', error.message);
     } else {
-      Alert.alert('Check your email', 'We have sent a confirmation link to your email address.');
+      CustomAlert.alert('Check your email', 'We have sent a confirmation link to your email address.');
       router.back();
     }
     setLoading(false);

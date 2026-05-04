@@ -7,6 +7,8 @@ import { useCurrency } from '../context/CurrencyContext';
 import { generateUUID } from '../lib/id-utils';
 import { useTheme } from '../context/ThemeContext';
 import { SleekCalendar } from './ui/SleekCalendar';
+import { supabase } from '../lib/supabase';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface GoalFormProps {
   goal?: Goal | null;
@@ -24,36 +26,58 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
   const [targetCompletionDate, setTargetCompletionDate] = useState<Date>(
     goal?.targetCompletionDate ? new Date(goal.targetCompletionDate) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
   );
-  const [syncToCalendar, setSyncToCalendar] = useState(goal?.syncToCalendar || false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
   const handleSubmit = async () => {
     if (!name || !targetAmount) return;
 
+    const newAmount = parseFloat(currentAmount) || 0;
+    const oldAmount = goal?.currentAmount || 0;
+    const delta = newAmount - oldAmount;
+
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user.id;
+
+      if (!userId) return;
+
       await database.write(async () => {
         if (goal) {
           await goal.update((record: any) => {
             record.name = name;
             record.targetAmount = parseFloat(targetAmount);
-            record.currentAmount = parseFloat(currentAmount);
+            record.currentAmount = newAmount;
             record.targetCompletionDate = targetCompletionDate.getTime();
-            record.syncToCalendar = syncToCalendar;
           });
         } else {
           await database.get('goals').create((record: any) => {
             record._raw.id = generateUUID();
             record.name = name;
             record.targetAmount = parseFloat(targetAmount);
-            record.currentAmount = parseFloat(currentAmount);
+            record.currentAmount = newAmount;
             record.targetCompletionDate = targetCompletionDate.getTime();
-            record.syncToCalendar = syncToCalendar;
+            record.userId = userId;
+          });
+        }
+
+        // If the user increased their savings, record it as a transaction to deduct from liquidity
+        if (delta > 0) {
+          await database.get('expenses').create((exp: any) => {
+            exp._raw.id = generateUUID();
+            exp.amount = delta;
+            exp.category = 'Goals';
+            exp.description = `Contribution: ${name}`;
+            exp._currency = currency;
+            exp.userId = userId;
+            const now = new Date();
+            exp.createdAt = now;
+            exp.updatedAt = now;
           });
         }
       });
       onSuccess();
     } catch (error) {
-      console.error('Failed to save goal:', error);
+      console.error('[GoalForm] Failed to save goal:', error);
     }
   };
 
@@ -61,8 +85,7 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
     if (!goal) return;
 
     // Use a standard Alert for confirmation
-    const { Alert } = require('react-native');
-    Alert.alert(
+    CustomAlert.alert(
       'Delete Goal',
       `Are you sure you want to remove "${goal.name}"?`,
       [
@@ -157,18 +180,6 @@ export const GoalForm = ({ goal, onSuccess, onCancel }: GoalFormProps) => {
           </TouchableOpacity>
         </View>
 
-        <View className={`rounded-xl px-gsd-md py-gsd-sm border flex-row justify-between items-center ${isDark ? 'border-white/10' : 'border-black/5'}`}>
-           <View>
-              <Text className={`font-bold text-[13px] ${isDark ? 'text-white' : 'text-black'}`}>Sync to Google Calendar</Text>
-              <Text className="text-[9px] text-muted-foreground font-medium uppercase tracking-widest">Connect your timeline</Text>
-           </View>
-           <TouchableOpacity 
-             onPress={() => setSyncToCalendar(!syncToCalendar)}
-             className={`w-10 h-5 rounded-full p-1 ${syncToCalendar ? 'bg-primary' : (isDark ? 'bg-white/10' : 'bg-black/10')}`}
-           >
-              <View className={`w-3 h-3 rounded-full ${syncToCalendar ? 'self-end' : 'self-start'} bg-white`} />
-           </TouchableOpacity>
-        </View>
       </View>
 
       {/* Advanced Calendar Modal */}

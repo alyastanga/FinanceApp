@@ -127,17 +127,9 @@ export async function syncData() {
           const decryptedRows = await decryptRows(rawRows);
           const patchedRows = patchLegacyDates(decryptedRows);
 
-          // If this is the first sync (lastPulledAt is null), treat everything as created locally
-          if (!lastPulledAt) {
-            return {
-              created: patchedRows,
-              updated: [],
-              deleted: [],
-            };
-          }
-
-          // Otherwise, WatermelonDB's default categorization (all in updated) works 
-          // because it will match existing IDs or create if missing.
+          // WatermelonDB's sendCreatedAsUpdated: true means we should always 
+          // return records in the 'updated' array. It will automatically
+          // handle creation if the ID doesn't exist locally.
           return {
             created: [],
             updated: patchedRows,

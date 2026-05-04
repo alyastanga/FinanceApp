@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import database from '../database';
 import { generateUUID } from '../lib/id-utils';
 import { fetchExchangeRate } from '../lib/market-service';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface TransactionFormProps {
   initialType?: 'income' | 'expense';
@@ -25,7 +26,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
 
   const INCOME_CATEGORIES = ['Salary', 'Business', 'Investment', 'Gift', 'Allowance', 'Other'];
   const EXPENSE_CATEGORIES = [
-    'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Other'
+    'Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Insurance', 'Subscriptions', 'Other'
   ];
 
   const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
@@ -54,7 +55,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
 
   async function handleSubmit() {
     if (!amount || !category || !user) {
-      Alert.alert('Incomplete Data', 'Please enter an amount and select a category.');
+      CustomAlert.alert('Incomplete Data', 'Please enter an amount and select a category.');
       return;
     }
 
@@ -69,7 +70,7 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
           const rate = await fetchExchangeRate(currency, txCurrency);
           finalAmount = inputAmount * rate;
         } catch (error) {
-          Alert.alert('Conversion Failed', 'Could not perform live currency conversion. Please check your network connection.');
+          CustomAlert.alert('Conversion Failed', 'Could not perform live currency conversion. Please check your network connection.');
           return;
         }
       }
@@ -105,9 +106,9 @@ export default function TransactionForm({ initialType = 'expense', onSuccess }: 
       setAmount('');
       setDescription('');
       if (onSuccess) onSuccess();
-      Alert.alert('Success', `${type} added locally!`);
+      CustomAlert.alert('Success', `${type} added locally!`);
     } catch (error) {
-      Alert.alert('Error', (error as Error).message);
+      CustomAlert.alert('Error', (error as Error).message);
     }
   }
 

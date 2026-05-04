@@ -1,4 +1,5 @@
 import database from '../database';
+import { BudgetMonitor } from './budget-monitor';
 
 export interface TransactionData {
   amount: number;
@@ -40,4 +41,7 @@ export async function addExpense(data: TransactionData) {
       record.updatedAt = Date.now();
     });
   });
+
+  // Check budget thresholds after adding expense
+  await BudgetMonitor.checkBudgetThresholds(data.category);
 }

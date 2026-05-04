@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { isValidSeedPhrase } from '../../lib/bip39-service';
 import { recoverFromSeedPhrase } from '../../lib/key-manager';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 export default function E2EERecoveryScreen() {
   const { isDark } = useTheme();
@@ -24,22 +25,22 @@ export default function E2EERecoveryScreen() {
     const cleanPhrase = seedPhrase.toLowerCase().replace(/\s+/g, ' ').trim();
 
     if (cleanPhrase.split(' ').length !== 24) {
-      Alert.alert('Error', 'Please enter exactly 24 words separated by spaces.');
+      CustomAlert.alert('Error', 'Please enter exactly 24 words separated by spaces.');
       return;
     }
 
     if (!isValidSeedPhrase(cleanPhrase)) {
-      Alert.alert('Error', 'Invalid recovery phrase. Please check for typos.');
+      CustomAlert.alert('Error', 'Invalid recovery phrase. Please check for typos.');
       return;
     }
 
     if (newPassphrase.length < 8) {
-      Alert.alert('Error', 'New passphrase must be at least 8 characters long.');
+      CustomAlert.alert('Error', 'New passphrase must be at least 8 characters long.');
       return;
     }
 
     if (newPassphrase !== confirmPassphrase) {
-      Alert.alert('Error', 'Passphrases do not match.');
+      CustomAlert.alert('Error', 'Passphrases do not match.');
       return;
     }
 
@@ -48,18 +49,18 @@ export default function E2EERecoveryScreen() {
       const { recovered, isNewDEK } = await recoverFromSeedPhrase(cleanPhrase, newPassphrase);
 
       if (recovered) {
-        Alert.alert('Success', 'Your encrypted data has been successfully unlocked.', [
+        CustomAlert.alert('Success', 'Your encrypted data has been successfully unlocked.', [
           { text: 'Continue', onPress: () => router.replace('/(tabs)') }
         ]);
       } else if (isNewDEK) {
-        Alert.alert(
+        CustomAlert.alert(
           'New Key Provisioned',
           'No existing cloud data was found for this account. A new encryption key has been provisioned.',
           [{ text: 'Continue', onPress: () => router.replace('/(tabs)') }]
         );
       }
     } catch (err: any) {
-      Alert.alert('Recovery Failed', err.message || 'Could not recover data. The phrase may not match the original cloud key.');
+      CustomAlert.alert('Recovery Failed', err.message || 'Could not recover data. The phrase may not match the original cloud key.');
     } finally {
       setIsProcessing(false);
     }

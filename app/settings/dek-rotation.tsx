@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { resumeRotation, startRotation } from '../../lib/dek-rotation';
 import { getRotationCheckpoint, RotationProgress } from '../../lib/key-manager';
 import { PasswordInput } from '../../components/ui/PasswordInput';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 export default function DEKRotationScreen() {
   const navigation = useNavigation();
@@ -30,7 +31,7 @@ export default function DEKRotationScreen() {
     async function checkResume() {
       const checkpoint = await getRotationCheckpoint();
       if (checkpoint && checkpoint.status === 'in_progress') {
-        Alert.alert(
+        CustomAlert.alert(
           'Rotation Interrupted',
           'A previous key rotation was interrupted. The app will now resume the process to secure your data.',
           [{ text: 'Resume', onPress: executeResume }]
@@ -45,7 +46,7 @@ export default function DEKRotationScreen() {
     const unsubscribe = navigation.addListener('beforeRemove', (e) => {
       if (isRotating) {
         e.preventDefault();
-        Alert.alert(
+        CustomAlert.alert(
           'Rotation in Progress',
           'Please wait until the key rotation is complete to avoid data inconsistency. If you force close the app, it will resume automatically on next launch.'
         );
@@ -58,12 +59,12 @@ export default function DEKRotationScreen() {
     setProgress(p);
     if (p.status === 'completed') {
       setIsRotating(false);
-      Alert.alert('Success', 'Your encryption key has been successfully rotated and all records re-secured.', [
+      CustomAlert.alert('Success', 'Your encryption key has been successfully rotated and all records re-secured.', [
         { text: 'Done', onPress: () => router.back() }
       ]);
     } else if (p.status === 'interrupted') {
       setIsRotating(false);
-      Alert.alert('Error', 'Rotation failed. Please try again or check your connection.');
+      CustomAlert.alert('Error', 'Rotation failed. Please try again or check your connection.');
     }
   };
 
@@ -73,22 +74,22 @@ export default function DEKRotationScreen() {
       await resumeRotation(onProgressUpdate);
     } catch (err: any) {
       setIsRotating(false);
-      Alert.alert('Error', err.message || 'Failed to resume rotation.');
+      CustomAlert.alert('Error', err.message || 'Failed to resume rotation.');
     }
   };
 
   const handleStartRotation = async () => {
     const cleanPhrase = seedPhrase.toLowerCase().replace(/\s+/g, ' ').trim();
     if (cleanPhrase.split(' ').length !== 24) {
-      Alert.alert('Error', 'Please enter your exactly 24-word Recovery Phrase.');
+      CustomAlert.alert('Error', 'Please enter your exactly 24-word Recovery Phrase.');
       return;
     }
     if (passphrase.length < 8) {
-      Alert.alert('Error', 'Invalid daily passphrase.');
+      CustomAlert.alert('Error', 'Invalid daily passphrase.');
       return;
     }
 
-    Alert.alert(
+    CustomAlert.alert(
       'Confirm Rotation',
       'This will replace your current encryption key. All your data will be re-encrypted and synced. Do not close the app until complete.',
       [
@@ -103,7 +104,7 @@ export default function DEKRotationScreen() {
               await resumeRotation(onProgressUpdate);
             } catch (err: any) {
               setIsRotating(false);
-              Alert.alert('Authentication Failed', err.message || 'The passphrase or seed phrase is incorrect.');
+              CustomAlert.alert('Authentication Failed', err.message || 'The passphrase or seed phrase is incorrect.');
             }
           }
         }

@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Image, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../lib/supabase';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 export default function LoginScreen() {
   const { isDark } = useTheme();
@@ -19,22 +20,22 @@ export default function LoginScreen() {
       password: password,
     });
 
-    if (error) Alert.alert(error.message);
+    if (error) CustomAlert.alert(error.message);
     setLoading(false);
   }
 
   async function handleForgotPassword() {
     if (!email) {
-      Alert.alert('Email Required', 'Please enter your email address to reset your password.');
+      CustomAlert.alert('Email Required', 'Please enter your email address to reset your password.');
       return;
     }
     
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
-      Alert.alert('Error', error.message);
+      CustomAlert.alert('Error', error.message);
     } else {
-      Alert.alert('Check your email', 'We have sent a password reset link to your email.');
+      CustomAlert.alert('Check your email', 'We have sent a password reset link to your email.');
     }
     setLoading(false);
   }
