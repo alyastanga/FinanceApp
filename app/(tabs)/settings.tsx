@@ -36,7 +36,6 @@ export default function SettingsScreen() {
   const [e2eeState, setE2eeState] = React.useState<E2EEState | null>(null);
   const [isGmailConnected, setIsGmailConnected] = React.useState(false);
   const [isEmailSyncing, setIsEmailSyncing] = React.useState(false);
-  const [showVaultModal, setShowVaultModal] = React.useState(false);
 
   // Cloud AI Settings
   const [aiKeys, setAiKeys] = React.useState<Record<string, string>>({});
@@ -397,7 +396,7 @@ export default function SettingsScreen() {
             </Link>
 
             {/* Biometric App Lock */}
-            <View className={`flex-row items-center justify-between p-4`}>
+            <View className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}>
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="lock.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
                 <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
@@ -409,98 +408,29 @@ export default function SettingsScreen() {
                 trackColor={{ false: "#ccc", true: "#10b981" }}
               />
             </View>
-          </View>
 
-          {/* Cloud Intelligence & Vault */}
-          <View className="flex-row justify-between items-end mb-2 ml-2">
-            <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] opacity-30`}>Cloud & Vault</Text>
-            {e2eeState?.isEnabled && (
-              <View className="flex-row items-center gap-x-1.5">
-                <View className={`w-1.5 h-1.5 rounded-full ${e2eeState.isVaultLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
-                <Text className={`text-[8px] font-black uppercase tracking-tighter ${e2eeState.isVaultLocked ? 'text-red-400' : 'text-emerald-500'}`}>
-                  Vault {e2eeState.isVaultLocked ? 'Locked' : 'Active'}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          <View className={`${cardBgClass} rounded-[40px] border ${borderClass} overflow-hidden shadow-2xl shadow-primary/5`}>
-            {/* Main Sync & Status Row */}
-            <View className="p-8 items-center">
-              <View className="items-center mb-6">
-                <Text className={`text-2xl font-black ${textClass} tracking-tight mb-1 text-center`}>
-                  {isSyncing ? 'Syncing...' : 'Cloud Intelligence'}
-                </Text>
-                <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-[2px] text-center`}>
-                  {e2eeState?.isEnabled ? 'Zero-Knowledge AES-256' : 'Standard Supabase Protection'}
-                </Text>
-              </View>
-
-              <TouchableOpacity
-                onPress={handleManualSync}
-                disabled={isSyncing}
-                className={`h-12 w-12 rounded-2xl items-center justify-center mb-6 ${isDark ? 'bg-primary/10 border border-primary/20' : 'bg-primary/20 border border-primary/30'}`}
-              >
-                {isSyncing ? (
-                  <ActivityIndicator size="small" color="#10b981" />
-                ) : (
-                  <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#10b981" />
-                )}
+            {/* Cloud & Vault Navigation */}
+            <Link href="/settings/cloud-vault" asChild>
+              <TouchableOpacity className="flex-row items-center justify-between p-4">
+                <View className="flex-row items-center gap-x-3">
+                  <IconSymbol name="icloud.fill" size={20} color="#10b981" />
+                  <View>
+                    <Text className={`${textClass} font-medium text-base`}>Cloud & Vault</Text>
+                    {e2eeState?.isEnabled ? (
+                      <View className="flex-row items-center gap-x-1.5 mt-0.5">
+                        <View className={`w-1.5 h-1.5 rounded-full ${e2eeState.isVaultLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
+                        <Text className={`text-[9px] font-black uppercase tracking-tight ${e2eeState.isVaultLocked ? 'text-red-400' : 'text-emerald-500'}`}>
+                          Vault {e2eeState.isVaultLocked ? 'Locked' : 'Active'}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text className={`text-[9px] ${subTextClass} font-black uppercase tracking-widest mt-0.5`}>Standard Protection</Text>
+                    )}
+                  </View>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
               </TouchableOpacity>
-
-              {/* Action Area */}
-              {e2eeState?.isEnabled ? (
-                <View className="gap-y-3 w-full">
-                  {e2eeState.isVaultLocked ? (
-                    <TouchableOpacity
-                      onPress={() => setShowVaultModal(true)}
-                      className="bg-emerald-500 py-4 rounded-2xl items-center shadow-lg shadow-emerald-500/20"
-                    >
-                      <Text className="text-[#050505] font-black text-xs uppercase tracking-widest">Unlock Encryption Vault</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <View className="flex-row gap-x-3 w-full">
-                      <Link href="/settings/dek-rotation" asChild>
-                        <TouchableOpacity className={`flex-1 py-3 rounded-2xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/10'} items-center`}>
-                          <Text className={`${textClass} font-bold text-[10px] uppercase tracking-widest`}>Rotate Keys</Text>
-                        </TouchableOpacity>
-                      </Link>
-                      <TouchableOpacity
-                        onPress={async () => {
-                          await clearActiveDEK();
-                          const newState = await getE2EEState();
-                          setE2eeState(newState);
-                        }}
-                        className={`flex-1 py-3 rounded-2xl border border-red-500/20 bg-red-500/5 items-center`}
-                      >
-                        <Text className="text-red-400 font-bold text-[10px] uppercase tracking-widest">Lock Vault</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                  <TouchableOpacity
-                    onPress={() => router.push('/onboarding/e2ee-recovery')}
-                    className="py-2 items-center"
-                  >
-                    <Text className={`${subTextClass} font-bold text-[9px] uppercase tracking-widest`}>Forgot passphrase? Recover Vault</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <View className="gap-y-3 w-full">
-                  <Link href="/onboarding/e2ee-setup" asChild>
-                    <TouchableOpacity className="bg-emerald-500/10 border border-emerald-500/20 py-4 rounded-2xl items-center">
-                      <Text className="text-emerald-500 font-black text-xs uppercase tracking-widest">Enable End-to-End Encryption</Text>
-                    </TouchableOpacity>
-                  </Link>
-                  <TouchableOpacity
-                    onPress={() => router.push('/onboarding/e2ee-recovery')}
-                    className="py-2 items-center flex-row justify-center gap-x-2"
-                  >
-                    <IconSymbol name="key.fill" size={12} color="#10b981" />
-                    <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Recover Existing Vault</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </View>
+            </Link>
           </View>
         </View>
 
@@ -586,15 +516,6 @@ export default function SettingsScreen() {
         onExport={handleExport}
       />
 
-      <VaultUnlockModal
-        isVisible={showVaultModal}
-        onClose={() => setShowVaultModal(false)}
-        onSubmit={async (pass) => {
-          await unlockVault(pass);
-          const newState = await getE2EEState();
-          setE2eeState(newState);
-        }}
-      />
     </SafeAreaView>
   );
 }
