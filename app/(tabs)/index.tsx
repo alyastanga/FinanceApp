@@ -3,7 +3,7 @@ import withObservables from '@nozbe/watermelondb/react/withObservables';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, RefreshControl, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import TransactionForm from '../../components/TransactionForm';
 import { MicroBudgetGauge } from '../../components/ui/MicroBudgetGauge';
@@ -23,8 +23,8 @@ interface MissionControlProps {
   portfolio: any[];
 }
 
-import { GoalProgressCard } from '../../components/ui/GoalProgressCard';
 import { CustomAlert } from '../../components/ui/CustomAlert';
+import { GoalProgressCard } from '../../components/ui/GoalProgressCard';
 
 const GoalProgressGlimpseComp = ({ goal }: { goal: any }) => {
   return (
@@ -291,7 +291,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
 
               {currentMonthExpenses.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className={`font-black text-[7px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>No Data</Text>
+                  <Text className={`font-black text-[7px] uppercase tracking-widest ${isDark ? 'text-white/60' : 'text-black/60'}`}>Add Data</Text>
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center pt-1">
@@ -314,7 +314,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
 
               {budgets.length === 0 ? (
                 <View className="items-center flex-1 justify-center">
-                  <Text className="text-primary font-black text-[7px] uppercase tracking-widest">Set</Text>
+                  <Text className="text-primary font-black text-[7px] uppercase tracking-widest">Set budget</Text>
                 </View>
               ) : (
                 <View className="flex-1 items-center justify-center pt-1">
