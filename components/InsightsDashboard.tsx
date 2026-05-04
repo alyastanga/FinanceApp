@@ -293,7 +293,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
               </View>
               <View className={`w-[1px] h-4 ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />
               <View className="flex-1">
-                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[9px] font-black uppercase tracking-[1px]`}>Fixed Expenses</Text>
+                <Text className={`${isDark ? 'text-white/30' : 'text-black/30'} text-[9px] font-black uppercase tracking-[1px]`}>Reserved Expenses</Text>
                 <Text className="text-destructive/100 text-[12px] font-bold">-{format(insights.monthlyFixedExpenses)}</Text>
               </View>
             </View>
@@ -318,6 +318,7 @@ const InsightsDashboardBase = ({ incomes, expenses, goals, portfolio, budgets, u
                 <SafeToSpendView
                   amount={insights.dailySafeToSpend}
                   totalMonthlyIncome={insights.monthlyIncome}
+                  spentToday={insights.spentToday}
                   isDark={isDark}
                 />
                 <View className={`mx-6 my-4 h-[1px] ${isDark ? 'bg-white/5' : 'bg-black/5'}`} />

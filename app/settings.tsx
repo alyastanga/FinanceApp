@@ -5,6 +5,7 @@ import { Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { seedDatabase } from '../_tests_dev/seed';
 import { CurrencyCode, useCurrency } from '../context/CurrencyContext';
 import { useTheme } from '../context/ThemeContext';
+import { CustomAlert } from '../components/ui/CustomAlert';
 
 export default function Settings() {
   const router = useRouter();
@@ -25,9 +26,9 @@ export default function Settings() {
   const handleSeed = async () => {
     const success = await seedDatabase();
     if (success) {
-      Alert.alert("Success", "Database seeded with mock financial data.");
+      CustomAlert.alert("Success", "Database seeded with mock financial data.");
     } else {
-      Alert.alert("Error", "Seeding failed. Check console for details.");
+      CustomAlert.alert("Error", "Seeding failed. Check console for details.");
     }
   };
 

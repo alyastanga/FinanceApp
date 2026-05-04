@@ -16,6 +16,8 @@ export function PasswordInput({ className, containerClass, isDark, ...props }: P
       <TextInput
         {...props}
         secureTextEntry={!showPassword}
+        textContentType="none"
+        autoComplete="off"
         className={`flex-1 ${className}`}
       />
       <TouchableOpacity 

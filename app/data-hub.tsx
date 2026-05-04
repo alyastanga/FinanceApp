@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CustomAlert } from '../components/ui/CustomAlert';
 
 export default function DataHubScreen() {
   const { isDark } = useTheme();
@@ -75,7 +76,7 @@ export default function DataHubScreen() {
       }
     } catch (err) {
       console.error('File pick failed:', err);
-      Alert.alert('Error', 'Failed to read file.');
+      CustomAlert.alert('Error', 'Failed to read file.');
     }
   };
 
@@ -85,11 +86,11 @@ export default function DataHubScreen() {
     try {
       const result = await PDFService.parseStatement(pendingPdfUri, password);
       if (result.success) {
-        Alert.alert('Success', `Parsed ${result.count} transactions from statement.`);
+        CustomAlert.alert('Success', `Parsed ${result.count} transactions from statement.`);
         setShowPasswordModal(false);
         setPendingPdfUri(null);
       } else {
-        Alert.alert('Parse Failed', result.error || 'Check password and try again.');
+        CustomAlert.alert('Parse Failed', result.error || 'Check password and try again.');
       }
     } finally {
       setIsProcessing(false);
@@ -99,7 +100,7 @@ export default function DataHubScreen() {
   const executeImport = async () => {
     if (!csvText) return;
     if (!mapping.dateHeader || !mapping.amountHeader) {
-      Alert.alert('Mapping Required', 'Please map at least Date and Amount columns.');
+      CustomAlert.alert('Mapping Required', 'Please map at least Date and Amount columns.');
       return;
     }
 
@@ -139,13 +140,13 @@ export default function DataHubScreen() {
           importedCount++;
         }
 
-        Alert.alert('Success', `Imported ${importedCount} new transactions.`);
+        CustomAlert.alert('Success', `Imported ${importedCount} new transactions.`);
       });
 
       setCsvText(null);
     } catch (err: any) {
       console.error('Import failed:', err);
-      Alert.alert('Import Failed', err.message);
+      CustomAlert.alert('Import Failed', err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -190,7 +191,7 @@ export default function DataHubScreen() {
       setShowExportModal(false);
     } catch (error: any) {
       console.error('Export Error:', error);
-      Alert.alert("Export Failed", error.message);
+      CustomAlert.alert("Export Failed", error.message);
     } finally {
       setIsProcessing(false);
     }

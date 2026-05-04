@@ -97,6 +97,9 @@ const MAPPING = {
   'arrow.left.square.fill': 'logout',
   'banknote': 'payments',
   'key.fill': 'vpn-key',
+  'exclamationmark.triangle.fill': 'warning',
+  'checkmark.shield.fill': 'verified-user',
+  'touchid': 'fingerprint',
 } as const;
 
 type IconSymbolName = keyof typeof MAPPING;

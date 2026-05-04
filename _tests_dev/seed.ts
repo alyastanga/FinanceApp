@@ -2,7 +2,7 @@ import database from '../database';
 import { supabase } from '../lib/supabase';
 import { setSyncLock } from '../lib/sync';
 
-const CATEGORIES = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Misc'];
+const CATEGORIES = ['Food', 'Housing', 'Transport', 'Utilities', 'Health', 'Entertainment', 'Shopping', 'Insurance', 'Subscriptions', 'Misc'];
 
 function getRandomDateInLast2Years() {
   const date = new Date();
@@ -19,6 +19,10 @@ export async function seedDatabase() {
       return false;
     }
     const userId = session.user.id;
+
+    // 1. Wipe Cloud Data first to prevent sync pollution
+    const { clearCloudData } = require('../lib/data-management');
+    await clearCloudData();
 
     await database.write(async () => {
       // 1. Wipe existing data
@@ -37,14 +41,14 @@ export async function seedDatabase() {
       }
 
       // 2. Seed Incomes (24-month horizon)
-      // Typical Filipino professional salary + occasional freelance
+      // Goal: ~66,100 PHP total monthly income
       for (let m = 0; m < 24; m++) {
         const d = new Date();
         d.setMonth(d.getMonth() - m);
 
-        // Main Salary (PHP) - Professional Salary in the Philippines (~65k PHP net)
+        // Main Salary (PHP 60,000 Net)
         await database.get('incomes').create((income: any) => {
-          income.amount = 65000 + (Math.random() * 2000 - 1000);
+          income.amount = 60000;
           income.category = 'Salary';
           income.description = 'Monthly Salary (Professional)';
           income._currency = 'PHP';
@@ -55,10 +59,10 @@ export async function seedDatabase() {
           income.updatedAt = salDate;
         });
 
-        // 13th Month Pay (Typical in PH - usually in December)
+        // 13th Month Pay (Typical in PH - December)
         if (d.getMonth() === 11) {
           await database.get('incomes').create((income: any) => {
-            income.amount = 65000;
+            income.amount = 60000;
             income.category = 'Salary';
             income.description = '13th Month Pay Bonus';
             income._currency = 'PHP';
@@ -70,29 +74,29 @@ export async function seedDatabase() {
           });
         }
 
-        // Freelance / Raket (e.g., Virtual Assistant or Graphic Design) - ~$500 USD
-        if (Math.random() > 0.3) {
-          await database.get('incomes').create((income: any) => {
-            income.amount = 500 + (Math.random() * 200 - 100);
-            income.category = 'Business';
-            income.description = 'Freelance Project (VA/Design)';
-            income._currency = 'USD';
-            income.userId = userId;
-            const freeDate = new Date(d);
-            freeDate.setDate(25);
-            income.createdAt = freeDate;
-            income.updatedAt = freeDate;
-          });
-        }
+        // Freelance / Side Hustle (~$110 USD / ~6,100 PHP)
+        await database.get('incomes').create((income: any) => {
+          income.amount = 110;
+          income.category = 'Business';
+          income.description = 'Freelance Project (VA/Design)';
+          income._currency = 'USD';
+          income.userId = userId;
+          const freeDate = new Date(d);
+          freeDate.setDate(25);
+          income.createdAt = freeDate;
+          income.updatedAt = freeDate;
+        });
       }
 
-      // 3. Seed Budgets (Localized PH categories)
+      // 3. Seed Budgets (Matched to ~45k total allocation)
       const budgetLines = [
-        { category: 'Housing', limit: 18000, currency: 'PHP' }, // Rent for a studio in Makati/Mandaluyong
-        { category: 'Food', limit: 12000, currency: 'PHP' },    // Groceries + GrabFood
-        { category: 'Utilities', limit: 6000, currency: 'PHP' }, // Meralco + Fiber Internet
-        { category: 'Transport', limit: 5000, currency: 'PHP' }, // Petrol + RFID/Joyride
-        { category: 'Entertainment', limit: 4000, currency: 'PHP' } // Netflix + Coffee + Night out
+        { category: 'Housing', limit: 15500, currency: 'PHP' }, 
+        { category: 'Food', limit: 10000, currency: 'PHP' },    
+        { category: 'Utilities', limit: 4500, currency: 'PHP' }, 
+        { category: 'Insurance', limit: 5000, currency: 'PHP' }, 
+        { category: 'Subscriptions', limit: 2000, currency: 'PHP' },
+        { category: 'Transport', limit: 4000, currency: 'PHP' }, 
+        { category: 'Entertainment', limit: 4000, currency: 'PHP' } 
       ];
 
       for (const b of budgetLines) {
@@ -109,13 +113,14 @@ export async function seedDatabase() {
         const d = new Date();
         d.setMonth(d.getMonth() - m);
 
-        // Recurring Fixed PH Expenses
+        // Monthly Recurring Fixed (Reserved)
         const monthlyFixed = [
-          { cat: 'Housing', desc: 'Monthly Rent', amt: 15500, day: 1 },
-          { cat: 'Utilities', desc: 'Meralco Bill', amt: 3800 + (Math.random() * 500), day: 10 },
-          { cat: 'Utilities', desc: 'Converge Fiber', amt: 1500, day: 5 },
-          { cat: 'Transport', desc: 'Easytrip/Autosweep Load', amt: 1500, day: 2 },
-          { cat: 'Misc', desc: 'Netflix Sub', amt: 549, day: 14 }
+          { cat: 'Housing', desc: 'Condo Rent', amt: 15500, day: 1 },
+          { cat: 'Utilities', desc: 'Meralco', amt: 3000 + (Math.random() * 500), day: 10 },
+          { cat: 'Utilities', desc: 'PLDT Home Fiber', amt: 1699, day: 5 },
+          { cat: 'Insurance', desc: 'SunLife VUL Policy', amt: 4500, day: 8 },
+          { cat: 'Subscriptions', desc: 'ChatGPT Plus', amt: 1150, day: 12 },
+          { cat: 'Subscriptions', desc: 'Netflix / Spotify', amt: 850, day: 14 }
         ];
 
         for (const f of monthlyFixed) {
@@ -134,13 +139,13 @@ export async function seedDatabase() {
 
       // Random Localized Variable Expenses (Local Food, Transpo, Shopping)
       const phContexts = [
-        { cat: 'Food', choices: ['GrabFood Order', 'SM Supermarket', 'Puregold', 'Dinner with Friends', 'Starbucks Coffee'] },
-        { cat: 'Transport', choices: ['Joyride/Angkas', 'GrabCar', 'Gas Station Full Tank', 'MRT/LRT Beep Load'] },
+        { cat: 'Food', choices: ['GrabFood Order', 'SM Supermarket', 'Puregold', 'Dinner with Friends', 'Starbucks Coffee', 'Jollibee'] },
+        { cat: 'Transport', choices: ['Angkas', 'GrabCar', 'Gas Station', 'Beep Load'] },
         { cat: 'Shopping', choices: ['Lazada Sale', 'Shopee Budol', 'Uniqlo Essentials'] },
-        { cat: 'Entertainment', choices: ['Cinema', 'Mobile Legends Diamonds', 'Gym Membership'] }
+        { cat: 'Entertainment', choices: ['Cinema', 'ML Diamonds', 'Anytime Fitness'] }
       ];
 
-      for (let i = 0; i < 600; i++) {
+      for (let i = 0; i < 500; i++) {
         await database.get('expenses').create((expense: any) => {
           const context = phContexts[Math.floor(Math.random() * phContexts.length)];
           expense.category = context.cat;
@@ -148,11 +153,11 @@ export async function seedDatabase() {
           expense.description = desc;
 
           if (context.cat === 'Food') {
-            expense.amount = Math.random() * 800 + 150; // PHP 150 to 950
+            expense.amount = Math.random() * 600 + 100; // PHP 100 to 700
           } else if (context.cat === 'Transport') {
-            expense.amount = Math.random() * 500 + 50;  // PHP 50 to 550
+            expense.amount = Math.random() * 400 + 50;  // PHP 50 to 450
           } else {
-            expense.amount = Math.random() * 3000 + 200; // PHP 200 to 3200
+            expense.amount = Math.random() * 2000 + 200; // PHP 200 to 2200
           }
 
           expense._currency = 'PHP';
@@ -163,12 +168,12 @@ export async function seedDatabase() {
         });
       }
 
-      // 5. Seed Goals (PH Goals)
+      // 5. Seed Attainable Goals (relative to 66k income)
       const mockGoals = [
-        { name: 'Emergency Fund', target: 200000, current: 85000, months: 6, currency: 'PHP' },
-        { name: 'Siargao Trip', target: 35000, current: 15000, months: 3, currency: 'PHP' },
-        { name: 'New iPhone 16 Pro', target: 85000, current: 20000, months: 8, currency: 'PHP' },
-        { name: 'House Downpayment', target: 1000000, current: 120000, months: 48, currency: 'PHP' }
+        { name: 'Emergency Fund', target: 150000, current: 85000, months: 12, currency: 'PHP' },
+        { name: 'Siargao Trip', target: 25000, current: 5000, months: 5, currency: 'PHP' },
+        { name: 'iPhone 16 Pro', target: 85000, current: 15000, months: 12, currency: 'PHP' },
+        { name: 'House Downpayment', target: 1500000, current: 120000, months: 60, currency: 'PHP' }
       ];
 
       for (const g of mockGoals) {
@@ -186,10 +191,10 @@ export async function seedDatabase() {
         });
       }
 
-      // 6. Portfolio Assets (Localized PH Portfolio)
+      // 6. Portfolio Assets
       const mockPortfolio = [
         { name: 'Pag-IBIG MP2', symbol: 'MP2', type: 'cash', value: 1, invested: 150000, quantity: 150000, change: 0, currency: 'PHP' },
-        { name: 'Maya Savings', symbol: 'MAYA', type: 'cash', value: 1, invested: 45000, quantity: 45000, change: 0, currency: 'PHP' },
+        { name: 'Maya Savings (6%)', symbol: 'MAYA', type: 'cash', value: 1, invested: 45000, quantity: 45000, change: 0, currency: 'PHP' },
         { name: 'GCash (GSave)', symbol: 'GCSH', type: 'cash', value: 1, invested: 25000, quantity: 25000, change: 0, currency: 'PHP' },
         { name: 'Ethereum', symbol: 'BINANCE:ETHUSDT', type: 'crypto', value: 3500, invested: 2800, quantity: 0.45, change: 1.5, currency: 'USD' },
         { name: 'Stock: Jollibee (JFC)', symbol: 'PSE:JFC', type: 'stock', value: 245, invested: 220, quantity: 100, change: 2.1, currency: 'PHP' }
@@ -210,7 +215,7 @@ export async function seedDatabase() {
       }
     });
 
-    console.log('[Dev] Database successfully seeded with Filipino-context financial data for user:', userId);
+    console.log('[Dev] Database successfully seeded with realistic Filipino financial data for user:', userId);
     return true;
   } catch (error) {
     console.error('[Dev] Seeding failed:', error);

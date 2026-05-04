@@ -24,6 +24,7 @@ interface MissionControlProps {
 }
 
 import { GoalProgressCard } from '../../components/ui/GoalProgressCard';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 const GoalProgressGlimpseComp = ({ goal }: { goal: any }) => {
   return (
@@ -49,7 +50,7 @@ const Dashboard = ({ incomes, expenses, goals, budgets, portfolio }: MissionCont
     try {
       const state = await getE2EEState();
       if (state.isEnabled && state.isVaultLocked) {
-        Alert.alert(
+        CustomAlert.alert(
           "Vault Locked",
           "Your vault is locked. Please unlock it in Settings to sync your data.",
           [{ text: "OK" }]

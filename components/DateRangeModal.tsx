@@ -5,6 +5,7 @@ import { SleekButton } from './ui/SleekButton';
 import { IconSymbol } from './ui/icon-symbol';
 import { useTheme } from '../context/ThemeContext';
 import { SleekCalendar } from './ui/SleekCalendar';
+import { CustomAlert } from './ui/CustomAlert';
 
 interface DateRangeModalProps {
   isVisible: boolean;
@@ -28,7 +29,7 @@ export function DateRangeModal({ isVisible, onClose, onExport }: DateRangeModalP
 
   const handleExport = () => {
     if (fromDate > toDate) {
-      Alert.alert('Invalid Range', '"From" date cannot be after "To" date.');
+      CustomAlert.alert('Invalid Range', '"From" date cannot be after "To" date.');
       return;
     }
     onExport(fromDate, toDate);

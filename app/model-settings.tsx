@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { router } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { CustomAlert } from '../components/ui/CustomAlert';
 
 const MODEL_URL = 'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf';
 const MODEL_NAME = 'qwen2.5-1.5b-instruct-q4_k_m.gguf';
@@ -70,25 +71,25 @@ export default function ModelSettings() {
         const success = await initLocalModel(modelPath, true);
 
         if (success) {
-          Alert.alert('Success', 'Model downloaded and engine initialized for offline use.');
+          CustomAlert.alert('Success', 'Model downloaded and engine initialized for offline use.');
         } else {
-          Alert.alert('Download Finished', 'The model was downloaded but the engine failed to load it. Please restart the app.');
+          CustomAlert.alert('Download Finished', 'The model was downloaded but the engine failed to load it. Please restart the app.');
         }
       } else {
         const status = result?.status;
         console.error('[Model Settings] Download failed with status:', status);
-        Alert.alert('Download Failed', `Server returned status ${status || 'unknown'}.`);
+        CustomAlert.alert('Download Failed', `Server returned status ${status || 'unknown'}.`);
       }
     } catch (e: any) {
       console.error('[Model Settings] Download Error:', e);
-      Alert.alert('Download Error', `Failed to download: ${e.message || 'Unknown error'}`);
+      CustomAlert.alert('Download Error', `Failed to download: ${e.message || 'Unknown error'}`);
     } finally {
       setIsDownloading(false);
     }
   };
 
   const handleDelete = async () => {
-    Alert.alert(
+    CustomAlert.alert(
       'Delete Model',
       'Are you sure you want to remove the local LLM model from your device?',
       [
@@ -102,7 +103,7 @@ export default function ModelSettings() {
               await FileSystem.deleteAsync(modelPath);
               setHasModel(false);
             } catch (err) {
-              Alert.alert('Error', 'Failed to delete model file.');
+              CustomAlert.alert('Error', 'Failed to delete model file.');
             }
           }
         }
