@@ -419,6 +419,15 @@ export default function AIChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const mounted = useRef(true);
   const lastTriggerId = useRef<string | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const stopAI = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsTyping(false);
+    }
+  };
 
   const handleInputChange = (text: string) => {
     setInput(text);
@@ -487,6 +496,11 @@ export default function AIChatScreen() {
   const performSendMessage = async (text: string) => {
     if (!text.trim() || !mounted.current) return;
 
+    // Reset/Setup controller
+    if (abortControllerRef.current) abortControllerRef.current.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsTyping(true);
 
     const userMsg: Message = {
@@ -516,10 +530,11 @@ export default function AIChatScreen() {
         (token) => {
           // Collect tokens but don't update state to keep bubble hidden
           fullText += token;
-        }
+        },
+        controller.signal
       );
 
-      if (!mounted.current) return;
+      if (!mounted.current || controller.signal.aborted) return;
 
       // Final response is ready, add the AI message to the list
       const finalAiMsg: Message = {
@@ -532,6 +547,7 @@ export default function AIChatScreen() {
 
       setMessages(prev => [...prev, finalAiMsg]);
     } catch (error) {
+      if (controller.signal.aborted) return;
       console.error('Chat error:', error);
       const errorMsg: Message = {
         id: aiMsgId,
@@ -544,6 +560,7 @@ export default function AIChatScreen() {
     } finally {
       if (mounted.current) {
         setIsTyping(false);
+        abortControllerRef.current = null;
       }
     }
   };
@@ -629,27 +646,30 @@ export default function AIChatScreen() {
               </View>
             )}
 
-            <View className={`flex-row items-center p-2 pr-2`}>
+            <View className="flex-row items-center p-2">
               {(!input || input.length === 0) && (
-                <View className="pl-4 pr-1">
-                  <IconSymbol name="at" size={18} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
+                <View className="pl-3 pr-1">
+                  <IconSymbol name="at" size={16} color={isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.3)"} />
                 </View>
               )}
               <TextInput
                 value={input}
                 onChangeText={handleInputChange}
                 placeholder="Summon an expert..."
-                placeholderTextColor={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"}
-                className={`flex-1 ${(!input || input.length === 0) ? 'px-2' : 'px-5'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
+                placeholderTextColor={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"}
+                className={`flex-1 ${(!input || input.length === 0) ? 'px-1' : 'px-4'} py-3 text-[15px] font-bold ${isDark ? 'text-white' : 'text-black'}`}
                 multiline
               />
               <TouchableOpacity
-                onPress={sendMessage}
-                disabled={!input.trim()}
-                className={`h-12 w-12 rounded-full items-center justify-center ${input.trim() ? 'bg-primary' : (isDark ? 'bg-white/5' : 'bg-black/5')
-                  }`}
+                onPress={isTyping ? stopAI : sendMessage}
+                disabled={!isTyping && !input.trim()}
+                className={`h-12 w-12 rounded-full items-center justify-center ${isTyping || input.trim() ? 'bg-primary' : (isDark ? 'bg-white/5' : 'bg-black/5')}`}
               >
-                <IconSymbol name="arrow.up" size={24} color={input.trim() ? (isDark ? '#000' : '#FFF') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')} />
+                <IconSymbol 
+                  name={isTyping ? "stop.fill" : "arrow.up"} 
+                  size={isTyping ? 18 : 24} 
+                  color={(isTyping || input.trim()) ? (isDark ? '#000' : '#FFF') : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')} 
+                />
               </TouchableOpacity>
             </View>
           </BlurView>

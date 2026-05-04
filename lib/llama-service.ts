@@ -151,7 +151,8 @@ function sanitizeResponse(text: string, isFinancial: boolean): string {
 export async function generateLocalResponse(
   messages: { role: string; content: string }[],
   agentId?: string,
-  onToken?: (token: string) => void
+  onToken?: (token: string) => void,
+  signal?: AbortSignal
 ): Promise<string> {
   if (!modelState.initialized) {
     console.log('[Local LLM] Model not initialized, triggering init...');
@@ -205,6 +206,15 @@ export async function generateLocalResponse(
       let streamingOutput = '';
       const encounteredSentences = new Set<string>();
 
+      const abortHandler = () => {
+        console.log('[Local LLM] User triggered stop. Aborting native completion.');
+        modelState.context?.stopCompletion();
+      };
+      
+      if (signal) {
+        signal.addEventListener('abort', abortHandler);
+      }
+
       const result = await modelState.context.completion({
         messages: fullPrompt,
         n_predict: 512, // Reduced for faster response on mobile
@@ -233,6 +243,10 @@ export async function generateLocalResponse(
           }
         }
       });
+
+      if (signal) {
+        signal.removeEventListener('abort', abortHandler);
+      }
 
       const rawResponse = result.text || 'I could not generate a response.';
       const finalResponse = sanitizeResponse(rawResponse, isFinancial);

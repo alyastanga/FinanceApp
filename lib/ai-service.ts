@@ -33,7 +33,8 @@ export async function generateAIResponse(
   messages: { role: string; content: string }[],
   useLocal: boolean = false,
   agentId?: string,
-  onToken?: (token: string) => void
+  onToken?: (token: string) => void,
+  signal?: AbortSignal
 ) {
   const agent = agentId ? (AI_AGENTS[agentId] || DEFAULT_AGENT) : DEFAULT_AGENT;
 
@@ -105,9 +106,13 @@ export async function generateAIResponse(
         9. #a855f7 (Violet)
         NEVER use the same color for multiple categories.`;
 
-  // Add a 25-second timeout for the free tier
+  // Combine external signal with internal timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 40000);
+  
+  if (signal) {
+    signal.addEventListener('abort', () => controller.abort());
+  }
 
   try {
     let response;
@@ -176,7 +181,7 @@ export async function generateAIResponse(
       // Auto-fallback to local on API errors (quota, auth, etc)
       console.log(`[AI Assistant] ${userProvider} failed with error, falling back to local mode.`);
       await initLocalModel();
-      return generateLocalResponse(messages, agent.id, onToken);
+      return generateLocalResponse(messages, agent.id, onToken, controller.signal);
     }
 
     // Extract text based on provider format
@@ -198,7 +203,8 @@ export async function generateAIResponse(
     return resultText;
   } catch (error: any) {
     clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
+    if (error.name === 'AbortError' || controller.signal.aborted) {
+      if (signal?.aborted) return "Generation stopped by user.";
       return "The AI is taking too long to respond (Free Tier Limit). Please try a shorter question or try again in a moment.";
     }
     // Network failure — auto-fallback to local
