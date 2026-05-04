@@ -19,10 +19,11 @@ import { useTheme } from '../../context/ThemeContext';
 interface SafeToSpendViewProps {
   amount: number;
   totalMonthlyIncome: number;
+  spentToday?: number;
   isDark?: boolean;
 }
 
-export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: isDarkProp }: SafeToSpendViewProps) {
+export default function SafeToSpendView({ amount, totalMonthlyIncome, spentToday = 0, isDark: isDarkProp }: SafeToSpendViewProps) {
   const { isDark: themeIsDark } = useTheme();
   const isDark = isDarkProp !== undefined ? isDarkProp : themeIsDark;
   const { format } = useCurrency();
@@ -36,24 +37,22 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: is
   // Animated progress (0 to 1)
   const progress = useSharedValue(0);
 
-  // Calculate percentage used
-  const used = Math.max(0, totalMonthlyIncome - amount);
-  const percentage = totalMonthlyIncome > 0 ? Math.min(1.2, used / totalMonthlyIncome) : 0;
+  // Calculate SAFETY percentage (how much is LEFT)
+  const dailyAllowance = amount + spentToday;
+  const percentage = dailyAllowance > 0 
+    ? Math.min(1, Math.max(0, amount / dailyAllowance)) 
+    : (amount > 0 ? 1 : 0);
 
   useEffect(() => {
+    // Ensure the animation actually runs by checking the percentage
     progress.value = withTiming(percentage, { duration: 1500 });
   }, [percentage]);
 
-  const animatedEnd = useDerivedValue(() => {
-    // Semi-circle is 180 degrees (0.5 of a full circle)
-    return progress.value * 0.5;
-  });
-
-  // Health color logic
+  // Safety color logic
   const getStatusColor = (p: number) => {
-    if (p > 0.9) return '#ef4444'; // Red
-    if (p > 0.7) return '#f59e0b'; // Amber
-    return '#10b981'; // Green
+    if (p < 0.1) return '#ef4444'; // Red (Almost out of money)
+    if (p < 0.3) return '#f59e0b'; // Amber (Getting low)
+    return '#10b981'; // Green (Safe)
   };
 
   const statusColor = getStatusColor(percentage);
@@ -61,7 +60,12 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: is
   // Background arc path (Semi-circle at the top)
   const backgroundPath = useMemo(() => {
     const p = Skia.Path.Make();
-    const rect = Skia.XYWHRect(strokeWidth / 2, strokeWidth / 2 + canvasPadding, size - strokeWidth, size - strokeWidth);
+    const rect = Skia.XYWHRect(
+      strokeWidth / 2, 
+      strokeWidth / 2 + canvasPadding, 
+      size - strokeWidth, 
+      size - strokeWidth
+    );
     p.addArc(rect, 180, 180);
     return p;
   }, [size, canvasPadding]);
@@ -70,17 +74,22 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: is
   const progressPath = useDerivedValue(() => {
     const p = Skia.Path.Make();
     // Path goes from 180 to 180 + (180 * progress)
-    const sweep = Math.min(180, progress.value * 180);
-    const rect = Skia.XYWHRect(strokeWidth / 2, strokeWidth / 2 + canvasPadding, size - strokeWidth, size - strokeWidth);
+    const sweep = Math.min(180, Math.max(0.1, progress.value * 180));
+    const rect = Skia.XYWHRect(
+      strokeWidth / 2, 
+      strokeWidth / 2 + canvasPadding, 
+      size - strokeWidth, 
+      size - strokeWidth
+    );
     p.addArc(rect, 180, sweep);
     return p;
   });
 
   return (
     <View className="items-center justify-center py-8">
-      <View style={{ width: size, height: (size / 2) + canvasPadding + 60 }} className="items-center justify-center">
+      <View style={{ width: size, height: (size / 2) + canvasPadding + 40 }} className="items-center justify-center relative">
         {totalMonthlyIncome > 0 ? (
-          <Canvas style={{ width: size, height: (size / 2) + canvasPadding + 60 }}>
+          <Canvas style={{ width: size, height: (size / 2) + canvasPadding + 40 }} className="absolute z-0">
             {/* Background Track */}
             <Path
               path={backgroundPath}
@@ -105,7 +114,7 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: is
           <View 
             style={{ 
               width: size - strokeWidth, 
-              height: radius + canvasPadding, 
+              height: (size / 2) - strokeWidth / 2, 
               borderRadius: radius,
               borderWidth: strokeWidth,
               borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
@@ -138,7 +147,7 @@ export default function SafeToSpendView({ amount, totalMonthlyIncome, isDark: is
 
           <View className={`mt-6 px-4 py-1.5 ${isDark ? 'bg-white/5' : 'bg-black/5'} rounded-full border ${isDark ? 'border-white/10' : 'border-black/10'}`}>
             <Text className={`${isDark ? 'text-white/60' : 'text-black/60'} text-[8px] font-black uppercase tracking-widest`}>
-              {percentage > 0.9 ? 'Budget Exhausted' : percentage > 0.7 ? 'Caution: Slow Down' : 'Spending Power: High'}
+              {percentage < 0.1 ? 'Budget Exhausted' : percentage < 0.3 ? 'Caution: Slow Down' : 'Spending Power: High'}
             </Text>
           </View>
         </View>

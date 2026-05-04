@@ -9,7 +9,8 @@ export interface BudgetInsights {
   monthlyFixedExpenses: number;
   monthlyGoalTarget: number;
   remainingDays: number;
-  variableSpent: number; // Exposing variableSpent for calculations later if needed
+  variableSpent: number;
+  spentToday: number;
   allTimeBalance: number;
 }
 
@@ -102,32 +103,22 @@ export const calculateBudgetInsights = (
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const remainingDays = Math.max(1, daysInMonth - now.getDate() + 1);
 
-  // 1. Calculate Monthly Income 
+  // 1. Calculate Monthly Income (Actual current month)
   const currentMonthIncomes = incomes.filter(i => {
     const t = normalizeDate(i);
-    return t >= new Date(currentYear, currentMonth, 1).getTime();
-  });
-  const actualCurrentMonthIncome = currentMonthIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
-
-  // LOGIC: Calculate a true 90-day historical average for better projection
-  const ninetyDaysAgo = new Date();
-  ninetyDaysAgo.setDate(now.getDate() - 90);
-
-  const historicalIncomes = incomes.filter(i => {
-    const t = normalizeDate(i);
-    return t >= ninetyDaysAgo.getTime();
+    if (t === 0) return false;
+    const d = new Date(t);
+    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
   });
 
-  // Calculate sum and divide by exactly 3 months
-  const sum90Days = historicalIncomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
-  const avgMonthlyIncome = sum90Days / 3;
+  const actualCurrentMonthIncome = currentMonthIncomes.reduce((acc, curr) => 
+    acc + convertFn((curr.amount || 0), curr.currency || curr._currency || baseCurrency), 0
+  );
+  
+  // Use actual income received this month for all calculations
+  const projectedIncome = actualCurrentMonthIncome;
 
-  // Decide on Projected Income:
-  // Use Actual if it's already higher than average, or if average is 0.
-  // Otherwise use average to help with Safe to Spend at the start of the month.
-  const projectedIncome = Math.max(actualCurrentMonthIncome, avgMonthlyIncome);
-
-  // 2. Calculate Fixed Monthly Expenses 
+  // 2. Calculate Fixed Monthly Expenses (Reserved upfront)
   const monthExpenses = expenses.filter(e => {
     const t = normalizeDate(e);
     if (t === 0) return false;
@@ -137,64 +128,106 @@ export const calculateBudgetInsights = (
 
   const fixedCategories = [
     'Rent', 'Housing', 'Mortgage', 'Subscription', 'Utilities', 
-    'Insurance', 'Loan', 'Debt', 'Internet', 'Telecommunications',
-    'Bills', 'Education', 'Health'
+    'Internet', 'Insurance', 'Loan', 'Debt', 'Bills', 'Education', 'Health'
   ].map(c => c.toLowerCase());
 
-  // Proactive Fixed Expenses: Use Budget limits for fixed categories if they exist, 
-  // otherwise fallback to actual current month logs.
-  const fixedBudgetTotal = budgets
-    .filter(b => fixedCategories.includes((b.category || b._category || '').toLowerCase()))
-    .reduce((sum, b) => sum + convertFn(b.amountLimit || b.amount_limit || 0, b.currency || b._currency || baseCurrency), 0);
+  // Find all unique fixed/committed categories present in budgets or actual expenses.
+  const allFixedCategories = new Set<string>();
+  fixedCategories.forEach(cat => allFixedCategories.add(cat));
 
-  const actualFixedSpent = monthExpenses
-    .filter(e => {
-      const cat = (e.category || e._category || '').toLowerCase();
-      return fixedCategories.includes(cat);
-    })
-    .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
+  let monthlyFixed = 0;
 
-  // We reserve the Budget amount if it's set, or the Actual if it's already over budget
-  const monthlyFixed = Math.max(fixedBudgetTotal, actualFixedSpent);
+  // We reserve the Budget amount if it's set, or the Actual if it's already over budget, PER CATEGORY
+  allFixedCategories.forEach(cat => {
+    const budgetForCat = budgets
+      .filter(b => (b.category || b._category || '').toLowerCase() === cat)
+      .reduce((sum, b) => sum + convertFn(b.amountLimit || b.amount_limit || 0, b.currency || b._currency || baseCurrency), 0);
 
-  // 3. Calculate Monthly Goal Contributions
+    const actualForCat = monthExpenses
+      .filter(e => (e.category || e._category || '').toLowerCase() === cat)
+      .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
+
+    monthlyFixed += Math.max(budgetForCat, actualForCat);
+  });
+
+  // 3. Calculate Monthly Goal Contributions (Pay Yourself First)
   let totalGoalContributionRequired = 0;
+  const goalBreakdown: any[] = [];
+
   goals.forEach(g => {
-    const targetAmt = convertFn(g.targetAmount || g._targetAmount || 0, g.currency || g._currency || baseCurrency);
-    const currentAmt = convertFn(g.currentAmount || g._currentAmount || 0, g.currency || g._currency || baseCurrency);
+    const targetAmt = convertFn(g.targetAmount || g.target_amount || 0, g.currency || g._currency || baseCurrency);
+    const currentAmt = convertFn(g.currentAmount || g.current_amount || 0, g.currency || g._currency || baseCurrency);
     const remaining = targetAmt - currentAmt;
     if (remaining <= 0) return;
 
-    const targetDate = new Date(g.targetCompletionDate || g.target_completion_date);
-    const monthsDiff = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
+    const targetDate = new Date(g.targetCompletionDate || g.target_date || g.target_completion_date);
+    if (!targetDate || isNaN(targetDate.getTime())) return;
 
-    const monthlyNeeded = remaining / Math.max(1, monthsDiff);
+    // Calculate months inclusive of the current month
+    const monthsDiff = (targetDate.getFullYear() - now.getFullYear()) * 12 + (targetDate.getMonth() - now.getMonth());
+    const divisor = Math.max(1, monthsDiff);
+    const monthlyNeeded = remaining / divisor;
+    console.log(`[BudgetEngine] Goal "${g.name || 'Untitled'}" - Remaining: ${remaining.toFixed(2)}, Months: ${divisor}, Needed: ${monthlyNeeded.toFixed(2)}`);
+    
     totalGoalContributionRequired += monthlyNeeded;
+    goalBreakdown.push({
+      name: g.name || 'Untitled Goal',
+      remaining,
+      monthsLeft: divisor,
+      monthlyNeeded
+    });
   });
 
-  // 4. Calculate Safe to Spend
-  // Formula: (Projected Income - Fixed - Goals) / Remaining Days
+  console.log('[BudgetEngine] Goal Breakdown:', goalBreakdown);
+
+  // 4. Calculate Variable Spending So far
   const variableSpent = monthExpenses
     .filter(e => {
       const cat = (e.category || e._category || '').toLowerCase();
-      return !fixedCategories.includes(cat);
+      return !allFixedCategories.has(cat);
     })
     .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
-  const netAvailable = projectedIncome - monthlyFixed - totalGoalContributionRequired - variableSpent;
-  const dailySafeToSpend = netAvailable / remainingDays;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStart = today.getTime();
+  const todayEnd = todayStart + (24 * 60 * 60 * 1000) - 1;
+
+  const spentToday = monthExpenses
+    .filter(e => {
+      const t = normalizeDate(e);
+      const cat = (e.category || e._category || '').toLowerCase();
+      return t >= todayStart && t <= todayEnd && !allFixedCategories.has(cat);
+    })
+    .reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
+
+  // 5. Calculate Safe to Spend (User Formula)
+  // (Projected Income - Fixed - Goals - Variable Spending So Far) / Remaining Days
+  const remainingSurplus = projectedIncome - monthlyFixed - totalGoalContributionRequired - variableSpent;
+  const safeToSpendToday = remainingSurplus / remainingDays;
+
+  console.log('[BudgetEngine] User Specific Formula (Actual Income):', {
+    actualIncome: projectedIncome,
+    monthlyFixed,
+    goalsReserved: totalGoalContributionRequired,
+    variableSpentSoFar: variableSpent,
+    remainingSurplus,
+    remainingDays,
+    safeToSpendToday
+  });
 
   const allTimeIncome = incomes.reduce((sum, i) => sum + convertFn(i.amount || 0, i.currency || i._currency || baseCurrency), 0);
   const allTimeExpense = expenses.reduce((sum, e) => sum + convertFn(e.amount || 0, e.currency || e._currency || baseCurrency), 0);
 
   return {
-    dailySafeToSpend: Math.max(0, dailySafeToSpend),
+    dailySafeToSpend: Math.max(0, safeToSpendToday),
     monthlyIncome: projectedIncome,
     actualIncome: actualCurrentMonthIncome,
     monthlyFixedExpenses: monthlyFixed,
     monthlyGoalTarget: totalGoalContributionRequired,
     remainingDays,
     variableSpent,
+    spentToday,
     allTimeBalance: allTimeIncome - allTimeExpense
   };
 };

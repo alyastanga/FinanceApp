@@ -19,6 +19,7 @@ import { calculateBudgetInsights } from '@/lib/budget-engine';
 import { useAI } from '../../context/AIContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useTheme } from '../../context/ThemeContext';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 
 interface BudgetScreenProps {
   budgets: any[];
@@ -74,16 +75,31 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       spent: expenseMap[b.category] || 0
     })).sort((a, b) => b.limit - a.limit);
 
-    const totalAlloc = budgets.reduce((acc, b) => acc + convertFrom(b.amountLimit, b.currency || currency), 0);
+    const totalAlloc = budgets.reduce((acc, b) => acc + convertFrom(b.amountLimit || b.amount_limit || 0, b.currency || b._currency || currency), 0);
     const totalSpt = (Object.values(expenseMap) as number[]).reduce((acc, amt) => acc + amt, 0);
 
-    const insights = calculateBudgetInsights(incomes, expenses, [], budgets, convertFrom, currency); // temp goals check later
+    const insights = calculateBudgetInsights(incomes, expenses, [], budgets, convertFrom, currency); 
     const mIncome = insights.monthlyIncome;
 
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const currentDay = Math.max(now.getDate(), 1);
-    const dailyLimit = totalAlloc / daysInMonth;
-    const currentVelocity = totalSpt / currentDay;
+    
+    // Daily Limit should be based on the total discretionary budget (Income - Fixed - Goals)
+    const totalDiscretionaryMonth = mIncome - insights.monthlyFixedExpenses - insights.monthlyGoalTarget;
+    const dailyLimit = Math.max(0, totalDiscretionaryMonth / daysInMonth);
+    
+    // Current Velocity should only track VARIABLE spending speed
+    const currentVelocity = insights.variableSpent / currentDay;
+
+    console.log('[BudgetAnalysis] Calculation Debug:', {
+      totalAlloc,
+      totalSpt,
+      mIncome,
+      fixed: insights.monthlyFixedExpenses,
+      variableSpent: insights.variableSpent,
+      dailyLimit,
+      currentVelocity
+    });
 
     return {
       categoryData: comparisons,
@@ -94,7 +110,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
         dailyLimit,
         currentVelocity,
         isSlower: currentVelocity < dailyLimit,
-        variance: Math.abs(1 - (currentVelocity / dailyLimit)) * 100
+        variance: dailyLimit > 0 ? Math.abs(1 - (currentVelocity / dailyLimit)) * 100 : 0
       }
     };
   }, [budgets, expenses, incomes, convertFrom, currency]);
@@ -114,9 +130,9 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
     try {
       await applyAIAllocation(aiSuggestions);
       setAiSuggestions(null);
-      Alert.alert("Success", "AI suggested budget applied successfully!");
+      CustomAlert.alert("Success", "AI suggested budget applied successfully!");
     } catch {
-      Alert.alert("Error", "Failed to apply budget.");
+      CustomAlert.alert("Error", "Failed to apply budget.");
     }
   };
 
@@ -127,7 +143,7 @@ const BudgetScreenBase = ({ budgets, expenses, incomes }: BudgetScreenProps) => 
       setNewCategoryName('');
       setIsAddingCategory(false);
     } catch {
-      Alert.alert("Error", "Could not add category.");
+      CustomAlert.alert("Error", "Could not add category.");
     }
   };
 
