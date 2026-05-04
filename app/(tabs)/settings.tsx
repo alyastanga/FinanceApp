@@ -5,9 +5,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
 import { Link, router } from 'expo-router';
 import React from 'react';
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { seedDatabase } from '../../_tests_dev/seed';
+import { CustomAlert } from '../../components/ui/CustomAlert';
 import { VaultUnlockModal } from '../../components/VaultUnlockModal';
 import { useAI } from '../../context/AIContext';
 import { SUPPORTED_CURRENCIES, useCurrency } from '../../context/CurrencyContext';
@@ -20,6 +21,7 @@ import { clearAllUserData, clearCloudData, clearLocalData } from '../../lib/data
 import { EmailService } from '../../lib/email-service';
 import { ExportTransaction, exportTransactionsToCSV } from '../../lib/export-service';
 import { clearActiveDEK, E2EEState, getE2EEState, unlockVault } from '../../lib/key-manager';
+import { NotificationService } from '../../lib/notification-service';
 import { syncData } from '../../lib/sync';
 
 export default function SettingsScreen() {
@@ -54,6 +56,9 @@ export default function SettingsScreen() {
         const aiProvider = await AsyncStorage.getItem('cloud_ai_provider');
         const currentProvider = aiProvider || 'gemini';
 
+        // Check real notification permission status
+        const notificationStatus = await NotificationService.getPermissionStatusAsync();
+
         if (isMounted) {
           setE2eeState(state);
           setIsGmailConnected(!!token);
@@ -61,6 +66,7 @@ export default function SettingsScreen() {
           setCloudAiKey(loadedKeys[currentProvider] || '');
           if (aiModel) setCloudAiModel(aiModel);
           if (aiProvider) setCloudAiProvider(currentProvider);
+          setNotificationsEnabled(notificationStatus === 'granted');
         }
       };
       fetchState();
@@ -71,7 +77,7 @@ export default function SettingsScreen() {
   const handleManualSync = async () => {
     const state = await getE2EEState();
     if (state.isEnabled && state.isVaultLocked) {
-      Alert.alert(
+      CustomAlert.alert(
         "Vault Locked",
         "Your cloud data is encrypted. Please unlock your vault in the 'Security & Encryption' section before syncing.",
         [{ text: "OK" }]
@@ -82,17 +88,25 @@ export default function SettingsScreen() {
     setIsSyncing(true);
     try {
       await syncData();
-      Alert.alert("Sync Complete", "Your local data is now synchronized with the cloud.");
+
+      if (notificationsEnabled) {
+        await NotificationService.sendLocalNotificationAsync(
+          "Sync Complete",
+          "Your local data is now synchronized with the cloud."
+        );
+      } else {
+        CustomAlert.alert("Sync Complete", "Your local data is now synchronized with the cloud.");
+      }
     } catch (error: any) {
       console.error('Manual Sync Error:', error);
-      Alert.alert("Sync Failed", error.message || "An error occurred during synchronization.");
+      CustomAlert.alert("Sync Failed", error.message || "An error occurred during synchronization.");
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleSeed = async () => {
-    Alert.alert(
+    CustomAlert.alert(
       "Seed Database",
       "This will wipe all current local data and replace it with mock data for testing. Proceed?",
       [
@@ -103,9 +117,9 @@ export default function SettingsScreen() {
           onPress: async () => {
             const success = await seedDatabase();
             if (success) {
-              Alert.alert("Success", "Database seeded with Mission Control mock data.");
+              CustomAlert.alert("Success", "Database seeded with Mission Control mock data.");
             } else {
-              Alert.alert("Error", "Seeding failed. Check console for details.");
+              CustomAlert.alert("Error", "Seeding failed. Check console for details.");
             }
           }
         }
@@ -149,7 +163,7 @@ export default function SettingsScreen() {
       ].sort((a, b) => b.createdAt - a.createdAt);
 
       if (allTransactions.length === 0) {
-        Alert.alert('No Data', 'No transactions found for the selected period.');
+        CustomAlert.alert('No Data', 'No transactions found for the selected period.');
         return;
       }
 
@@ -157,7 +171,7 @@ export default function SettingsScreen() {
       setShowExportModal(false);
     } catch (error: any) {
       console.error('Export Error:', error);
-      Alert.alert("Export Failed", error.message || "An error occurred during export.");
+      CustomAlert.alert("Export Failed", error.message || "An error occurred during export.");
     } finally {
       setIsExporting(false);
     }
@@ -165,7 +179,7 @@ export default function SettingsScreen() {
 
   const handleConnectGmail = async () => {
     if (isGmailConnected) {
-      Alert.alert("Disconnect", "Are you sure you want to disconnect your Gmail?", [
+      CustomAlert.alert("Disconnect", "Are you sure you want to disconnect your Gmail?", [
         { text: "Cancel", style: "cancel" },
         {
           text: "Disconnect", style: "destructive", onPress: async () => {
@@ -178,14 +192,14 @@ export default function SettingsScreen() {
     } else {
       // In a real app, this would trigger the Google OAuth flow
       // For now, we simulate the connection for the user to test the UI/Logic
-      Alert.alert("Connect Gmail", "This will redirect you to Google to grant read-only access to your emails.", [
+      CustomAlert.alert("Connect Gmail", "This will redirect you to Google to grant read-only access to your emails.", [
         { text: "Cancel", style: "cancel" },
         {
           text: "Connect", onPress: async () => {
             await AsyncStorage.setItem('gmail_oauth_token', 'mock_token');
             await EmailService.initializeSync(); // Only upcoming emails
             setIsGmailConnected(true);
-            Alert.alert("Connected", "Only new emails received from now on will be processed.");
+            CustomAlert.alert("Connected", "Only new emails received from now on will be processed.");
           }
         }
       ]);
@@ -197,12 +211,12 @@ export default function SettingsScreen() {
     try {
       const result = await EmailService.syncIncomingTransactions();
       if (result.status === 'no_new_emails') {
-        Alert.alert("No New Transactions", "No upcoming bank emails found since the last check.");
+        CustomAlert.alert("No New Transactions", "No upcoming bank emails found since the last check.");
       } else if (result.status === 'success') {
-        Alert.alert("Sync Success", `Successfully parsed and added ${result.processed} new transactions.`);
+        CustomAlert.alert("Sync Success", `Successfully parsed and added ${result.processed} new transactions.`);
       }
     } catch (err: any) {
-      Alert.alert("Sync Error", err.message || "Could not fetch emails.");
+      CustomAlert.alert("Sync Error", err.message || "Could not fetch emails.");
     } finally {
       setIsEmailSyncing(false);
     }
@@ -231,10 +245,11 @@ export default function SettingsScreen() {
           <Text className={`text-2xl font-black tracking-tighter ${textClass} mb-1`}>Settings</Text>
         </View>
 
-        {/* Preferences Section */}
+        {/* 1. General Preferences Section */}
         <View className="mb-gsd-lg">
-          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Preferences</Text>
+          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>General Preferences</Text>
           <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            {/* Dark Mode */}
             <View className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}>
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="moon.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
@@ -247,6 +262,57 @@ export default function SettingsScreen() {
               />
             </View>
 
+            {/* Primary Currency */}
+            <View className={`p-4 border-b ${borderClass}`}>
+              <View className="flex-row items-center gap-x-3 mb-4">
+                <IconSymbol name="dollarsign.circle.fill" size={20} color="#10b981" />
+                <View>
+                  <Text className={`${textClass} font-bold text-base`}>Primary Currency</Text>
+                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Live Exchange Rates</Text>
+                </View>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ columnGap: 12 }}
+              >
+                {[...SUPPORTED_CURRENCIES].sort((a, b) => a.code === currency ? -1 : b.code === currency ? 1 : 0).map((c) => {
+                  const isSelected = currency === c.code;
+                  return (
+                    <TouchableOpacity
+                      key={c.code}
+                      onPress={() => setCurrency(c.code)}
+                      className={`px-6 py-4 rounded-2xl border ${isSelected ? 'bg-primary border-primary' : (isDark ? 'bg-white/5 border-white/5' : 'bg-neutral-100 border-neutral-200')}`}
+                    >
+                      <Text className={`text-base font-black ${isSelected ? 'text-[#050505]' : textClass}`}>{isSelected ? c.symbol : c.symbol}</Text>
+                      <Text className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-[#050505]/60' : subTextClass}`}>{c.code}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            {/* Notifications */}
+            <Link href="/settings/notifications" asChild>
+              <TouchableOpacity className="flex-row items-center justify-between p-4">
+                <View className="flex-row items-center gap-x-3">
+                  <IconSymbol name="bell.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
+                  <View>
+                    <Text className={`${textClass} font-medium text-base`}>Notifications</Text>
+                    <Text className={`text-[10px] ${subTextClass} font-black uppercase tracking-widest`}>Thresholds & Summaries</Text>
+                  </View>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
+              </TouchableOpacity>
+            </Link>
+          </View>
+        </View>
+
+        {/* 2. AI & Automation Section */}
+        <View className="mb-gsd-lg">
+          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>AI & Automation</Text>
+          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            {/* AI Intelligence */}
             <View className={`p-4 border-b ${borderClass}`}>
               <View className="flex-row items-center justify-between mb-3">
                 <View className="flex-row items-center gap-x-3">
@@ -278,60 +344,8 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-row items-center justify-between p-4">
-              <View className="flex-row items-center gap-x-3">
-                <IconSymbol name="bell.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                <Text className={`${textClass} font-medium text-base`}>Notifications</Text>
-              </View>
-              <Switch
-                value={notificationsEnabled}
-                onValueChange={setNotificationsEnabled}
-                trackColor={{ false: "#ccc", true: "#10b981" }}
-              />
-            </View>
-          </View>
-        </View>
-
-        {/* Financial Context Section */}
-        <View className="mb-gsd-lg">
-          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Financial Context</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} p-4`}>
-            <View className="flex-row items-center gap-x-3 mb-6">
-              <IconSymbol name="dollarsign.circle.fill" size={20} color="#10b981" />
-              <View>
-                <Text className={`${textClass} font-bold text-base`}>Primary Currency</Text>
-                <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Live Exchange Rates</Text>
-              </View>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ columnGap: 12 }}
-            >
-              {[...SUPPORTED_CURRENCIES].sort((a, b) => a.code === currency ? -1 : b.code === currency ? 1 : 0).map((c) => {
-                const isSelected = currency === c.code;
-                return (
-                  <TouchableOpacity
-                    key={c.code}
-                    onPress={() => setCurrency(c.code)}
-                    className={`px-6 py-4 rounded-2xl border ${isSelected ? 'bg-primary border-primary' : (isDark ? 'bg-white/5 border-white/5' : 'bg-neutral-100 border-neutral-200')}`}
-                  >
-                    <Text className={`text-base font-black ${isSelected ? 'text-[#050505]' : textClass}`}>{isSelected ? c.symbol : c.symbol}</Text>
-                    <Text className={`text-[9px] font-black uppercase tracking-widest mt-1 ${isSelected ? 'text-[#050505]/60' : subTextClass}`}>{c.code}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        </View>
-
-        {/* Integrations Section */}
-        <View className="mb-gsd-lg">
-          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Integrations</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
-            {/* Gmail Transaction Parser */}
-            <View className={`p-4 border-b ${borderClass}`}>
+            {/* Bank Email Parser */}
+            <View className={`p-4`}>
               <View className="flex-row items-center justify-between mb-4">
                 <View className="flex-row items-center gap-x-3">
                   <IconSymbol name="envelope.fill" size={20} color="#10b981" />
@@ -363,24 +377,43 @@ export default function SettingsScreen() {
                 </TouchableOpacity>
               )}
             </View>
-
-            <TouchableOpacity className={`flex-row items-center justify-between p-4`}>
-              <View className="flex-row items-center gap-x-3">
-                <IconSymbol name="calendar.badge.plus" size={20} color="#10b981" />
-                <View>
-                  <Text className={`${textClass} font-medium text-base`}>Connect Google Calendar</Text>
-                  {/* <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-widest`}>Available in Pro</Text> */}
-                </View>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
-            </TouchableOpacity>
           </View>
         </View>
 
-        {/* Cloud & Security Hub */}
+        {/* 3. Account & Security Section */}
         <View className="mb-gsd-lg">
+          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Account & Security</Text>
+          
+          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden mb-4`}>
+            {/* Profile Settings */}
+            <Link href="/settings/profile" asChild>
+              <TouchableOpacity className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}>
+                <View className="flex-row items-center gap-x-3">
+                  <IconSymbol name="person.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
+                  <Text className={`${textClass} font-medium text-base`}>Profile Settings</Text>
+                </View>
+                <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
+              </TouchableOpacity>
+            </Link>
+
+            {/* Biometric App Lock */}
+            <View className={`flex-row items-center justify-between p-4`}>
+              <View className="flex-row items-center gap-x-3">
+                <IconSymbol name="lock.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
+                <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
+              </View>
+              <Switch
+                value={isBiometricsEnabled}
+                onValueChange={toggleBiometrics}
+                disabled={!canAuthenticate}
+                trackColor={{ false: "#ccc", true: "#10b981" }}
+              />
+            </View>
+          </View>
+
+          {/* Cloud Intelligence & Vault */}
           <View className="flex-row justify-between items-end mb-2 ml-2">
-            <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] opacity-30`}>Cloud & Security Hub</Text>
+            <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] opacity-30`}>Cloud & Vault</Text>
             {e2eeState?.isEnabled && (
               <View className="flex-row items-center gap-x-1.5">
                 <View className={`w-1.5 h-1.5 rounded-full ${e2eeState.isVaultLocked ? 'bg-red-500' : 'bg-emerald-500'}`} />
@@ -393,32 +426,31 @@ export default function SettingsScreen() {
 
           <View className={`${cardBgClass} rounded-[40px] border ${borderClass} overflow-hidden shadow-2xl shadow-primary/5`}>
             {/* Main Sync & Status Row */}
-            <View className="p-8">
-              <View className="flex-row justify-between items-start mb-6">
-                <View className="flex-1 mr-4">
-                  <Text className={`text-2xl font-black ${textClass} tracking-tight mb-1`}>
-                    {isSyncing ? 'Syncing...' : 'Cloud Intelligence'}
-                  </Text>
-                  <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-[2px]`}>
-                    {e2eeState?.isEnabled ? 'Zero-Knowledge AES-256' : 'Standard Supabase Protection'}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={handleManualSync}
-                  disabled={isSyncing}
-                  className={`h-12 w-12 rounded-2xl items-center justify-center ${isDark ? 'bg-primary/10 border border-primary/20' : 'bg-primary/20 border border-primary/30'}`}
-                >
-                  {isSyncing ? (
-                    <ActivityIndicator size="small" color="#10b981" />
-                  ) : (
-                    <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#10b981" />
-                  )}
-                </TouchableOpacity>
+            <View className="p-8 items-center">
+              <View className="items-center mb-6">
+                <Text className={`text-2xl font-black ${textClass} tracking-tight mb-1 text-center`}>
+                  {isSyncing ? 'Syncing...' : 'Cloud Intelligence'}
+                </Text>
+                <Text className={`text-[10px] ${subTextClass} uppercase font-black tracking-[2px] text-center`}>
+                  {e2eeState?.isEnabled ? 'Zero-Knowledge AES-256' : 'Standard Supabase Protection'}
+                </Text>
               </View>
+
+              <TouchableOpacity
+                onPress={handleManualSync}
+                disabled={isSyncing}
+                className={`h-12 w-12 rounded-2xl items-center justify-center mb-6 ${isDark ? 'bg-primary/10 border border-primary/20' : 'bg-primary/20 border border-primary/30'}`}
+              >
+                {isSyncing ? (
+                  <ActivityIndicator size="small" color="#10b981" />
+                ) : (
+                  <IconSymbol name="arrow.triangle.2.circlepath" size={20} color="#10b981" />
+                )}
+              </TouchableOpacity>
 
               {/* Action Area */}
               {e2eeState?.isEnabled ? (
-                <View className="gap-y-3">
+                <View className="gap-y-3 w-full">
                   {e2eeState.isVaultLocked ? (
                     <TouchableOpacity
                       onPress={() => setShowVaultModal(true)}
@@ -427,7 +459,7 @@ export default function SettingsScreen() {
                       <Text className="text-[#050505] font-black text-xs uppercase tracking-widest">Unlock Encryption Vault</Text>
                     </TouchableOpacity>
                   ) : (
-                    <View className="flex-row gap-x-3">
+                    <View className="flex-row gap-x-3 w-full">
                       <Link href="/settings/dek-rotation" asChild>
                         <TouchableOpacity className={`flex-1 py-3 rounded-2xl border ${isDark ? 'bg-white/5 border-white/5' : 'bg-black/5 border-black/10'} items-center`}>
                           <Text className={`${textClass} font-bold text-[10px] uppercase tracking-widest`}>Rotate Keys</Text>
@@ -453,7 +485,7 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <View className="gap-y-3">
+                <View className="gap-y-3 w-full">
                   <Link href="/onboarding/e2ee-setup" asChild>
                     <TouchableOpacity className="bg-emerald-500/10 border border-emerald-500/20 py-4 rounded-2xl items-center">
                       <Text className="text-emerald-500 font-black text-xs uppercase tracking-widest">Enable End-to-End Encryption</Text>
@@ -472,39 +504,11 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Account & Privacy Section */}
+        {/* 4. Data & Advanced Section */}
         <View className="mb-gsd-lg">
-          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Account & Privacy</Text>
+          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Data & Advanced</Text>
           <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
-            <View className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}>
-              <View className="flex-row items-center gap-x-3">
-                <IconSymbol name="lock.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                <Text className={`${textClass} font-medium text-base`}>Biometric App Lock</Text>
-              </View>
-              <Switch
-                value={isBiometricsEnabled}
-                onValueChange={toggleBiometrics}
-                disabled={!canAuthenticate}
-                trackColor={{ false: "#ccc", true: "#10b981" }}
-              />
-            </View>
-
-            <Link href="/settings/profile" asChild>
-              <TouchableOpacity className="flex-row items-center justify-between p-4">
-                <View className="flex-row items-center gap-x-3">
-                  <IconSymbol name="person.fill" size={20} color={isDark ? "rgba(255,255,255,0.7)" : "#666"} />
-                  <Text className={`${textClass} font-medium text-base`}>Profile Settings</Text>
-                </View>
-                <IconSymbol name="chevron.right" size={20} color={isDark ? "rgba(255,255,255,0.3)" : "#999"} />
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-
-        {/* Data Management Section */}
-        <View className="mb-gsd-lg">
-          <Text className={`text-[10px] font-black ${textClass} uppercase tracking-[3px] ml-2 mb-2 opacity-30`}>Data Management</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            {/* Data Hub */}
             <Link href="/data-hub" asChild>
               <TouchableOpacity className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}>
                 <View className="flex-row items-center gap-x-3">
@@ -518,9 +522,10 @@ export default function SettingsScreen() {
               </TouchableOpacity>
             </Link>
 
+            {/* Clear Database */}
             <TouchableOpacity
               onPress={async () => {
-                Alert.alert(
+                CustomAlert.alert(
                   "Clear Data",
                   "Choose which data you would like to remove. This action is permanent.",
                   [
@@ -529,14 +534,14 @@ export default function SettingsScreen() {
                       text: "Local Only",
                       onPress: async () => {
                         const success = await clearLocalData();
-                        if (success) Alert.alert("Success", "Local database and keys have been wiped.");
+                        if (success) CustomAlert.alert("Success", "Local database and keys have been wiped.");
                       }
                     },
                     {
                       text: "Cloud Only",
                       onPress: async () => {
                         const success = await clearCloudData();
-                        if (success) Alert.alert("Success", "Cloud records and key backups have been removed.");
+                        if (success) CustomAlert.alert("Success", "Cloud records and key backups have been removed.");
                       }
                     },
                     {
@@ -544,26 +549,21 @@ export default function SettingsScreen() {
                       style: "destructive",
                       onPress: async () => {
                         const success = await clearAllUserData();
-                        if (success) Alert.alert("Success", "All local and cloud records have been removed.");
+                        if (success) CustomAlert.alert("Success", "All local and cloud records have been removed.");
                       }
                     }
                   ]
                 );
               }}
-              className="flex-row items-center justify-between p-4"
+              className={`flex-row items-center justify-between p-4 border-b ${borderClass}`}
             >
               <View className="flex-row items-center gap-x-3">
                 <IconSymbol name="trash.fill" size={20} color="#ef4444" />
                 <Text className="text-destructive font-bold text-base">Clear Database</Text>
               </View>
             </TouchableOpacity>
-          </View>
-        </View>
 
-        {/* Developer Section */}
-        <View className="mb-gsd-lg">
-          <Text className={`text-xs font-black ${textClass} uppercase tracking-widest ml-2 mb-4`}>Developer Tools</Text>
-          <View className={`${cardBgClass} rounded-[32px] border ${borderClass} overflow-hidden`}>
+            {/* Developer Tools */}
             <TouchableOpacity
               onPress={handleSeed}
               className="flex-row items-center justify-between p-4"
