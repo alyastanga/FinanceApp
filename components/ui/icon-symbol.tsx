@@ -96,6 +96,7 @@ const MAPPING = {
   'chart.line.uptrend.xyaxis.circle': 'trending-up',
   'arrow.left.square.fill': 'logout',
   'banknote': 'payments',
+  'key.fill': 'vpn-key',
 } as const;
 
 type IconSymbolName = keyof typeof MAPPING;

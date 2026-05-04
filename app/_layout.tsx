@@ -62,6 +62,7 @@ export default function RootLayout() {
 function GlassLockScreen() {
   const { authenticate } = useSecurity();
   const { isDark } = useTheme();
+  const router = useRouter();
 
   return (
     <View className="flex-1 items-center justify-center bg-[#050505]">
@@ -84,10 +85,19 @@ function GlassLockScreen() {
 
         <TouchableOpacity
           onPress={() => authenticate()}
-          className="bg-primary px-10 py-4 rounded-[24px] shadow-lg shadow-primary/20"
+          className="bg-primary px-10 py-4 rounded-[24px] shadow-lg shadow-primary/20 mb-6"
         >
           <Text className="text-[#050505] font-black uppercase tracking-widest text-xs">
             Unlock App
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => router.push('/onboarding/e2ee-recovery')}
+          className="py-2"
+        >
+          <Text className="text-primary/60 font-black text-[10px] uppercase tracking-[2px]">
+            Forgot Passphrase? Recover Vault
           </Text>
         </TouchableOpacity>
       </View>

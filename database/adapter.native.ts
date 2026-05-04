@@ -5,13 +5,26 @@ import migrations from './migrations';
 export const getAdapter = () => {
   // Detect if we are running in Expo Go (standard app store app)
   // or a custom Development Build.
-  const isExpoGo = ExpoConstants.appOwnership === 'expo';
+  const appOwnership = ExpoConstants.appOwnership;
+  const isExpoGo = appOwnership === 'expo';
+  
+  console.log(`[Database] appOwnership: ${appOwnership}, isExpoGo: ${isExpoGo}`);
 
-  if (isExpoGo) {
-    // Lazy-load LokiJS for Expo Go fallback
+  // Also check if the native JSI bridge is actually available
+  // WatermelonDB's SQLite adapter requires this on native.
+  const isNativeBridgeAvailable = !!(global as any).nativeWatermelon;
+  console.log(`[Database] isNativeBridgeAvailable: ${isNativeBridgeAvailable}`);
+
+  if (isExpoGo || !isNativeBridgeAvailable) {
+    // Lazy-load LokiJS for Expo Go fallback or missing native bridge
     const LokiJSAdapter = require('@nozbe/watermelondb/adapters/lokijs').default;
     
-    console.warn('WatermelonDB: Running in Expo Go. Falling back to LokiJS (JS-only).');
+    if (isExpoGo) {
+      console.warn('WatermelonDB: Running in Expo Go. Falling back to LokiJS (JS-only).');
+    } else {
+      console.warn('WatermelonDB: Native bridge not found. Falling back to LokiJS (JS-only). Check if you have built a development client with the WatermelonDB plugin.');
+    }
+
     return new LokiJSAdapter({
       schema,
       migrations,

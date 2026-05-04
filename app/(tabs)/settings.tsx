@@ -453,11 +453,20 @@ export default function SettingsScreen() {
                   </TouchableOpacity>
                 </View>
               ) : (
-                <Link href="/onboarding/e2ee-setup" asChild>
-                  <TouchableOpacity className="bg-emerald-500/10 border border-emerald-500/20 py-4 rounded-2xl items-center">
-                    <Text className="text-emerald-500 font-black text-xs uppercase tracking-widest">Enable End-to-End Encryption</Text>
+                <View className="gap-y-3">
+                  <Link href="/onboarding/e2ee-setup" asChild>
+                    <TouchableOpacity className="bg-emerald-500/10 border border-emerald-500/20 py-4 rounded-2xl items-center">
+                      <Text className="text-emerald-500 font-black text-xs uppercase tracking-widest">Enable End-to-End Encryption</Text>
+                    </TouchableOpacity>
+                  </Link>
+                  <TouchableOpacity
+                    onPress={() => router.push('/onboarding/e2ee-recovery')}
+                    className="py-2 items-center flex-row justify-center gap-x-2"
+                  >
+                    <IconSymbol name="key.fill" size={12} color="#10b981" />
+                    <Text className="text-primary font-black text-[10px] uppercase tracking-widest">Recover Existing Vault</Text>
                   </TouchableOpacity>
-                </Link>
+                </View>
               )}
             </View>
           </View>
